@@ -5,6 +5,14 @@
 
 ---
 
+## 2026-07-11 — Spec 5024 (JobsService registry test harness fix)
+
+**Scope:** Restored the focused `JobsService` unit-test harness after the production service migrated from a local `scraperMap` field to the injected `PluginRegistry`. The helper now supplies a minimal registry-shaped mock plus config and metrics mocks so routing and aggregation tests exercise the current contract.
+
+**Validation:** Focused Jest coverage for `apps/api/src/jobs/__tests__/jobs.service.spec.ts`; broad `npm test -- --runInBand` was attempted first and exposed this harness drift.
+
+---
+
 > **Run #100 reminder — Q-042 has been pending review since run #84 (~119 runs / ~119 hours of agent wall-clock). Default C continues; user owner please review at convenience.**
 
 > **Run #150 reminder — Q-042 has been pending review for ~119 runs since run #84. Default C continues; user owner please review at convenience.** (Second-reminder threshold per the run #100 reminder convention; next reminder window opens at run #200.)
