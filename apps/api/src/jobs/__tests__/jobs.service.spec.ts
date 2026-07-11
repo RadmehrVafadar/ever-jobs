@@ -251,8 +251,56 @@ function failingScraper(error = 'Network timeout'): IScraper {
  */
 function createService(scraperEntries: [Site, IScraper][]): JobsService {
   const service = Object.create(JobsService.prototype);
-  service.logger = { log: jest.fn(), warn: jest.fn(), error: jest.fn() };
-  service.scraperMap = new Map<Site, IScraper>(scraperEntries);
+  const scraperMap = new Map<Site, IScraper>(scraperEntries);
+  const atsSites = new Set<Site>([
+    Site.GREENHOUSE,
+    Site.LEVER,
+    Site.ASHBY,
+    Site.WORKABLE,
+    Site.SMARTRECRUITERS,
+    Site.RIPPLING,
+    Site.WORKDAY,
+  ]);
+
+  service.logger = {
+    log: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+  };
+  service.registry = {
+    get size() {
+      return scraperMap.size;
+    },
+    getScraper: jest.fn((site: Site) => scraperMap.get(site)),
+    listAtsSites: jest.fn(() =>
+      Array.from(atsSites).filter((site) => scraperMap.has(site)),
+    ),
+    listSiteKeys: jest.fn(() => Array.from(scraperMap.keys())),
+    listSources: jest.fn(() =>
+      Array.from(scraperMap.keys()).map((site) => ({
+        site,
+        name: site,
+        category: atsSites.has(site) ? 'ats' : 'source',
+      })),
+    ),
+    registerExternal: jest.fn((site: Site, scraper: IScraper) =>
+      scraperMap.set(site, scraper),
+    ),
+  };
+  service.configService = {
+    get: jest.fn(() => ({
+      defaultRetries: 0,
+      defaultDelayMs: 0,
+      defaultBackoff: 1,
+      perSource: {},
+    })),
+  };
+  service.metrics = {
+    scraperDuration: { startTimer: jest.fn(() => jest.fn()) },
+    scraperRequestsTotal: { inc: jest.fn() },
+  };
+  service.circuitBreaker = undefined;
   return service;
 }
 
