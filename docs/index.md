@@ -1769,3 +1769,5 @@
 ---
 
 _Last revised: 2026-07-11 (Spec 5024: JobsService registry test harness fix)._
+
+- `docs/specs/016-realtime-job-watcher.md` — Real-time persistent job watching and notifications.

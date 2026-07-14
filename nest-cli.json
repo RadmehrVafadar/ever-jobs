@@ -27,6 +27,15 @@
       "compilerOptions": {
         "tsConfigPath": "apps/cli/tsconfig.build.json"
       }
+    },
+    "watcher": {
+      "type": "application",
+      "root": "apps/watcher",
+      "entryFile": "main",
+      "sourceRoot": "apps/watcher/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/watcher/tsconfig.build.json"
+      }
     }
   }
 }

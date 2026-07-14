@@ -180,10 +180,12 @@ import { EcojobsModule } from '@ever-jobs/source-ecojobs';
 import { AnalyticsModule } from '@ever-jobs/analytics';
 import { JobsService } from '../../api/src/jobs/jobs.service';
 import { SearchCommand } from './commands/search.command';
+import { WatchCommand } from './commands/watch.command';
+import { WatcherModule } from '@ever-jobs/watcher';
 import { CompareCommand } from './commands/compare.command';
 
 @Module({
-  imports: [
+  imports: [WatcherModule, 
     // Search-based sources
     LinkedInModule,
     IndeedModule,
@@ -379,6 +381,7 @@ import { CompareCommand } from './commands/compare.command';
     // Analytics
     AnalyticsModule,
   ],
-  providers: [JobsService, SearchCommand, CompareCommand],
+  providers: [JobsService, SearchCommand,
+    WatchCommand, CompareCommand],
 })
 export class CliModule {}

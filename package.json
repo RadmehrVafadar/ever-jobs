@@ -29,7 +29,10 @@
     "bench:oracle": "ts-node --project tsconfig.base.json -r tsconfig-paths/register packages/plugins/source-ats-oracle/__tests__/oracle.bench.ts",
     "bench:mercor": "ts-node --project tsconfig.base.json -r tsconfig-paths/register packages/plugins/source-ats-mercor/__tests__/mercor.bench.ts",
     "bench:tesla": "ts-node --project tsconfig.base.json -r tsconfig-paths/register packages/plugins/source-tesla/__tests__/tesla.bench.ts",
-    "bench:ats-batch-2": "npm run bench:oracle && npm run bench:mercor && npm run bench:tesla"
+    "bench:ats-batch-2": "npm run bench:oracle && npm run bench:mercor && npm run bench:tesla",
+    "start:watcher:dev": "npx nx run watcher:start:dev",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "npx ts-node -r tsconfig-paths/register scripts/seeds/watcher-seed.ts"
   },
   "dependencies": {
     "@apollo/server": "^5.5.1",

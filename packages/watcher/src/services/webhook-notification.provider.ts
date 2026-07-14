@@ -1,0 +1,8 @@
+import { Injectable } from '@nestjs/common';
+import { JobNotificationMessage, NotificationDestination, NotificationProvider, NotificationResult } from '../interfaces/watch.types';
+@Injectable()
+export class WebhookNotificationProvider implements NotificationProvider { readonly type: string = 'webhook'; async send(message: JobNotificationMessage, destination: NotificationDestination): Promise<NotificationResult> { const url = new URL(destination.destination); if (!['https:'].includes(url.protocol) || ['localhost','127.0.0.1','0.0.0.0'].includes(url.hostname)) return { status: 'failed', errorMessage: 'unsafe webhook destination' }; const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 10000); try { const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: message.type, score: message.match.score, company: message.job.company, title: message.job.title, location: message.job.location, applyUrl: message.job.applicationUrl ?? message.job.jobUrl, watch: message.watch.name }), signal: controller.signal }); return { status: res.ok ? 'sent' : 'failed', providerResponse: { status: res.status } }; } catch (e: any) { return { status: 'failed', errorMessage: e.message }; } finally { clearTimeout(timer); } } }
+@Injectable()
+export class DiscordNotificationProvider extends WebhookNotificationProvider { readonly type: string = 'discord'; }
+@Injectable()
+export class TelegramNotificationProvider implements NotificationProvider { readonly type = 'telegram'; async send(): Promise<NotificationResult> { return { status: 'suppressed', errorMessage: 'telegram provider requires runtime bot token wiring' }; } }
