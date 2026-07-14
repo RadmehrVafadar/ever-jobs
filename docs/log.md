@@ -1,3 +1,8 @@
+
+## 2026-07-14 — Spec 016 real-time job watcher
+
+- Added real-time watcher specification, implementation plan, task list, persistence schema, seed watch, API/CLI integration, Docker configuration, and watcher README.
+
 # Change Log — Docs & Specs
 
 > Append-only log of every doc/spec edit. **Newest entry at the top.** This is a

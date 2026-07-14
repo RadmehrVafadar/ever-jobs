@@ -1068,3 +1068,21 @@ You can also view a full list of our [contributors tracked by GitHub](https://gi
 
 - If you are running any business or doing freelance, check our new project [Ever Gauzy](https://github.com/ever-co/ever-gauzy) - Open Business Management Platform (ERP/CRM/HRM)
 - [We are Hiring: remote TypeScript / NodeJS / NestJS / Angular & React developers](https://github.com/ever-co/jobs#available-positions)
+
+
+## Real-time job watcher
+
+Ever Jobs now includes a watcher for persistent low-latency monitoring of software internship and co-op postings. It reuses existing source plugins, stores watches and observed jobs, baselines the first run to avoid notification floods, scores matches, and dispatches Telegram/Discord/webhook notifications for strong matches. See `apps/watcher/README.md` and `docs/specs/016-realtime-job-watcher.md`.
+
+Quick start:
+
+```bash
+cp .env.example .env
+docker compose up -d postgres redis
+npm install
+npm run db:migrate
+npm run db:seed
+npm run start:watcher:dev
+```
+
+Example watch JSON: `examples/toronto-canada-software-internships.watch.json`.

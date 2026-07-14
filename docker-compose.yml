@@ -56,3 +56,51 @@ services:
       timeout: 10s
       start_period: 10s
       retries: 3
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ever_jobs
+      POSTGRES_USER: ever_jobs
+      POSTGRES_PASSWORD: ever_jobs
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - ever-jobs-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ever_jobs -d ever_jobs"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ever-jobs-watcher:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      WATCHER_ENABLED: ${WATCHER_ENABLED:-true}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://ever_jobs:ever_jobs@postgres:5432/ever_jobs}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: ["npx", "ts-node", "-r", "tsconfig-paths/register", "apps/watcher/src/main.ts"]
+    restart: unless-stopped
+
+volumes:
+  ever-jobs-postgres:
