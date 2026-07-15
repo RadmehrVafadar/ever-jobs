@@ -1069,20 +1069,31 @@ You can also view a full list of our [contributors tracked by GitHub](https://gi
 - If you are running any business or doing freelance, check our new project [Ever Gauzy](https://github.com/ever-co/ever-gauzy) - Open Business Management Platform (ERP/CRM/HRM)
 - [We are Hiring: remote TypeScript / NodeJS / NestJS / Angular & React developers](https://github.com/ever-co/jobs#available-positions)
 
-
 ## Real-time job watcher
 
-Ever Jobs now includes a watcher for persistent low-latency monitoring of software internship and co-op postings. It reuses existing source plugins, stores watches and observed jobs, baselines the first run to avoid notification floods, scores matches, and dispatches Telegram/Discord/webhook notifications for strong matches. See `apps/watcher/README.md` and `docs/specs/016-realtime-job-watcher.md`.
+Ever Jobs includes a persistent watcher for low-latency internship and co-op discovery. It reuses the registered source plugins, stores state and distributed execution leases in PostgreSQL, checks direct company/ATS sources every three minutes by default, scores new jobs, and sends idempotent Discord notifications after persistence succeeds. Tier 2 and Tier 3 sources default to 15-minute and 60-minute cadences so expensive sources are not polled every three minutes.
 
-Quick start:
+The default seed is disabled and uses a no-notification baseline. The safe local sequence is:
 
 ```bash
 cp .env.example .env
-docker compose up -d postgres redis
-npm install
+docker compose up -d postgres
+npm ci
+npm run db:generate
 npm run db:migrate
 npm run db:seed
 npm run start:watcher:dev
 ```
 
-Example watch JSON: `examples/toronto-canada-software-internships.watch.json`.
+In a second terminal, baseline all configured tiers, test Discord, and only then enable scheduling:
+
+```bash
+npm run cli -- watch list --json
+npm run cli -- watch initialize <watch-id> --json
+npm run cli -- watch notifications-test <watch-id> --json
+npm run cli -- watch resume <watch-id> --json
+```
+
+Set the complete webhook only in `DISCORD_WEBHOOK_URL`; never put it in watch JSON or source control. Redis is not required. See the [watcher application guide](apps/watcher/README.md), the copy-and-paste [local operations runbook](docs/runbooks/watcher-local.md), and the [Google Cloud deployment runbook](docs/runbooks/watcher-google-cloud.md). An example watch is in [examples/toronto-canada-software-internships.watch.json](examples/toronto-canada-software-internships.watch.json).
+
+The unattended seed enables Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash Canada, Coinbase, Figma, Vercel, Plaid through Ashby, and Canada Job Bank. Google Careers, Meta, Shopify, Google Jobs, and Wellfound are intentionally absent until their stale or fragile adapters are repaired. Do not enable a repaired source on a live watch until it has been initialized while the watch is disabled.

@@ -11,7 +11,7 @@
   "scripts": {
     "build": "npx nx run-many --target=build --all",
     "start:dev": "npx nx run api:start:dev",
-    "cli": "npx ts-node -r tsconfig-paths/register apps/cli/src/main.ts",
+    "cli": "npx ts-node --project apps/cli/tsconfig.build.json -r tsconfig-paths/register apps/cli/src/main.ts",
     "lint": "npx nx run-many --target=lint --all",
     "test": "jest",
     "test:e2e": "jest --testPathPatterns e2e-spec",
@@ -31,8 +31,10 @@
     "bench:tesla": "ts-node --project tsconfig.base.json -r tsconfig-paths/register packages/plugins/source-tesla/__tests__/tesla.bench.ts",
     "bench:ats-batch-2": "npm run bench:oracle && npm run bench:mercor && npm run bench:tesla",
     "start:watcher:dev": "npx nx run watcher:start:dev",
+    "start:watcher": "node dist/apps/watcher/main.js",
+    "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
-    "db:seed": "npx ts-node -r tsconfig-paths/register scripts/seeds/watcher-seed.ts"
+    "db:seed": "npx ts-node --project tsconfig.base.json -r tsconfig-paths/register scripts/seeds/watcher-seed.ts"
   },
   "dependencies": {
     "@apollo/server": "^5.5.1",

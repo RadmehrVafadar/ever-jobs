@@ -6,8 +6,8 @@ export interface AppleSearchResponse {
 }
 
 export interface AppleJobResult {
-  id?: string;
-  positionId?: string;
+  id?: string | number;
+  positionId?: string | number;
   postingTitle?: string;
   postingDate?: string;
   jobSummary?: string;

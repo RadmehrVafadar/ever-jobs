@@ -1,20 +1,28 @@
-﻿import { SourcePlugin } from '@ever-jobs/plugin';
+﻿import { SourcePlugin } from "@ever-jobs/plugin";
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from "@nestjs/common";
 import {
-  IScraper, ScraperInputDto, JobResponseDto, JobPostDto, Site, LocationDto,
-} from '@ever-jobs/models';
-import { createHttpClient } from '@ever-jobs/common';
-import { stripHtmlTags } from '@ever-jobs/common';
+  IScraper,
+  ScraperInputDto,
+  JobResponseDto,
+  JobPostDto,
+  Site,
+  LocationDto,
+} from "@ever-jobs/models";
+import { createHttpClient } from "@ever-jobs/common";
+import { stripHtmlTags } from "@ever-jobs/common";
 import {
-  AMAZON_API_URL, AMAZON_HEADERS, AMAZON_PAGE_SIZE, AMAZON_REQUEST_DELAY_MS,
-} from './amazon.constants';
-import { AmazonSearchResponse, AmazonSearchHit } from './amazon.types';
+  AMAZON_API_URL,
+  AMAZON_HEADERS,
+  AMAZON_PAGE_SIZE,
+  AMAZON_REQUEST_DELAY_MS,
+} from "./amazon.constants";
+import { AmazonSearchResponse, AmazonSearchHit } from "./amazon.types";
 
 @SourcePlugin({
   site: Site.AMAZON,
-  name: 'Amazon',
-  category: 'company',
+  name: "Amazon",
+  category: "company",
 })
 @Injectable()
 export class AmazonService implements IScraper {
@@ -28,12 +36,23 @@ export class AmazonService implements IScraper {
     try {
       while (jobs.length < maxResults) {
         const response = await this.fetchPage(offset, input);
-        if (!response?.searchHits?.length) break;
+        if (!Array.isArray(response?.searchHits)) {
+          throw new Error(
+            "Amazon returned an invalid response: expected searchHits[]",
+          );
+        }
+        if (response.searchHits.length === 0) break;
 
         for (const hit of response.searchHits) {
           if (jobs.length >= maxResults) break;
-          const job = this.mapToJobPost(hit);
-          if (job) jobs.push(job);
+          try {
+            const job = this.mapToJobPost(hit);
+            if (job) jobs.push(job);
+          } catch (err: any) {
+            this.logger.warn(
+              `Amazon: failed to map search hit: ${err.message}`,
+            );
+          }
         }
 
         offset += AMAZON_PAGE_SIZE;
@@ -45,6 +64,7 @@ export class AmazonService implements IScraper {
       this.logger.log(`Amazon: scraped ${jobs.length} jobs`);
     } catch (err: any) {
       this.logger.error(`Amazon scrape failed: ${err.message}`);
+      throw err;
     }
 
     return { jobs };
@@ -53,7 +73,7 @@ export class AmazonService implements IScraper {
   private async fetchPage(
     offset: number,
     input: ScraperInputDto,
-  ): Promise<AmazonSearchResponse | null> {
+  ): Promise<AmazonSearchResponse> {
     const client = createHttpClient({
       proxies: input.proxies,
       timeout: input.requestTimeout ?? 30,
@@ -61,22 +81,17 @@ export class AmazonService implements IScraper {
     client.setHeaders(AMAZON_HEADERS);
 
     const payload = {
-      searchType: 'JOB_SEARCH',
+      searchType: "JOB_SEARCH",
       start: offset,
       size: AMAZON_PAGE_SIZE,
       filters: [] as Record<string, unknown>[],
     };
 
-    try {
-      const { data } = await client.post<AmazonSearchResponse>(
-        AMAZON_API_URL,
-        payload,
-      );
-      return data;
-    } catch (err: any) {
-      if (err.response?.status === 400) return null;
-      throw err;
-    }
+    const { data } = await client.post<AmazonSearchResponse>(
+      AMAZON_API_URL,
+      payload,
+    );
+    return data;
   }
 
   private mapToJobPost(hit: AmazonSearchHit): JobPostDto | null {
@@ -90,25 +105,29 @@ export class AmazonService implements IScraper {
     const desc = first(f.description);
     if (desc) descParts.push(stripHtmlTags(desc));
     const basicQuals = first(f.basicQualifications);
-    if (basicQuals) descParts.push(`\nBasic Qualifications:\n${stripHtmlTags(basicQuals)}`);
+    if (basicQuals)
+      descParts.push(`\nBasic Qualifications:\n${stripHtmlTags(basicQuals)}`);
     const prefQuals = first(f.preferredQualifications);
-    if (prefQuals) descParts.push(`\nPreferred Qualifications:\n${stripHtmlTags(prefQuals)}`);
+    if (prefQuals)
+      descParts.push(
+        `\nPreferred Qualifications:\n${stripHtmlTags(prefQuals)}`,
+      );
 
     const locationStr = first(f.location);
-    const locationParts = locationStr?.split(',').map((s) => s.trim()) ?? [];
+    const locationParts = locationStr?.split(",").map((s) => s.trim()) ?? [];
 
     return new JobPostDto({
       id: first(f.urlNextStep) ?? undefined,
       site: Site.AMAZON,
       title,
-      companyName: 'Amazon',
+      companyName: "Amazon",
       jobUrl: first(f.urlNextStep) ?? undefined,
       location: new LocationDto({
         city: locationParts[0] ?? null,
         state: locationParts[1] ?? null,
-        country: locationParts[2] ?? 'US',
+        country: locationParts[2] ?? "US",
       }),
-      description: descParts.join('\n') || null,
+      description: descParts.join("\n") || null,
       datePosted: first(f.createdDate) ?? undefined,
     });
   }

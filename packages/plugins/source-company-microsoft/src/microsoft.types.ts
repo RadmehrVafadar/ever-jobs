@@ -1,6 +1,6 @@
 export interface EightfoldPosition {
-  id: string;
-  displayJobId?: string;
+  id: string | number;
+  displayJobId?: string | number;
   name?: string;
   locations?: string[];
   department?: string;

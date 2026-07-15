@@ -1,7 +1,23 @@
-import { Module } from '@nestjs/common';
-import { JobsModule } from '../../api/src/jobs/jobs.module';
-import { AppConfigModule } from '../../api/src/config/config.module';
-import { MetricsModule } from '../../api/src/metrics/metrics.module';
-import { WatcherModule } from '@ever-jobs/watcher';
-@Module({ imports: [AppConfigModule, MetricsModule, JobsModule, WatcherModule] })
+import { Module } from "@nestjs/common";
+import { WatcherModule } from "@ever-jobs/watcher";
+import { AppConfigModule } from "../../api/src/config/config.module";
+import { AppCacheModule } from "../../api/src/cache/cache.module";
+import { JobsModule } from "../../api/src/jobs/jobs.module";
+import { JobsService } from "../../api/src/jobs/jobs.service";
+import { MetricsModule } from "../../api/src/metrics/metrics.module";
+import { WatcherHealthController } from "./watcher-health.controller";
+
+@Module({
+  imports: [
+    AppConfigModule,
+    AppCacheModule,
+    MetricsModule,
+    WatcherModule.register({
+      imports: [JobsModule],
+      jobsServiceToken: JobsService,
+      enableScheduler: true,
+    }),
+  ],
+  controllers: [WatcherHealthController],
+})
 export class WatcherAppModule {}

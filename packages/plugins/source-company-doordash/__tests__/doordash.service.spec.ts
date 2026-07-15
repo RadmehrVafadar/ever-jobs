@@ -1,14 +1,14 @@
-import 'reflect-metadata';
-import * as fs from 'fs';
-import * as path from 'path';
-import { Test } from '@nestjs/testing';
-import { JobResponseDto, ScraperInputDto, Site } from '@ever-jobs/models';
+import "reflect-metadata";
+import * as fs from "fs";
+import * as path from "path";
+import { Test } from "@nestjs/testing";
+import { JobResponseDto, ScraperInputDto, Site } from "@ever-jobs/models";
 
 // Mock createHttpClient so the scraper hits a controlled fixture
 // rather than the live Greenhouse public API.
 const mockGet = jest.fn();
-jest.mock('@ever-jobs/common', () => {
-  const actual = jest.requireActual('@ever-jobs/common');
+jest.mock("@ever-jobs/common", () => {
+  const actual = jest.requireActual("@ever-jobs/common");
   return {
     ...actual,
     createHttpClient: jest.fn(() => ({
@@ -18,11 +18,11 @@ jest.mock('@ever-jobs/common', () => {
   };
 });
 
-import { DoorDashModule, DoorDashService } from '../src';
+import { DoorDashModule, DoorDashService } from "../src";
 
-const FIXTURE_DIR = path.join(__dirname, 'fixtures');
+const FIXTURE_DIR = path.join(__dirname, "fixtures");
 const JOBS_PAGE_RAW = JSON.parse(
-  fs.readFileSync(path.join(FIXTURE_DIR, 'doordash-jobs.json'), 'utf8'),
+  fs.readFileSync(path.join(FIXTURE_DIR, "doordash-jobs.json"), "utf8"),
 );
 
 function clone<T>(v: T): T {
@@ -39,16 +39,16 @@ function clone<T>(v: T): T {
  *   4. `resultsWanted = 1` against a two-listing fixture caps response.
  *   5. `searchTerm` filters listings by title (case-insensitive).
  *   6. `searchTerm` filters listings by department name (case-insensitive).
- *   7. HTTP 500 → `scrape` resolves to `{ jobs: [] }`, never throws.
+ *   7. HTTP 500 → `scrape` rejects so orchestration records the failure.
  *   8. Empty `data.jobs` → `{ jobs: [] }`.
  */
-describe('DoorDashService — Spec 024 / T04', () => {
+describe("DoorDashService — Spec 024 / T04", () => {
   beforeEach(() => {
     mockGet.mockReset();
   });
 
-  describe('registration scaffolding', () => {
-    it('resolves through DoorDashModule via NestJS DI', async () => {
+  describe("registration scaffolding", () => {
+    it("resolves through DoorDashModule via NestJS DI", async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [DoorDashModule],
       }).compile();
@@ -58,12 +58,12 @@ describe('DoorDashService — Spec 024 / T04', () => {
     });
 
     it('exports the Site.DOORDASH = "doordash" enum value', () => {
-      expect(Site.DOORDASH).toBe('doordash');
+      expect(Site.DOORDASH).toBe("doordash");
     });
   });
 
-  describe('happy path — 2 listings mapped to JobPostDto', () => {
-    it('maps both fixture listings to JobPostDto with expected fields', async () => {
+  describe("happy path — 2 listings mapped to JobPostDto", () => {
+    it("maps both fixture listings to JobPostDto with expected fields", async () => {
       mockGet.mockResolvedValueOnce({ data: clone(JOBS_PAGE_RAW) });
 
       const service = new DoorDashService();
@@ -77,34 +77,36 @@ describe('DoorDashService — Spec 024 / T04', () => {
       const dto = result as JobResponseDto;
       expect(dto.jobs).toHaveLength(2);
 
-      const logistics = dto.jobs.find((j) => j.id === 'doordash-7401234');
+      const logistics = dto.jobs.find((j) => j.id === "doordash-7401234");
       expect(logistics).toBeDefined();
       expect(logistics?.site).toBe(Site.DOORDASH);
-      expect(logistics?.companyName).toBe('DoorDash');
-      expect(logistics?.title).toBe('Senior Software Engineer, Logistics Platform');
-      expect(logistics?.jobUrl).toBe(
-        'https://boards.greenhouse.io/doordash/jobs/7401234',
+      expect(logistics?.companyName).toBe("DoorDash");
+      expect(logistics?.title).toBe(
+        "Senior Software Engineer, Logistics Platform",
       );
-      expect(logistics?.location?.city).toBe('San Francisco, CA');
-      expect(logistics?.department).toBe('Engineering');
+      expect(logistics?.jobUrl).toBe(
+        "https://boards.greenhouse.io/doordash/jobs/7401234",
+      );
+      expect(logistics?.location?.city).toBe("San Francisco, CA");
+      expect(logistics?.department).toBe("Engineering");
       expect(logistics?.isRemote).toBe(false);
       // The HTML stripper removes tags but preserves text content.
-      expect(logistics?.description).not.toContain('<p>');
-      expect(logistics?.description).toContain('dispatch');
+      expect(logistics?.description).not.toContain("<p>");
+      expect(logistics?.description).toContain("dispatch");
 
-      const ops = dto.jobs.find((j) => j.id === 'doordash-7402345');
+      const ops = dto.jobs.find((j) => j.id === "doordash-7402345");
       expect(ops?.isRemote).toBe(true);
-      expect(ops?.department).toBe('Strategy & Operations');
+      expect(ops?.department).toBe("Strategy & Operations");
 
       const calledUrls = mockGet.mock.calls.map((c) => c[0] as string);
       expect(calledUrls[0]).toBe(
-        'https://api.greenhouse.io/v1/boards/doordash/jobs?content=true',
+        "https://boards-api.greenhouse.io/v1/boards/doordashcanada/jobs?content=true",
       );
     });
   });
 
-  describe('resultsWanted cap', () => {
-    it('honours resultsWanted=1 against a 2-item page', async () => {
+  describe("resultsWanted cap", () => {
+    it("honours resultsWanted=1 against a 2-item page", async () => {
       mockGet.mockResolvedValueOnce({ data: clone(JOBS_PAGE_RAW) });
 
       const service = new DoorDashService();
@@ -118,48 +120,77 @@ describe('DoorDashService — Spec 024 / T04', () => {
     });
   });
 
-  describe('searchTerm filter', () => {
-    it('filters by case-insensitive substring of title', async () => {
+  describe("searchTerm filter", () => {
+    it("filters by case-insensitive substring of title", async () => {
       mockGet.mockResolvedValueOnce({ data: clone(JOBS_PAGE_RAW) });
 
       const service = new DoorDashService();
       const result = await service.scrape({
         siteType: [Site.DOORDASH],
-        searchTerm: 'LOGISTICS',
+        searchTerm: "LOGISTICS",
       } as ScraperInputDto);
 
       expect(result.jobs).toHaveLength(1);
-      expect(result.jobs[0].id).toBe('doordash-7401234');
+      expect(result.jobs[0].id).toBe("doordash-7401234");
     });
 
-    it('filters by case-insensitive substring of department name', async () => {
+    it("filters by case-insensitive substring of department name", async () => {
       mockGet.mockResolvedValueOnce({ data: clone(JOBS_PAGE_RAW) });
 
       const service = new DoorDashService();
       const result = await service.scrape({
         siteType: [Site.DOORDASH],
-        searchTerm: 'strategy',
+        searchTerm: "strategy",
       } as ScraperInputDto);
 
       expect(result.jobs).toHaveLength(1);
-      expect(result.jobs[0].id).toBe('doordash-7402345');
+      expect(result.jobs[0].id).toBe("doordash-7402345");
     });
   });
 
-  describe('error handling', () => {
-    it('catches an HTTP 500 → empty JobResponseDto, never throws', async () => {
-      mockGet.mockRejectedValueOnce(new Error('Request failed with status 500'));
+  describe("error handling", () => {
+    it("rejects an HTTP 500 so JobsService can report the source failure", async () => {
+      mockGet.mockRejectedValueOnce(
+        new Error("Request failed with status 500"),
+      );
 
       const service = new DoorDashService();
-      const result = await service.scrape({
-        siteType: [Site.DOORDASH],
-      } as ScraperInputDto);
+      await expect(
+        service.scrape({ siteType: [Site.DOORDASH] } as ScraperInputDto),
+      ).rejects.toThrow("Request failed with status 500");
 
-      expect(result.jobs).toEqual([]);
       expect(mockGet).toHaveBeenCalledTimes(1);
     });
 
-    it('returns empty when the response payload has no jobs', async () => {
+    it("rejects a malformed payload while preserving a valid empty jobs array", async () => {
+      mockGet.mockResolvedValueOnce({ data: {} });
+
+      const service = new DoorDashService();
+      await expect(
+        service.scrape({ siteType: [Site.DOORDASH] } as ScraperInputDto),
+      ).rejects.toThrow("expected jobs[]");
+    });
+
+    it("skips one malformed listing without discarding valid listings", async () => {
+      const payload = clone(JOBS_PAGE_RAW) as any;
+      payload.jobs.unshift({
+        ...clone(payload.jobs[0]),
+        id: "malformed",
+        content: { unexpected: true },
+      });
+      mockGet.mockResolvedValueOnce({ data: payload });
+
+      const result = await new DoorDashService().scrape({
+        siteType: [Site.DOORDASH],
+      } as ScraperInputDto);
+
+      expect(result.jobs).toHaveLength(2);
+      expect(result.jobs.map((job) => job.id)).not.toContain(
+        "doordash-malformed",
+      );
+    });
+
+    it("returns empty when the response payload has no jobs", async () => {
       mockGet.mockResolvedValueOnce({ data: { jobs: [] } });
 
       const service = new DoorDashService();

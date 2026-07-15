@@ -1,12 +1,47 @@
-
-## 2026-07-14 — Spec 016 real-time job watcher
-
-- Added real-time watcher specification, implementation plan, task list, persistence schema, seed watch, API/CLI integration, Docker configuration, and watcher README.
-
 # Change Log — Docs & Specs
 
 > Append-only log of every doc/spec edit. **Newest entry at the top.** This is a
 > human-readable audit trail; for source-code history, see `git log`.
+
+---
+
+## 2026-07-14 — Run #462 — Watcher live pipeline and Docker validation
+
+**Implementation:** Completed PostgreSQL repositories and migrations, database-backed scheduler leases, tier due-state, bounded source execution, explainable scoring gates, persistent notification outbox/retries/idempotency, Discord delivery, daily digest selection, REST/CLI management, health, Prometheus metrics, safe default seeding, and local/Google Cloud operations documentation. Updated the unattended source set to the verified public endpoints, including DoorDash Canada and Plaid through Ashby.
+
+**Live validation:** A disabled baseline queried all 13 configured targets successfully, fetched 413 jobs, normalized 406, persisted 213 new observations/matches, and sent zero notifications. A repeat run found one newly returned low-score Apple posting, stored it once by stable external ID, and suppressed it. The local worker and final Compose container both reported healthy database and scheduler state.
+
+**Build and tests:** Aligned Docker with Node 22 and regenerated the npm 10-compatible lockfile. Prisma validation/migration/seed, four TypeScript checks, 17 Jest suites (126 tests), API/watcher/CLI production builds, Docker image build, Compose migration startup, formatting, and `git diff --check` passed. Documentation lint has no watcher errors; it still reports only the pre-existing Spec 5024 metadata defects.
+
+---
+
+## 2026-07-14 — Run #461 — Spec 016 production contract and source-readiness completion
+
+**Scope:** Expanded the authoritative watcher specification, implementation plan, and task ledger from scaffolding into the implemented production contract. Added persistence, scheduler/lease, 3/15/60 source cadence, scoring, initialization, Discord outbox/idempotency, digest, REST/CLI, observability, migration, rollout, rollback, risk, test, and honest limitation details.
+
+**Source readiness:** Documented the enabled unattended defaults—Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash Canada, Coinbase, Figma, Vercel, Plaid through Ashby slug `plaid`, and Canada Job Bank. Google Careers, Meta Careers, Shopify, Google Jobs, and Wellfound remain absent until their stale or fragile adapters are repaired and baselined while the watch is disabled.
+
+**Operations:** Corrected the Compose path to match `docker-compose.yml`: `watcher-migrate` applies checked-in migrations after PostgreSQL is healthy, `ever-jobs-watcher` starts only after migration succeeds, and safe bootstrap seeding creates only a missing disabled default. Updated the Google Cloud release path to use explicit migration/seed, `WATCHER_SEED_DEFAULT=false`, and the documented `--min-instances`/`--max-instances` flags.
+
+**Validation:** `git diff --check` passed for the requested watcher documentation. `npm run lint:docs` reported no watcher documentation errors; its only failures were the unrelated pre-existing missing H1/metadata tables in `.specify/specs/5024-jobs-service-registry-test-fix/{spec.md,plan.md}`.
+
+---
+
+## 2026-07-14 — Run #460 — Watcher production operations documentation
+
+**Scope:** Replaced the watcher application guide with the implemented PostgreSQL-backed operating path; documented the safe migrate, seed, baseline, Discord-test, and resume sequence; corrected the Tier 1/2/3 cadences to 3/15/60 minutes; documented health, Prometheus metrics, Docker behavior, PostgreSQL leases, and current notification boundaries; and added local and Google Cloud operations runbooks.
+
+**Cloud decision:** Documented a private Cloud Run service with instance-based CPU, one minimum instance, one initial maximum instance, Cloud SQL, and Secret Manager as the smallest deployment that preserves the current worker's `/health` and `/metrics` contract. Cloud Run Jobs are explicitly excluded for the long-running scheduler, and the worker-pool alternative records its missing HTTP endpoint and manual-scaling tradeoff.
+
+**Safety:** The Discord webhook remains environment/Secret Manager only. The runbooks require a complete no-notification baseline and provider test before a seeded watch is resumed, and explicitly describe partial-baseline, external-source, latency, restart, cost, and first-applicant limitations.
+
+**Validation:** `git diff --check` passed. `npm run lint:docs` confirmed watcher runbook/index reachability and reported only the existing missing H1/metadata-table debt in the Spec 016 watcher plan/spec and the unrelated Spec 5024 plan/spec.
+
+---
+
+## 2026-07-14 — Spec 016 real-time job watcher
+
+- Added real-time watcher specification, implementation plan, task list, persistence schema, seed watch, API/CLI integration, Docker configuration, and watcher README.
 
 ---
 
@@ -73,7 +108,7 @@ parent `OTHERS/` directory (outside this repo) were reviewed for situational awa
   index, module, **registry-delegation service**, generic mocked test, Workable **`{jobs:[...]}`
   widget fixture**) **and** the `.specify/specs/<specNo>-source-company-<slug>/` spec/plan/tasks. The
   generated service resolves `Site.WORKABLE` from the `PluginRegistry`, delegates `scrape({ ...input,
-  companySlug })`, and re-stamps `site`/`companyName`/`id` (`workable-`→`<slug>-`). Never touches
+companySlug })`, and re-stamps `site`/`companyName`/`id` (`workable-`→`<slug>-`). Never touches
   shared wiring files.
 - **`scripts/assemble-workable-batch.ts`** — deterministic descriptor join (survivors + factual
   enrichment → batch), deriving `className`/`moduleName`/`serviceName`/`enumKey`/`slug` from the
@@ -142,7 +177,7 @@ this repo per the no-competitor-references rule.
   module, **registry-delegation service**, generic mocked test, Recruitee **`{offers:[...]}` envelope**
   fixture) **and** the `.specify/specs/<specNo>-source-company-<slug>/` spec/plan/tasks. The generated
   service resolves `Site.RECRUITEE` from the `PluginRegistry`, delegates `scrape({ ...input,
-  companySlug })`, and re-stamps `site`/`companyName`/`id` (`recruitee-`→`<slug>-`). Never touches shared
+companySlug })`, and re-stamps `site`/`companyName`/`id` (`recruitee-`→`<slug>-`). Never touches shared
   wiring files.
 - **`scripts/assemble-recruitee-batch.ts`** — deterministic descriptor assembler that joins the probe
   survivors + enrichment (keyed by `companySlug`) + a contiguous spec-number range. Derives
@@ -499,178 +534,178 @@ mocked unit suites (spanning tricky name derivations — `C3 AI`, `dbt Labs`, `I
 `The New York Times`, `PlayStation (Sony Interactive Entertainment)`, `The Pokémon Company
 International`, `Picnic Delivery`) was run locally: **132 tests green**.
 
-| Spec | Phase | Slug | Enum | Display name | Sector | HQ | Roles |
-| ---- | ----- | ---- | ---- | ------------ | ------ | -- | ----- |
-| 804 | 799 | `accela` | ACCELA | Accela | Govtech (government permitting/licensing SaaS) | San Ramon, California, USA | 16 |
-| 805 | 800 | `aevexaerospace` | AEVEX_AEROSPACE | AEVEX Aerospace | Defense aerospace (UAS, ISR, full-spectrum) | Solana Beach, California, USA | 86 |
-| 806 | 801 | `akayshaenergy` | AKAYSHA_ENERGY | Akaysha Energy | Grid/storage / grid-scale battery storage | Sydney, New South Wales, Australia | 5 |
-| 807 | 802 | `andurilindustries` | ANDURIL_INDUSTRIES | Anduril Industries | Defense technology (autonomous systems, C2, counter-UAS) | Costa Mesa, California, USA | 2128 |
-| 808 | 803 | `armissecurity` | ARMIS | Armis | Asset/IoT security | San Francisco, California, USA | 45 |
-| 809 | 804 | `atbayjobs` | AT_BAY | At-Bay | Cyber insurance / security | San Francisco, California, USA | 27 |
-| 810 | 805 | `atomicmachines` | ATOMIC_MACHINES | Atomic Machines | Robotics, industrial automation, warehouse/manufacturing automation | Berkeley, California, USA | 37 |
-| 811 | 806 | `augury` | AUGURY | Augury | Industrial IoT / machine-health sensors | New York, New York, USA | 21 |
-| 812 | 807 | `aura` | AURA | Aura | Consumer identity / fraud protection | Boston, Massachusetts, USA | 7 |
-| 813 | 808 | `avantus` | AVANTUS | Avantus | Clean energy / utility-scale solar & storage | San Diego, California, USA | 16 |
-| 814 | 809 | `avride` | AVRIDE | Avride | Robotics, industrial automation, warehouse/manufacturing automation | Austin, Texas, USA | 39 |
-| 815 | 810 | `axonius` | AXONIUS | Axonius | Cyber asset attack surface management | New York, New York, USA | 34 |
-| 816 | 811 | `beamtherapeutics` | BEAM_THERAPEUTICS | Beam Therapeutics | Gene editing | Cambridge, MA, USA | 27 |
-| 817 | 812 | `blockchain` | BLOCKCHAIN_COM | Blockchain.com | Fintech — crypto wallet / exchange | London, England, United Kingdom | 29 |
-| 818 | 813 | `botauto` | BOT_AUTO | Bot Auto | Autonomous trucking | Houston, Texas, USA | 21 |
-| 819 | 814 | `buildops` | BUILDOPS | BuildOps | Construction tech (commercial contractor management software) | Santa Monica, CA, USA | 37 |
-| 820 | 815 | `c3iot` | C3_AI | C3 AI | Enterprise applied AI applications | Redwood City, California, USA | 57 |
-| 821 | 816 | `cabify` | CABIFY | Cabify | Ride-hailing / mobility platform | Madrid, Spain | 56 |
-| 822 | 817 | `cargomatic` | CARGOMATIC | Cargomatic | Drayage / digital freight marketplace | Long Beach, California, USA | 20 |
-| 823 | 818 | `censys` | CENSYS | Censys | Security data / applied AI platform | Ann Arbor, Michigan, USA | 14 |
-| 824 | 819 | `charterup` | CHARTERUP | CharterUP | Group transportation / charter mobility platform | Austin, Texas, USA | 14 |
-| 825 | 820 | `checkbook` | CHECKBOOK | Checkbook | Fintech — digital payments / disbursements | San Mateo, California, USA | 3 |
-| 826 | 821 | `codepath` | CODEPATH | CodePath | Edtech / tech career upskilling | San Francisco, California, USA | 18 |
-| 827 | 822 | `cognitiv` | COGNITIV | Cognitiv | Adtech (AI/deep-learning ads) | Seattle, Washington, United States | 6 |
-| 828 | 823 | `collibra` | COLLIBRA | Collibra | Compliance / data governance | New York, New York, USA | 38 |
-| 829 | 824 | `colossalbiosciences` | COLOSSAL_BIOSCIENCES | Colossal Biosciences | Genomics / synthetic biology | Dallas, TX, USA | 7 |
-| 830 | 825 | `customerio` | CUSTOMER_IO | Customer.io | Martech (marketing automation/messaging) | Portland, Oregon, United States | 18 |
-| 831 | 826 | `cypresscreekrenewables` | CYPRESS_CREEK_RENEWABLES | Cypress Creek Renewables | Clean energy / utility-scale solar & storage | Santa Monica, California, USA | 28 |
-| 832 | 827 | `daybreakgames` | DAYBREAK_GAME_COMPANY | Daybreak Game Company | Gaming studios / interactive entertainment | San Diego, California, USA | 5 |
-| 833 | 828 | `dbtlabsinc` | DBT_LABS | dbt Labs | Data transformation / analytics engineering platform | Philadelphia, Pennsylvania, USA | 36 |
-| 834 | 829 | `dealpath` | DEALPATH | Dealpath | Proptech / commercial real estate (deal management & investment platform) | San Francisco, CA, USA | 14 |
-| 835 | 830 | `defenseunicorns` | DEFENSE_UNICORNS | Defense Unicorns | Defense software (mission infrastructure/DevSecOps) | Colorado Springs, Colorado, USA | 49 |
-| 836 | 831 | `digitalextremes` | DIGITAL_EXTREMES | Digital Extremes | Gaming studios / interactive entertainment | London, Ontario, Canada | 8 |
-| 837 | 832 | `dorsia` | DORSIA | Dorsia | Restaurant tech | New York, New York, USA | 11 |
-| 838 | 833 | `easyship` | EASYSHIP | Easyship | E-commerce enablement (shipping/fulfillment SaaS) | New York, New York, USA | 24 |
-| 839 | 834 | `eleventhhourgames` | ELEVENTH_HOUR_GAMES | Eleventh Hour Games | Gaming studios / interactive entertainment | Chicago, Illinois, USA | 10 |
-| 840 | 835 | `emarketer` | EMARKETER | EMARKETER | Martech/media (marketing research) | New York, New York, United States | 12 |
-| 841 | 836 | `emnify` | EMNIFY | emnify | IoT connectivity / cellular hardware-SIM platform | Berlin, Berlin, Germany | 9 |
-| 842 | 837 | `energysolutions` | ENERGY_SOLUTIONS | Energy Solutions | Clean energy / efficiency & decarbonization services | Oakland, California, USA | 33 |
-| 843 | 838 | `esusu` | ESUSU | Esusu | Fintech — rent reporting / credit building / consumer payments | New York, New York, USA | 9 |
-| 844 | 839 | `exiger` | EXIGER | Exiger | Regtech (supply-chain risk / AML / compliance) | New York, New York, USA | 48 |
-| 845 | 840 | `extrahopnetworks` | EXTRAHOP | ExtraHop | Network detection & response | Seattle, Washington, USA | 19 |
-| 846 | 841 | `federato` | FEDERATO | Federato | Insurtech and insurance technology | San Francisco, California, USA | 14 |
-| 847 | 842 | `feedzai` | FEEDZAI | Feedzai | Regtech (fraud / AML) | San Mateo, California, USA | 37 |
-| 848 | 843 | `fieldwire` | FIELDWIRE | Fieldwire | Construction tech (jobsite field management & coordination software) | San Francisco, CA, USA | 22 |
-| 849 | 844 | `flashfood` | FLASHFOOD | Flashfood | Foodtech / food waste | Toronto, Ontario, Canada | 5 |
-| 850 | 845 | `fleetio` | FLEETIO | Fleetio | Fleet management software / logistics | Birmingham, Alabama, USA | 10 |
-| 851 | 846 | `forbes` | FORBES | Forbes | Media (publishing) | Jersey City, New Jersey, United States | 11 |
-| 852 | 847 | `forter` | FORTER | Forter | Fraud prevention / risk | New York, New York, USA | 41 |
-| 853 | 848 | `freeformfuturecorp` | FREEFORM | Freeform | Aerospace & defense metal additive manufacturing | Hawthorne, California, USA | 55 |
-| 854 | 849 | `galvanizeclimatesolutions` | GALVANIZE_CLIMATE_SOLUTIONS | Galvanize Climate Solutions | Climate tech / climate investment firm | San Francisco, California, USA | 3 |
-| 855 | 850 | `gatikaiinc` | GATIK_AI | Gatik AI | Robotics, industrial automation, warehouse/manufacturing automation | Mountain View, California, USA | 61 |
-| 856 | 851 | `gleanwork` | GLEAN | Glean | Enterprise AI search & assistant (applied AI) | Palo Alto, California, USA | 155 |
-| 857 | 852 | `glossgenius` | GLOSSGENIUS | GlossGenius | Fintech — embedded payments / SMB platform | New York, New York, USA | 32 |
-| 858 | 853 | `goodwaygroup` | GOODWAY_GROUP | Goodway Group | Adtech/martech (digital media agency) | Westport, Connecticut, United States | 5 |
-| 859 | 854 | `gotion` | GOTION | Gotion | Grid/storage / EV & energy-storage lithium batteries | Fremont, California, USA | 148 |
-| 860 | 855 | `govtech` | GOVTECH_SINGAPORE_GOVERNMENT_TECHNOLOGY_AGENCY | GovTech Singapore (Government Technology Agency) | Govtech (government digital services) | Singapore, Singapore, Singapore | 265 |
-| 861 | 856 | `gsgcareers` | GHOST_STORY_GAMES | Ghost Story Games | Gaming studios / interactive entertainment | Westwood, Massachusetts, USA | 3 |
-| 862 | 857 | `hanwharenewables` | HANWHA_RENEWABLES | Hanwha Renewables | Clean energy / utility-scale solar & storage | Houston, Texas, USA | 4 |
-| 863 | 858 | `heraldapi` | HERALD | Herald | Insurtech and insurance technology | New York, New York, USA | 7 |
-| 864 | 859 | `homeward` | HOMEWARD | Homeward | Real estate tech (cash-offer home buying) | Austin, TX, USA | 4 |
-| 865 | 860 | `hyliion` | HYLIION | Hyliion | Electrified powertrain / clean transport | Cedar Park, Texas, USA | 11 |
-| 866 | 861 | `hyperproof` | HYPERPROOF | Hyperproof | Compliance / GRC (security compliance) | Seattle, Washington, USA | 7 |
-| 867 | 862 | `idme` | ID_ME | ID.me | Identity verification / fraud | McLean, Virginia, USA | 53 |
-| 868 | 863 | `inchargeenergy` | INCHARGE_ENERGY | InCharge Energy | Clean energy / fleet EV charging infrastructure | Santa Monica, California, USA | 20 |
-| 869 | 864 | `innovid` | INNOVID | Innovid | Adtech (ad serving/CTV) | New York, New York, United States | 15 |
-| 870 | 865 | `instawork` | INSTAWORK | Instawork | Workforce management - hourly / flexible staffing marketplace | San Francisco, California, USA | 64 |
-| 871 | 866 | `intrinsicrobotics` | INTRINSIC | Intrinsic | Robotics, industrial automation, warehouse/manufacturing automation | Mountain View, California, USA | 30 |
-| 872 | 867 | `isccareers` | INTEGRATED_SPECIALTY_COVERAGES | Integrated Specialty Coverages | Insurtech and insurance technology | Carlsbad, California, USA | 23 |
-| 873 | 868 | `itslogisticsllc` | ITS_LOGISTICS | ITS Logistics | 3PL / freight / warehousing | Sparks (Reno), Nevada, USA | 24 |
-| 874 | 869 | `k2spacecorporation` | K2_SPACE | K2 Space | Satellites (large GEO/MEO buses) | Los Angeles, California, USA | 147 |
-| 875 | 870 | `kasa` | KASA | Kasa | Proptech / real estate (tech-enabled hospitality & flexible accommodations) | San Francisco, CA, USA | 25 |
-| 876 | 871 | `khaerospace` | KH_AEROSPACE | KH Aerospace | Aerospace & defense (UAS manufacturing/training) | Hayward, California, USA | 4 |
-| 877 | 872 | `knowbe4` | KNOWBE4 | KnowBe4 | Compliance / security awareness training | Clearwater, Florida, USA | 98 |
-| 878 | 873 | `legion` | LEGION_TECHNOLOGIES | Legion Technologies | Workforce management software (scheduling / labor) | Palo Alto, California, USA | 16 |
-| 879 | 874 | `logicgate` | LOGICGATE | LogicGate | Compliance / GRC (risk management) | Chicago, Illinois, USA | 12 |
-| 880 | 875 | `mark43` | MARK43 | Mark43 | Govtech / public safety (police RMS/CAD) | New York, New York, USA | 38 |
-| 881 | 876 | `matic` | MATIC_INSURANCE | Matic Insurance | Insurtech and insurance technology | Columbus, Ohio, USA | 7 |
-| 882 | 877 | `maymobility` | MAY_MOBILITY | May Mobility | Autonomous vehicles / mobility | Ann Arbor, Michigan, USA | 44 |
-| 883 | 878 | `mediasmart` | MEDIASMART | mediasmart | Adtech (omnichannel/CTV/DOOH DSP) | Madrid, Spain | 8 |
-| 884 | 879 | `metropolis` | METROPOLIS_TECHNOLOGIES | Metropolis Technologies | Proptech / real estate (AI computer-vision parking & mobility platform) | Santa Monica, CA, USA | 129 |
-| 885 | 880 | `mobilityware` | MOBILITYWARE | MobilityWare | Mobile gaming / interactive entertainment | Irvine, California, USA | 4 |
-| 886 | 881 | `modernize` | MODERNIZE_HOME_SERVICES | Modernize Home Services | Proptech / home services (home improvement lead generation) | Austin, TX, USA | 7 |
-| 887 | 882 | `mrbeastyoutube` | MRBEAST_BEAST_INDUSTRIES | MrBeast (Beast Industries) | Creator economy (media/YouTube) | Greenville, North Carolina, United States | 80 |
-| 888 | 883 | `nabis` | NABIS | Nabis | Distribution / last-mile delivery | San Francisco, California, USA | 37 |
-| 889 | 884 | `nationalpublicradioinc` | NPR_NATIONAL_PUBLIC_RADIO | NPR (National Public Radio) | Media/streaming (public radio/podcasts) | Washington, District of Columbia, United States | 10 |
-| 890 | 885 | `neonaerospace` | NEON_AEROSPACE | Neon Aerospace | Aerospace (autonomous flight / propulsion) | San Francisco, California, USA | 16 |
-| 891 | 886 | `nerostechnologies` | NEROS_TECHNOLOGIES | Neros Technologies | Robotics, industrial automation, warehouse/manufacturing automation | El Segundo, California, USA | 63 |
-| 892 | 887 | `newleafenergy` | NEW_LEAF_ENERGY | New Leaf Energy | Clean energy / solar & storage development | Lowell, Massachusetts, USA | 42 |
-| 893 | 888 | `nex` | NEX | Nex | Gaming studios / interactive entertainment (motion gaming) | San Jose, California, USA | 44 |
-| 894 | 889 | `nextinsurance66` | NEXT_INSURANCE | Next Insurance | Insurtech and insurance technology | Palo Alto, California, USA | 31 |
-| 895 | 890 | `nimblerobotics` | NIMBLE_ROBOTICS | Nimble Robotics | Robotics, industrial automation, warehouse/manufacturing automation | San Francisco, California, USA | 19 |
-| 896 | 891 | `nmi` | NMI | NMI | Fintech — payments gateway / embedded payments | Schaumburg, Illinois, USA | 16 |
-| 897 | 892 | `northspyre` | NORTHSPYRE | Northspyre | Proptech / real estate (development project & cost management software) | New York, NY, USA | 8 |
-| 898 | 893 | `nothing` | NOTHING | Nothing | Consumer electronics (smartphones, earbuds) | London, England, United Kingdom | 17 |
-| 899 | 894 | `onetrust` | ONETRUST | OneTrust | Data privacy, security & governance | Atlanta, Georgia, USA | 91 |
-| 900 | 895 | `openspace` | OPENSPACE | OpenSpace | Construction tech (AI jobsite capture & reality mapping) | San Francisco, CA, USA | 10 |
-| 901 | 896 | `opentable` | OPENTABLE | OpenTable | Restaurant tech | San Francisco, California, USA | 41 |
-| 902 | 897 | `operationscareers` | VEO | Veo | Shared micromobility (bikes/scooters) | Santa Monica, California, USA | 49 |
-| 903 | 898 | `orcasecurity` | ORCA_SECURITY | Orca Security | Cloud security (CNAPP) | Portland, Oregon, USA | 4 |
-| 904 | 899 | `origisenergy` | ORIGIS_ENERGY | Origis Energy | Clean energy / utility-scale solar & storage | Miami, Florida, USA | 17 |
-| 905 | 900 | `osano` | OSANO | Osano | Compliance / data privacy | Austin, Texas, USA | 5 |
-| 906 | 901 | `pacvue` | PACVUE | Pacvue | E-commerce enablement / retail media SaaS | Seattle, Washington, USA | 13 |
-| 907 | 902 | `palmettocleantech` | PALMETTO_CLEAN_TECHNOLOGY | Palmetto Clean Technology | Clean energy / residential solar platform | Charleston, South Carolina, USA | 31 |
-| 908 | 903 | `pathward` | PATHWARD | Pathward | Fintech — banking-as-a-service / sponsor bank | Sioux Falls, South Dakota, USA | 34 |
-| 909 | 904 | `paynearmeinc` | PAYNEARME | PayNearMe | Fintech — bill pay / payments platform | Santa Clara, California, USA | 11 |
-| 910 | 905 | `payoneer` | PAYONEER | Payoneer | Fintech — cross-border payments | New York, New York, USA | 133 |
-| 911 | 906 | `pixability` | PIXABILITY | Pixability | Adtech (YouTube/CTV video ads) | Boston, Massachusetts, United States | 3 |
-| 912 | 907 | `pluspower` | PLUS_POWER | Plus Power | Grid/storage / standalone battery storage developer | Houston, Texas, USA | 8 |
-| 913 | 908 | `pokemoncareers` | THE_POK_MON_COMPANY_INTERNATIONAL | The Pokémon Company International | Gaming / interactive entertainment / esports | Bellevue, Washington, USA | 34 |
-| 914 | 909 | `primemedicine` | PRIME_MEDICINE | Prime Medicine | Gene editing | Cambridge, MA, USA | 7 |
-| 915 | 910 | `pubmatic` | PUBMATIC | PubMatic | Adtech (SSP) | Redwood City, California, United States | 66 |
-| 916 | 911 | `qualia` | QUALIA | Qualia | Real estate tech (digital closing / title & escrow platform) | San Francisco, CA, USA | 17 |
-| 917 | 912 | `razorpaysoftwareprivatelimited` | RAZORPAY | Razorpay | Fintech — payments gateway / banking-as-a-service | Bengaluru, Karnataka, India | 28 |
-| 918 | 913 | `recordedfuture` | RECORDED_FUTURE | Recorded Future | Threat intelligence | Boston, Massachusetts, USA | 43 |
-| 919 | 914 | `renaissancelearning-nam` | RENAISSANCE_LEARNING | Renaissance Learning | Edtech / pre-K-12 assessment & learning | Bloomington, Minnesota, USA | 14 |
-| 920 | 915 | `riskified` | RISKIFIED | Riskified | Fraud prevention / e-commerce risk | New York, New York, USA | 31 |
-| 921 | 916 | `rithum` | RITHUM | Rithum | E-commerce enablement / commerce network SaaS | Bethesda, Maryland, USA | 25 |
-| 922 | 917 | `rocketlawyer` | ROCKET_LAWYER | Rocket Lawyer | Legaltech (online legal services) | San Francisco, California, USA | 6 |
-| 923 | 918 | `roku` | ROKU | Roku | Media/streaming (CTV platform) | San Jose, California, United States | 230 |
-| 924 | 919 | `sanabiotech` | SANA_BIOTECHNOLOGY | Sana Biotechnology | Cell & gene therapy | Seattle, WA, USA | 13 |
-| 925 | 920 | `sayari` | SAYARI | Sayari | Regtech (corporate risk intelligence / AML) | Washington, DC, USA | 24 |
-| 926 | 921 | `scoutai` | SCOUT_AI | Scout AI | Defense robotics / autonomous drones | San Francisco, California, USA | 23 |
-| 927 | 922 | `securityscorecard` | SECURITYSCORECARD | SecurityScorecard | Compliance / cyber risk ratings | New York, New York, USA | 62 |
-| 928 | 923 | `seekout` | SEEKOUT | SeekOut | Recruiting tech - talent sourcing & talent intelligence AI | Bellevue, Washington, USA | 4 |
-| 929 | 924 | `seoulrobotics` | SEOUL_ROBOTICS | Seoul Robotics | Robotics, industrial automation, warehouse/manufacturing automation | Seoul, South Korea | 9 |
-| 930 | 925 | `shifttechnology` | SHIFT_TECHNOLOGY | Shift Technology | Insurtech and insurance technology | Paris, Ile-de-France, France | 27 |
-| 931 | 926 | `shipbobinc` | SHIPBOB | ShipBob | Fulfillment / 3PL | Chicago, Illinois, USA | 43 |
-| 932 | 927 | `shipmonk` | SHIPMONK | ShipMonk | Fulfillment / 3PL | Fort Lauderdale, Florida, USA | 54 |
-| 933 | 928 | `skillsoft` | SKILLSOFT | Skillsoft | HR tech - corporate learning & talent development | Nashua, New Hampshire, USA | 17 |
-| 934 | 929 | `smartrent` | SMARTRENT | SmartRent | Proptech (smart home & access automation for rental communities) | Scottsdale, AZ, USA | 14 |
-| 935 | 930 | `snorkelai` | SNORKEL_AI | Snorkel AI | Data-centric AI / data development platform | Redwood City, California, USA | 45 |
-| 936 | 931 | `soldejaneiro` | SOL_DE_JANEIRO | Sol de Janeiro | DTC beauty brand | New York, New York, USA | 32 |
-| 937 | 932 | `sonyinteractiveentertainmentglobal` | PLAYSTATION_SONY_INTERACTIVE_ENTERTAINMENT | PlayStation (Sony Interactive Entertainment) | Gaming / interactive entertainment | San Mateo, California, USA | 203 |
-| 938 | 933 | `speechify` | SPEECHIFY | Speechify | Edtech / assistive learning (text-to-speech) | Miami, Florida, USA | 1695 |
-| 939 | 934 | `spin` | SPIN | Spin | Shared micromobility (e-scooters) | San Francisco, California, USA | 28 |
-| 940 | 935 | `splice` | SPLICE | Splice | Creator economy (music creation platform) | New York, New York, United States | 7 |
-| 941 | 936 | `spothopper` | SPOTHOPPER | SpotHopper | Restaurant tech | Milwaukee, Wisconsin, USA | 30 |
-| 942 | 937 | `stackadapt` | STACKADAPT | StackAdapt | Adtech (programmatic DSP) | Toronto, Ontario, Canada | 92 |
-| 943 | 938 | `starfaceworld` | STARFACE_WORLD | Starface World | DTC beauty/skincare brand | New York, New York, USA | 3 |
-| 944 | 939 | `stokespacetechnologies` | STOKE_SPACE | Stoke Space | Space launch (reusable rockets) | Kent, Washington, USA | 53 |
-| 945 | 940 | `strandtherapeutics` | STRAND_THERAPEUTICS | Strand Therapeutics | mRNA / synthetic biology | Boston, MA, USA | 5 |
-| 946 | 941 | `sumologic` | SUMO_LOGIC | Sumo Logic | Security analytics (SIEM) | Redwood City, California, USA | 25 |
-| 947 | 942 | `taketwo` | TAKE_TWO_INTERACTIVE | Take-Two Interactive | Gaming studios / interactive entertainment | New York, New York, USA | 31 |
-| 948 | 943 | `tebra` | TEBRA | Tebra | Digital health (practice & telehealth software) | Newport Beach, California, USA | 19 |
-| 949 | 944 | `tegnainc` | TEGNA | TEGNA | Media/streaming (broadcast TV) | Tysons, Virginia, United States | 332 |
-| 950 | 945 | `tenableinc` | TENABLE | Tenable | Vulnerability & exposure management | Columbia, Maryland, USA | 55 |
-| 951 | 946 | `terranorbitalcorporation` | TERRAN_ORBITAL | Terran Orbital | Satellites (small-sat manufacturing) | Boca Raton, Florida, USA | 27 |
-| 952 | 947 | `tesseratherapeutics` | TESSERA_THERAPEUTICS | Tessera Therapeutics | Gene editing / genomics | Somerville, MA, USA | 7 |
-| 953 | 948 | `thedutchie` | DUTCHIE | Dutchie | Retail tech (POS + e-commerce platform) | Bend, Oregon, USA | 10 |
-| 954 | 949 | `thenewyorktimes` | THE_NEW_YORK_TIMES | The New York Times | Media (news publishing) | New York, New York, United States | 157 |
-| 955 | 950 | `thetradedesk` | THE_TRADE_DESK | The Trade Desk | Adtech (DSP) | Ventura, California, United States | 199 |
-| 956 | 951 | `thirdwaveautomation` | THIRD_WAVE_AUTOMATION | Third Wave Automation | Robotics, industrial automation, warehouse/manufacturing automation | Union City, California, USA | 6 |
-| 957 | 952 | `toogoodtogo` | TOO_GOOD_TO_GO | Too Good To Go | Foodtech / food waste | Copenhagen, Denmark | 84 |
-| 958 | 953 | `toradex` | TORADEX | Toradex | Embedded computing / IoT modules (SoMs) | Horw, Lucerne, Switzerland | 13 |
-| 959 | 954 | `transmitsecurity` | TRANSMIT_SECURITY | Transmit Security | Identity / fraud & CIAM | Boston, Massachusetts, USA | 21 |
-| 960 | 955 | `trueanomalyinc` | TRUE_ANOMALY | True Anomaly | Space defense / space domain awareness | Denver, Colorado, USA | 184 |
-| 961 | 956 | `try-picnic` | PICNIC_DELIVERY | Picnic Delivery | Foodtech / food delivery | Los Angeles, California, USA | 45 |
-| 962 | 957 | `uberfreight` | UBER_FREIGHT | Uber Freight | Freight marketplace / brokerage | San Francisco, California, USA | 84 |
-| 963 | 958 | `unqork` | UNQORK | Unqork | Insurtech and insurance technology | New York, New York, USA | 7 |
-| 964 | 959 | `vardaspace` | VARDA_SPACE_INDUSTRIES | Varda Space Industries | Space (in-orbit manufacturing, reentry capsules) | El Segundo, California, USA | 89 |
-| 965 | 960 | `verramobility` | VERRA_MOBILITY | Verra Mobility | Smart transportation / mobility tech | Mesa, Arizona, USA | 43 |
-| 966 | 961 | `vianttechnology` | VIANT_TECHNOLOGY | Viant Technology | Adtech (omnichannel DSP) | Irvine, California, United States | 36 |
-| 967 | 962 | `viralnation` | VIRAL_NATION | Viral Nation | Creator economy (influencer marketing) | Mississauga, Ontario, Canada | 58 |
-| 968 | 963 | `voxmedia` | VOX_MEDIA | Vox Media | Media/streaming (digital publisher) | Washington, District of Columbia, United States | 15 |
-| 969 | 964 | `vts` | VTS | VTS | Proptech / commercial real estate (leasing & asset management platform) | New York, NY, USA | 16 |
-| 970 | 965 | `wildlifestudios` | WILDLIFE_STUDIOS | Wildlife Studios | Mobile gaming / interactive entertainment | São Paulo, São Paulo, Brazil | 16 |
-| 971 | 966 | `wizinc` | WIZ | Wiz | Cloud security (CNAPP) | New York, New York, USA | 157 |
-| 972 | 967 | `wurljobs` | WURL | Wurl | Media/streaming + adtech (CTV distribution) | Palo Alto, California, United States | 4 |
-| 974 | 969 | `zyngacareers` | ZYNGA | Zynga | Mobile gaming / interactive entertainment | San Mateo, California, USA | 49 |
+| Spec | Phase | Slug                                 | Enum                                           | Display name                                     | Sector                                                                      | HQ                                              | Roles |
+| ---- | ----- | ------------------------------------ | ---------------------------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------- | ----------------------------------------------- | ----- |
+| 804  | 799   | `accela`                             | ACCELA                                         | Accela                                           | Govtech (government permitting/licensing SaaS)                              | San Ramon, California, USA                      | 16    |
+| 805  | 800   | `aevexaerospace`                     | AEVEX_AEROSPACE                                | AEVEX Aerospace                                  | Defense aerospace (UAS, ISR, full-spectrum)                                 | Solana Beach, California, USA                   | 86    |
+| 806  | 801   | `akayshaenergy`                      | AKAYSHA_ENERGY                                 | Akaysha Energy                                   | Grid/storage / grid-scale battery storage                                   | Sydney, New South Wales, Australia              | 5     |
+| 807  | 802   | `andurilindustries`                  | ANDURIL_INDUSTRIES                             | Anduril Industries                               | Defense technology (autonomous systems, C2, counter-UAS)                    | Costa Mesa, California, USA                     | 2128  |
+| 808  | 803   | `armissecurity`                      | ARMIS                                          | Armis                                            | Asset/IoT security                                                          | San Francisco, California, USA                  | 45    |
+| 809  | 804   | `atbayjobs`                          | AT_BAY                                         | At-Bay                                           | Cyber insurance / security                                                  | San Francisco, California, USA                  | 27    |
+| 810  | 805   | `atomicmachines`                     | ATOMIC_MACHINES                                | Atomic Machines                                  | Robotics, industrial automation, warehouse/manufacturing automation         | Berkeley, California, USA                       | 37    |
+| 811  | 806   | `augury`                             | AUGURY                                         | Augury                                           | Industrial IoT / machine-health sensors                                     | New York, New York, USA                         | 21    |
+| 812  | 807   | `aura`                               | AURA                                           | Aura                                             | Consumer identity / fraud protection                                        | Boston, Massachusetts, USA                      | 7     |
+| 813  | 808   | `avantus`                            | AVANTUS                                        | Avantus                                          | Clean energy / utility-scale solar & storage                                | San Diego, California, USA                      | 16    |
+| 814  | 809   | `avride`                             | AVRIDE                                         | Avride                                           | Robotics, industrial automation, warehouse/manufacturing automation         | Austin, Texas, USA                              | 39    |
+| 815  | 810   | `axonius`                            | AXONIUS                                        | Axonius                                          | Cyber asset attack surface management                                       | New York, New York, USA                         | 34    |
+| 816  | 811   | `beamtherapeutics`                   | BEAM_THERAPEUTICS                              | Beam Therapeutics                                | Gene editing                                                                | Cambridge, MA, USA                              | 27    |
+| 817  | 812   | `blockchain`                         | BLOCKCHAIN_COM                                 | Blockchain.com                                   | Fintech — crypto wallet / exchange                                          | London, England, United Kingdom                 | 29    |
+| 818  | 813   | `botauto`                            | BOT_AUTO                                       | Bot Auto                                         | Autonomous trucking                                                         | Houston, Texas, USA                             | 21    |
+| 819  | 814   | `buildops`                           | BUILDOPS                                       | BuildOps                                         | Construction tech (commercial contractor management software)               | Santa Monica, CA, USA                           | 37    |
+| 820  | 815   | `c3iot`                              | C3_AI                                          | C3 AI                                            | Enterprise applied AI applications                                          | Redwood City, California, USA                   | 57    |
+| 821  | 816   | `cabify`                             | CABIFY                                         | Cabify                                           | Ride-hailing / mobility platform                                            | Madrid, Spain                                   | 56    |
+| 822  | 817   | `cargomatic`                         | CARGOMATIC                                     | Cargomatic                                       | Drayage / digital freight marketplace                                       | Long Beach, California, USA                     | 20    |
+| 823  | 818   | `censys`                             | CENSYS                                         | Censys                                           | Security data / applied AI platform                                         | Ann Arbor, Michigan, USA                        | 14    |
+| 824  | 819   | `charterup`                          | CHARTERUP                                      | CharterUP                                        | Group transportation / charter mobility platform                            | Austin, Texas, USA                              | 14    |
+| 825  | 820   | `checkbook`                          | CHECKBOOK                                      | Checkbook                                        | Fintech — digital payments / disbursements                                  | San Mateo, California, USA                      | 3     |
+| 826  | 821   | `codepath`                           | CODEPATH                                       | CodePath                                         | Edtech / tech career upskilling                                             | San Francisco, California, USA                  | 18    |
+| 827  | 822   | `cognitiv`                           | COGNITIV                                       | Cognitiv                                         | Adtech (AI/deep-learning ads)                                               | Seattle, Washington, United States              | 6     |
+| 828  | 823   | `collibra`                           | COLLIBRA                                       | Collibra                                         | Compliance / data governance                                                | New York, New York, USA                         | 38    |
+| 829  | 824   | `colossalbiosciences`                | COLOSSAL_BIOSCIENCES                           | Colossal Biosciences                             | Genomics / synthetic biology                                                | Dallas, TX, USA                                 | 7     |
+| 830  | 825   | `customerio`                         | CUSTOMER_IO                                    | Customer.io                                      | Martech (marketing automation/messaging)                                    | Portland, Oregon, United States                 | 18    |
+| 831  | 826   | `cypresscreekrenewables`             | CYPRESS_CREEK_RENEWABLES                       | Cypress Creek Renewables                         | Clean energy / utility-scale solar & storage                                | Santa Monica, California, USA                   | 28    |
+| 832  | 827   | `daybreakgames`                      | DAYBREAK_GAME_COMPANY                          | Daybreak Game Company                            | Gaming studios / interactive entertainment                                  | San Diego, California, USA                      | 5     |
+| 833  | 828   | `dbtlabsinc`                         | DBT_LABS                                       | dbt Labs                                         | Data transformation / analytics engineering platform                        | Philadelphia, Pennsylvania, USA                 | 36    |
+| 834  | 829   | `dealpath`                           | DEALPATH                                       | Dealpath                                         | Proptech / commercial real estate (deal management & investment platform)   | San Francisco, CA, USA                          | 14    |
+| 835  | 830   | `defenseunicorns`                    | DEFENSE_UNICORNS                               | Defense Unicorns                                 | Defense software (mission infrastructure/DevSecOps)                         | Colorado Springs, Colorado, USA                 | 49    |
+| 836  | 831   | `digitalextremes`                    | DIGITAL_EXTREMES                               | Digital Extremes                                 | Gaming studios / interactive entertainment                                  | London, Ontario, Canada                         | 8     |
+| 837  | 832   | `dorsia`                             | DORSIA                                         | Dorsia                                           | Restaurant tech                                                             | New York, New York, USA                         | 11    |
+| 838  | 833   | `easyship`                           | EASYSHIP                                       | Easyship                                         | E-commerce enablement (shipping/fulfillment SaaS)                           | New York, New York, USA                         | 24    |
+| 839  | 834   | `eleventhhourgames`                  | ELEVENTH_HOUR_GAMES                            | Eleventh Hour Games                              | Gaming studios / interactive entertainment                                  | Chicago, Illinois, USA                          | 10    |
+| 840  | 835   | `emarketer`                          | EMARKETER                                      | EMARKETER                                        | Martech/media (marketing research)                                          | New York, New York, United States               | 12    |
+| 841  | 836   | `emnify`                             | EMNIFY                                         | emnify                                           | IoT connectivity / cellular hardware-SIM platform                           | Berlin, Berlin, Germany                         | 9     |
+| 842  | 837   | `energysolutions`                    | ENERGY_SOLUTIONS                               | Energy Solutions                                 | Clean energy / efficiency & decarbonization services                        | Oakland, California, USA                        | 33    |
+| 843  | 838   | `esusu`                              | ESUSU                                          | Esusu                                            | Fintech — rent reporting / credit building / consumer payments              | New York, New York, USA                         | 9     |
+| 844  | 839   | `exiger`                             | EXIGER                                         | Exiger                                           | Regtech (supply-chain risk / AML / compliance)                              | New York, New York, USA                         | 48    |
+| 845  | 840   | `extrahopnetworks`                   | EXTRAHOP                                       | ExtraHop                                         | Network detection & response                                                | Seattle, Washington, USA                        | 19    |
+| 846  | 841   | `federato`                           | FEDERATO                                       | Federato                                         | Insurtech and insurance technology                                          | San Francisco, California, USA                  | 14    |
+| 847  | 842   | `feedzai`                            | FEEDZAI                                        | Feedzai                                          | Regtech (fraud / AML)                                                       | San Mateo, California, USA                      | 37    |
+| 848  | 843   | `fieldwire`                          | FIELDWIRE                                      | Fieldwire                                        | Construction tech (jobsite field management & coordination software)        | San Francisco, CA, USA                          | 22    |
+| 849  | 844   | `flashfood`                          | FLASHFOOD                                      | Flashfood                                        | Foodtech / food waste                                                       | Toronto, Ontario, Canada                        | 5     |
+| 850  | 845   | `fleetio`                            | FLEETIO                                        | Fleetio                                          | Fleet management software / logistics                                       | Birmingham, Alabama, USA                        | 10    |
+| 851  | 846   | `forbes`                             | FORBES                                         | Forbes                                           | Media (publishing)                                                          | Jersey City, New Jersey, United States          | 11    |
+| 852  | 847   | `forter`                             | FORTER                                         | Forter                                           | Fraud prevention / risk                                                     | New York, New York, USA                         | 41    |
+| 853  | 848   | `freeformfuturecorp`                 | FREEFORM                                       | Freeform                                         | Aerospace & defense metal additive manufacturing                            | Hawthorne, California, USA                      | 55    |
+| 854  | 849   | `galvanizeclimatesolutions`          | GALVANIZE_CLIMATE_SOLUTIONS                    | Galvanize Climate Solutions                      | Climate tech / climate investment firm                                      | San Francisco, California, USA                  | 3     |
+| 855  | 850   | `gatikaiinc`                         | GATIK_AI                                       | Gatik AI                                         | Robotics, industrial automation, warehouse/manufacturing automation         | Mountain View, California, USA                  | 61    |
+| 856  | 851   | `gleanwork`                          | GLEAN                                          | Glean                                            | Enterprise AI search & assistant (applied AI)                               | Palo Alto, California, USA                      | 155   |
+| 857  | 852   | `glossgenius`                        | GLOSSGENIUS                                    | GlossGenius                                      | Fintech — embedded payments / SMB platform                                  | New York, New York, USA                         | 32    |
+| 858  | 853   | `goodwaygroup`                       | GOODWAY_GROUP                                  | Goodway Group                                    | Adtech/martech (digital media agency)                                       | Westport, Connecticut, United States            | 5     |
+| 859  | 854   | `gotion`                             | GOTION                                         | Gotion                                           | Grid/storage / EV & energy-storage lithium batteries                        | Fremont, California, USA                        | 148   |
+| 860  | 855   | `govtech`                            | GOVTECH_SINGAPORE_GOVERNMENT_TECHNOLOGY_AGENCY | GovTech Singapore (Government Technology Agency) | Govtech (government digital services)                                       | Singapore, Singapore, Singapore                 | 265   |
+| 861  | 856   | `gsgcareers`                         | GHOST_STORY_GAMES                              | Ghost Story Games                                | Gaming studios / interactive entertainment                                  | Westwood, Massachusetts, USA                    | 3     |
+| 862  | 857   | `hanwharenewables`                   | HANWHA_RENEWABLES                              | Hanwha Renewables                                | Clean energy / utility-scale solar & storage                                | Houston, Texas, USA                             | 4     |
+| 863  | 858   | `heraldapi`                          | HERALD                                         | Herald                                           | Insurtech and insurance technology                                          | New York, New York, USA                         | 7     |
+| 864  | 859   | `homeward`                           | HOMEWARD                                       | Homeward                                         | Real estate tech (cash-offer home buying)                                   | Austin, TX, USA                                 | 4     |
+| 865  | 860   | `hyliion`                            | HYLIION                                        | Hyliion                                          | Electrified powertrain / clean transport                                    | Cedar Park, Texas, USA                          | 11    |
+| 866  | 861   | `hyperproof`                         | HYPERPROOF                                     | Hyperproof                                       | Compliance / GRC (security compliance)                                      | Seattle, Washington, USA                        | 7     |
+| 867  | 862   | `idme`                               | ID_ME                                          | ID.me                                            | Identity verification / fraud                                               | McLean, Virginia, USA                           | 53    |
+| 868  | 863   | `inchargeenergy`                     | INCHARGE_ENERGY                                | InCharge Energy                                  | Clean energy / fleet EV charging infrastructure                             | Santa Monica, California, USA                   | 20    |
+| 869  | 864   | `innovid`                            | INNOVID                                        | Innovid                                          | Adtech (ad serving/CTV)                                                     | New York, New York, United States               | 15    |
+| 870  | 865   | `instawork`                          | INSTAWORK                                      | Instawork                                        | Workforce management - hourly / flexible staffing marketplace               | San Francisco, California, USA                  | 64    |
+| 871  | 866   | `intrinsicrobotics`                  | INTRINSIC                                      | Intrinsic                                        | Robotics, industrial automation, warehouse/manufacturing automation         | Mountain View, California, USA                  | 30    |
+| 872  | 867   | `isccareers`                         | INTEGRATED_SPECIALTY_COVERAGES                 | Integrated Specialty Coverages                   | Insurtech and insurance technology                                          | Carlsbad, California, USA                       | 23    |
+| 873  | 868   | `itslogisticsllc`                    | ITS_LOGISTICS                                  | ITS Logistics                                    | 3PL / freight / warehousing                                                 | Sparks (Reno), Nevada, USA                      | 24    |
+| 874  | 869   | `k2spacecorporation`                 | K2_SPACE                                       | K2 Space                                         | Satellites (large GEO/MEO buses)                                            | Los Angeles, California, USA                    | 147   |
+| 875  | 870   | `kasa`                               | KASA                                           | Kasa                                             | Proptech / real estate (tech-enabled hospitality & flexible accommodations) | San Francisco, CA, USA                          | 25    |
+| 876  | 871   | `khaerospace`                        | KH_AEROSPACE                                   | KH Aerospace                                     | Aerospace & defense (UAS manufacturing/training)                            | Hayward, California, USA                        | 4     |
+| 877  | 872   | `knowbe4`                            | KNOWBE4                                        | KnowBe4                                          | Compliance / security awareness training                                    | Clearwater, Florida, USA                        | 98    |
+| 878  | 873   | `legion`                             | LEGION_TECHNOLOGIES                            | Legion Technologies                              | Workforce management software (scheduling / labor)                          | Palo Alto, California, USA                      | 16    |
+| 879  | 874   | `logicgate`                          | LOGICGATE                                      | LogicGate                                        | Compliance / GRC (risk management)                                          | Chicago, Illinois, USA                          | 12    |
+| 880  | 875   | `mark43`                             | MARK43                                         | Mark43                                           | Govtech / public safety (police RMS/CAD)                                    | New York, New York, USA                         | 38    |
+| 881  | 876   | `matic`                              | MATIC_INSURANCE                                | Matic Insurance                                  | Insurtech and insurance technology                                          | Columbus, Ohio, USA                             | 7     |
+| 882  | 877   | `maymobility`                        | MAY_MOBILITY                                   | May Mobility                                     | Autonomous vehicles / mobility                                              | Ann Arbor, Michigan, USA                        | 44    |
+| 883  | 878   | `mediasmart`                         | MEDIASMART                                     | mediasmart                                       | Adtech (omnichannel/CTV/DOOH DSP)                                           | Madrid, Spain                                   | 8     |
+| 884  | 879   | `metropolis`                         | METROPOLIS_TECHNOLOGIES                        | Metropolis Technologies                          | Proptech / real estate (AI computer-vision parking & mobility platform)     | Santa Monica, CA, USA                           | 129   |
+| 885  | 880   | `mobilityware`                       | MOBILITYWARE                                   | MobilityWare                                     | Mobile gaming / interactive entertainment                                   | Irvine, California, USA                         | 4     |
+| 886  | 881   | `modernize`                          | MODERNIZE_HOME_SERVICES                        | Modernize Home Services                          | Proptech / home services (home improvement lead generation)                 | Austin, TX, USA                                 | 7     |
+| 887  | 882   | `mrbeastyoutube`                     | MRBEAST_BEAST_INDUSTRIES                       | MrBeast (Beast Industries)                       | Creator economy (media/YouTube)                                             | Greenville, North Carolina, United States       | 80    |
+| 888  | 883   | `nabis`                              | NABIS                                          | Nabis                                            | Distribution / last-mile delivery                                           | San Francisco, California, USA                  | 37    |
+| 889  | 884   | `nationalpublicradioinc`             | NPR_NATIONAL_PUBLIC_RADIO                      | NPR (National Public Radio)                      | Media/streaming (public radio/podcasts)                                     | Washington, District of Columbia, United States | 10    |
+| 890  | 885   | `neonaerospace`                      | NEON_AEROSPACE                                 | Neon Aerospace                                   | Aerospace (autonomous flight / propulsion)                                  | San Francisco, California, USA                  | 16    |
+| 891  | 886   | `nerostechnologies`                  | NEROS_TECHNOLOGIES                             | Neros Technologies                               | Robotics, industrial automation, warehouse/manufacturing automation         | El Segundo, California, USA                     | 63    |
+| 892  | 887   | `newleafenergy`                      | NEW_LEAF_ENERGY                                | New Leaf Energy                                  | Clean energy / solar & storage development                                  | Lowell, Massachusetts, USA                      | 42    |
+| 893  | 888   | `nex`                                | NEX                                            | Nex                                              | Gaming studios / interactive entertainment (motion gaming)                  | San Jose, California, USA                       | 44    |
+| 894  | 889   | `nextinsurance66`                    | NEXT_INSURANCE                                 | Next Insurance                                   | Insurtech and insurance technology                                          | Palo Alto, California, USA                      | 31    |
+| 895  | 890   | `nimblerobotics`                     | NIMBLE_ROBOTICS                                | Nimble Robotics                                  | Robotics, industrial automation, warehouse/manufacturing automation         | San Francisco, California, USA                  | 19    |
+| 896  | 891   | `nmi`                                | NMI                                            | NMI                                              | Fintech — payments gateway / embedded payments                              | Schaumburg, Illinois, USA                       | 16    |
+| 897  | 892   | `northspyre`                         | NORTHSPYRE                                     | Northspyre                                       | Proptech / real estate (development project & cost management software)     | New York, NY, USA                               | 8     |
+| 898  | 893   | `nothing`                            | NOTHING                                        | Nothing                                          | Consumer electronics (smartphones, earbuds)                                 | London, England, United Kingdom                 | 17    |
+| 899  | 894   | `onetrust`                           | ONETRUST                                       | OneTrust                                         | Data privacy, security & governance                                         | Atlanta, Georgia, USA                           | 91    |
+| 900  | 895   | `openspace`                          | OPENSPACE                                      | OpenSpace                                        | Construction tech (AI jobsite capture & reality mapping)                    | San Francisco, CA, USA                          | 10    |
+| 901  | 896   | `opentable`                          | OPENTABLE                                      | OpenTable                                        | Restaurant tech                                                             | San Francisco, California, USA                  | 41    |
+| 902  | 897   | `operationscareers`                  | VEO                                            | Veo                                              | Shared micromobility (bikes/scooters)                                       | Santa Monica, California, USA                   | 49    |
+| 903  | 898   | `orcasecurity`                       | ORCA_SECURITY                                  | Orca Security                                    | Cloud security (CNAPP)                                                      | Portland, Oregon, USA                           | 4     |
+| 904  | 899   | `origisenergy`                       | ORIGIS_ENERGY                                  | Origis Energy                                    | Clean energy / utility-scale solar & storage                                | Miami, Florida, USA                             | 17    |
+| 905  | 900   | `osano`                              | OSANO                                          | Osano                                            | Compliance / data privacy                                                   | Austin, Texas, USA                              | 5     |
+| 906  | 901   | `pacvue`                             | PACVUE                                         | Pacvue                                           | E-commerce enablement / retail media SaaS                                   | Seattle, Washington, USA                        | 13    |
+| 907  | 902   | `palmettocleantech`                  | PALMETTO_CLEAN_TECHNOLOGY                      | Palmetto Clean Technology                        | Clean energy / residential solar platform                                   | Charleston, South Carolina, USA                 | 31    |
+| 908  | 903   | `pathward`                           | PATHWARD                                       | Pathward                                         | Fintech — banking-as-a-service / sponsor bank                               | Sioux Falls, South Dakota, USA                  | 34    |
+| 909  | 904   | `paynearmeinc`                       | PAYNEARME                                      | PayNearMe                                        | Fintech — bill pay / payments platform                                      | Santa Clara, California, USA                    | 11    |
+| 910  | 905   | `payoneer`                           | PAYONEER                                       | Payoneer                                         | Fintech — cross-border payments                                             | New York, New York, USA                         | 133   |
+| 911  | 906   | `pixability`                         | PIXABILITY                                     | Pixability                                       | Adtech (YouTube/CTV video ads)                                              | Boston, Massachusetts, United States            | 3     |
+| 912  | 907   | `pluspower`                          | PLUS_POWER                                     | Plus Power                                       | Grid/storage / standalone battery storage developer                         | Houston, Texas, USA                             | 8     |
+| 913  | 908   | `pokemoncareers`                     | THE_POK_MON_COMPANY_INTERNATIONAL              | The Pokémon Company International                | Gaming / interactive entertainment / esports                                | Bellevue, Washington, USA                       | 34    |
+| 914  | 909   | `primemedicine`                      | PRIME_MEDICINE                                 | Prime Medicine                                   | Gene editing                                                                | Cambridge, MA, USA                              | 7     |
+| 915  | 910   | `pubmatic`                           | PUBMATIC                                       | PubMatic                                         | Adtech (SSP)                                                                | Redwood City, California, United States         | 66    |
+| 916  | 911   | `qualia`                             | QUALIA                                         | Qualia                                           | Real estate tech (digital closing / title & escrow platform)                | San Francisco, CA, USA                          | 17    |
+| 917  | 912   | `razorpaysoftwareprivatelimited`     | RAZORPAY                                       | Razorpay                                         | Fintech — payments gateway / banking-as-a-service                           | Bengaluru, Karnataka, India                     | 28    |
+| 918  | 913   | `recordedfuture`                     | RECORDED_FUTURE                                | Recorded Future                                  | Threat intelligence                                                         | Boston, Massachusetts, USA                      | 43    |
+| 919  | 914   | `renaissancelearning-nam`            | RENAISSANCE_LEARNING                           | Renaissance Learning                             | Edtech / pre-K-12 assessment & learning                                     | Bloomington, Minnesota, USA                     | 14    |
+| 920  | 915   | `riskified`                          | RISKIFIED                                      | Riskified                                        | Fraud prevention / e-commerce risk                                          | New York, New York, USA                         | 31    |
+| 921  | 916   | `rithum`                             | RITHUM                                         | Rithum                                           | E-commerce enablement / commerce network SaaS                               | Bethesda, Maryland, USA                         | 25    |
+| 922  | 917   | `rocketlawyer`                       | ROCKET_LAWYER                                  | Rocket Lawyer                                    | Legaltech (online legal services)                                           | San Francisco, California, USA                  | 6     |
+| 923  | 918   | `roku`                               | ROKU                                           | Roku                                             | Media/streaming (CTV platform)                                              | San Jose, California, United States             | 230   |
+| 924  | 919   | `sanabiotech`                        | SANA_BIOTECHNOLOGY                             | Sana Biotechnology                               | Cell & gene therapy                                                         | Seattle, WA, USA                                | 13    |
+| 925  | 920   | `sayari`                             | SAYARI                                         | Sayari                                           | Regtech (corporate risk intelligence / AML)                                 | Washington, DC, USA                             | 24    |
+| 926  | 921   | `scoutai`                            | SCOUT_AI                                       | Scout AI                                         | Defense robotics / autonomous drones                                        | San Francisco, California, USA                  | 23    |
+| 927  | 922   | `securityscorecard`                  | SECURITYSCORECARD                              | SecurityScorecard                                | Compliance / cyber risk ratings                                             | New York, New York, USA                         | 62    |
+| 928  | 923   | `seekout`                            | SEEKOUT                                        | SeekOut                                          | Recruiting tech - talent sourcing & talent intelligence AI                  | Bellevue, Washington, USA                       | 4     |
+| 929  | 924   | `seoulrobotics`                      | SEOUL_ROBOTICS                                 | Seoul Robotics                                   | Robotics, industrial automation, warehouse/manufacturing automation         | Seoul, South Korea                              | 9     |
+| 930  | 925   | `shifttechnology`                    | SHIFT_TECHNOLOGY                               | Shift Technology                                 | Insurtech and insurance technology                                          | Paris, Ile-de-France, France                    | 27    |
+| 931  | 926   | `shipbobinc`                         | SHIPBOB                                        | ShipBob                                          | Fulfillment / 3PL                                                           | Chicago, Illinois, USA                          | 43    |
+| 932  | 927   | `shipmonk`                           | SHIPMONK                                       | ShipMonk                                         | Fulfillment / 3PL                                                           | Fort Lauderdale, Florida, USA                   | 54    |
+| 933  | 928   | `skillsoft`                          | SKILLSOFT                                      | Skillsoft                                        | HR tech - corporate learning & talent development                           | Nashua, New Hampshire, USA                      | 17    |
+| 934  | 929   | `smartrent`                          | SMARTRENT                                      | SmartRent                                        | Proptech (smart home & access automation for rental communities)            | Scottsdale, AZ, USA                             | 14    |
+| 935  | 930   | `snorkelai`                          | SNORKEL_AI                                     | Snorkel AI                                       | Data-centric AI / data development platform                                 | Redwood City, California, USA                   | 45    |
+| 936  | 931   | `soldejaneiro`                       | SOL_DE_JANEIRO                                 | Sol de Janeiro                                   | DTC beauty brand                                                            | New York, New York, USA                         | 32    |
+| 937  | 932   | `sonyinteractiveentertainmentglobal` | PLAYSTATION_SONY_INTERACTIVE_ENTERTAINMENT     | PlayStation (Sony Interactive Entertainment)     | Gaming / interactive entertainment                                          | San Mateo, California, USA                      | 203   |
+| 938  | 933   | `speechify`                          | SPEECHIFY                                      | Speechify                                        | Edtech / assistive learning (text-to-speech)                                | Miami, Florida, USA                             | 1695  |
+| 939  | 934   | `spin`                               | SPIN                                           | Spin                                             | Shared micromobility (e-scooters)                                           | San Francisco, California, USA                  | 28    |
+| 940  | 935   | `splice`                             | SPLICE                                         | Splice                                           | Creator economy (music creation platform)                                   | New York, New York, United States               | 7     |
+| 941  | 936   | `spothopper`                         | SPOTHOPPER                                     | SpotHopper                                       | Restaurant tech                                                             | Milwaukee, Wisconsin, USA                       | 30    |
+| 942  | 937   | `stackadapt`                         | STACKADAPT                                     | StackAdapt                                       | Adtech (programmatic DSP)                                                   | Toronto, Ontario, Canada                        | 92    |
+| 943  | 938   | `starfaceworld`                      | STARFACE_WORLD                                 | Starface World                                   | DTC beauty/skincare brand                                                   | New York, New York, USA                         | 3     |
+| 944  | 939   | `stokespacetechnologies`             | STOKE_SPACE                                    | Stoke Space                                      | Space launch (reusable rockets)                                             | Kent, Washington, USA                           | 53    |
+| 945  | 940   | `strandtherapeutics`                 | STRAND_THERAPEUTICS                            | Strand Therapeutics                              | mRNA / synthetic biology                                                    | Boston, MA, USA                                 | 5     |
+| 946  | 941   | `sumologic`                          | SUMO_LOGIC                                     | Sumo Logic                                       | Security analytics (SIEM)                                                   | Redwood City, California, USA                   | 25    |
+| 947  | 942   | `taketwo`                            | TAKE_TWO_INTERACTIVE                           | Take-Two Interactive                             | Gaming studios / interactive entertainment                                  | New York, New York, USA                         | 31    |
+| 948  | 943   | `tebra`                              | TEBRA                                          | Tebra                                            | Digital health (practice & telehealth software)                             | Newport Beach, California, USA                  | 19    |
+| 949  | 944   | `tegnainc`                           | TEGNA                                          | TEGNA                                            | Media/streaming (broadcast TV)                                              | Tysons, Virginia, United States                 | 332   |
+| 950  | 945   | `tenableinc`                         | TENABLE                                        | Tenable                                          | Vulnerability & exposure management                                         | Columbia, Maryland, USA                         | 55    |
+| 951  | 946   | `terranorbitalcorporation`           | TERRAN_ORBITAL                                 | Terran Orbital                                   | Satellites (small-sat manufacturing)                                        | Boca Raton, Florida, USA                        | 27    |
+| 952  | 947   | `tesseratherapeutics`                | TESSERA_THERAPEUTICS                           | Tessera Therapeutics                             | Gene editing / genomics                                                     | Somerville, MA, USA                             | 7     |
+| 953  | 948   | `thedutchie`                         | DUTCHIE                                        | Dutchie                                          | Retail tech (POS + e-commerce platform)                                     | Bend, Oregon, USA                               | 10    |
+| 954  | 949   | `thenewyorktimes`                    | THE_NEW_YORK_TIMES                             | The New York Times                               | Media (news publishing)                                                     | New York, New York, United States               | 157   |
+| 955  | 950   | `thetradedesk`                       | THE_TRADE_DESK                                 | The Trade Desk                                   | Adtech (DSP)                                                                | Ventura, California, United States              | 199   |
+| 956  | 951   | `thirdwaveautomation`                | THIRD_WAVE_AUTOMATION                          | Third Wave Automation                            | Robotics, industrial automation, warehouse/manufacturing automation         | Union City, California, USA                     | 6     |
+| 957  | 952   | `toogoodtogo`                        | TOO_GOOD_TO_GO                                 | Too Good To Go                                   | Foodtech / food waste                                                       | Copenhagen, Denmark                             | 84    |
+| 958  | 953   | `toradex`                            | TORADEX                                        | Toradex                                          | Embedded computing / IoT modules (SoMs)                                     | Horw, Lucerne, Switzerland                      | 13    |
+| 959  | 954   | `transmitsecurity`                   | TRANSMIT_SECURITY                              | Transmit Security                                | Identity / fraud & CIAM                                                     | Boston, Massachusetts, USA                      | 21    |
+| 960  | 955   | `trueanomalyinc`                     | TRUE_ANOMALY                                   | True Anomaly                                     | Space defense / space domain awareness                                      | Denver, Colorado, USA                           | 184   |
+| 961  | 956   | `try-picnic`                         | PICNIC_DELIVERY                                | Picnic Delivery                                  | Foodtech / food delivery                                                    | Los Angeles, California, USA                    | 45    |
+| 962  | 957   | `uberfreight`                        | UBER_FREIGHT                                   | Uber Freight                                     | Freight marketplace / brokerage                                             | San Francisco, California, USA                  | 84    |
+| 963  | 958   | `unqork`                             | UNQORK                                         | Unqork                                           | Insurtech and insurance technology                                          | New York, New York, USA                         | 7     |
+| 964  | 959   | `vardaspace`                         | VARDA_SPACE_INDUSTRIES                         | Varda Space Industries                           | Space (in-orbit manufacturing, reentry capsules)                            | El Segundo, California, USA                     | 89    |
+| 965  | 960   | `verramobility`                      | VERRA_MOBILITY                                 | Verra Mobility                                   | Smart transportation / mobility tech                                        | Mesa, Arizona, USA                              | 43    |
+| 966  | 961   | `vianttechnology`                    | VIANT_TECHNOLOGY                               | Viant Technology                                 | Adtech (omnichannel DSP)                                                    | Irvine, California, United States               | 36    |
+| 967  | 962   | `viralnation`                        | VIRAL_NATION                                   | Viral Nation                                     | Creator economy (influencer marketing)                                      | Mississauga, Ontario, Canada                    | 58    |
+| 968  | 963   | `voxmedia`                           | VOX_MEDIA                                      | Vox Media                                        | Media/streaming (digital publisher)                                         | Washington, District of Columbia, United States | 15    |
+| 969  | 964   | `vts`                                | VTS                                            | VTS                                              | Proptech / commercial real estate (leasing & asset management platform)     | New York, NY, USA                               | 16    |
+| 970  | 965   | `wildlifestudios`                    | WILDLIFE_STUDIOS                               | Wildlife Studios                                 | Mobile gaming / interactive entertainment                                   | São Paulo, São Paulo, Brazil                    | 16    |
+| 971  | 966   | `wizinc`                             | WIZ                                            | Wiz                                              | Cloud security (CNAPP)                                                      | New York, New York, USA                         | 157   |
+| 972  | 967   | `wurljobs`                           | WURL                                           | Wurl                                             | Media/streaming + adtech (CTV distribution)                                 | Palo Alto, California, United States            | 4     |
+| 974  | 969   | `zyngacareers`                       | ZYNGA                                          | Zynga                                            | Mobile gaming / interactive entertainment                                   | San Mateo, California, USA                      | 49    |
 
 ---
 
@@ -687,24 +722,24 @@ access, banking-as-a-service, merchant-of-record commerce, subscription billing,
 probe history shows still surface fresh employer boards, in contrast to the mined-out generic
 AI/dev-infra slice (now mostly on Ashby/Lever).
 
-| Spec | Phase | Slug | Enum | Display name | Sector | HQ | Roles |
-| ---- | ----- | ---- | ---- | ------------ | ------ | -- | ----- |
-| 788 | 783 | `aircompany` | AIR_COMPANY | AIR COMPANY | Climate Tech / Carbon Conversion & Synthetic Fuels | Brooklyn, New York, United States | 4 |
-| 789 | 784 | `arborenergy` | ARBOR_ENERGY | Arbor Energy | Climate Tech / Carbon-Negative Power (BECCS) | El Segundo, California, USA | 19 |
-| 790 | 785 | `aurorainnovation` | AURORA_INNOVATION | Aurora Innovation | Autonomous Vehicles / Self-Driving Trucking | Pittsburgh, Pennsylvania, USA | 147 |
-| 791 | 786 | `earnin` | EARNIN | EarnIn | Fintech / Earned-Wage Access | Mountain View, California, United States | 44 |
-| 792 | 787 | `faradayfuture` | FARADAY_FUTURE | Faraday Future | Automotive / Electric Vehicles | El Segundo, California, United States | 62 |
-| 793 | 788 | `fastspring` | FASTSPRING | FastSpring | Fintech / Merchant-of-Record Commerce & Subscription Billing | Santa Barbara, California, United States | 5 |
-| 794 | 789 | `gravity` | GRAVITY_R_D | Gravity R&D | AdTech / Recommendation & Personalization Software | Budapest, Hungary | 4 |
-| 795 | 790 | `runwise` | RUNWISE | Runwise | Climate Tech / Smart Building Energy Management | New York, New York, USA | 7 |
-| 796 | 791 | `sesai` | SES_AI | SES AI | Battery Technology / EV Energy Storage (Li-Metal) | Woburn, Massachusetts, USA | 43 |
-| 797 | 792 | `solarisbank` | SOLARIS | Solaris | Fintech / Banking-as-a-Service (Embedded Finance) | Berlin, Germany | 16 |
-| 798 | 793 | `stackav` | STACK_AV | Stack AV | Autonomous Vehicles / Self-Driving Trucking | Pittsburgh, Pennsylvania, USA | 22 |
-| 799 | 794 | `tastytrade` | TASTYTRADE | tastytrade | Fintech / Online Brokerage (Options & Futures Trading) | Chicago, Illinois, USA | 7 |
-| 800 | 795 | `torcrobotics` | TORC_ROBOTICS | Torc Robotics | Autonomous Vehicles / Self-Driving Trucking | Blacksburg, Virginia, USA | 58 |
-| 801 | 796 | `ursamajor` | URSA_MAJOR | Ursa Major | Aerospace & Defense / Rocket Propulsion | Berthoud, Colorado, USA | 43 |
-| 802 | 797 | `via` | VIA | Via | TransitTech / Mobility Software (SaaS + Operations) | New York City, New York, USA | 165 |
-| 803 | 798 | `zuora` | ZUORA | Zuora | Enterprise SaaS / Subscription Billing & Quote-to-Cash | Redwood City, California, USA | 34 |
+| Spec | Phase | Slug               | Enum              | Display name      | Sector                                                       | HQ                                       | Roles |
+| ---- | ----- | ------------------ | ----------------- | ----------------- | ------------------------------------------------------------ | ---------------------------------------- | ----- |
+| 788  | 783   | `aircompany`       | AIR_COMPANY       | AIR COMPANY       | Climate Tech / Carbon Conversion & Synthetic Fuels           | Brooklyn, New York, United States        | 4     |
+| 789  | 784   | `arborenergy`      | ARBOR_ENERGY      | Arbor Energy      | Climate Tech / Carbon-Negative Power (BECCS)                 | El Segundo, California, USA              | 19    |
+| 790  | 785   | `aurorainnovation` | AURORA_INNOVATION | Aurora Innovation | Autonomous Vehicles / Self-Driving Trucking                  | Pittsburgh, Pennsylvania, USA            | 147   |
+| 791  | 786   | `earnin`           | EARNIN            | EarnIn            | Fintech / Earned-Wage Access                                 | Mountain View, California, United States | 44    |
+| 792  | 787   | `faradayfuture`    | FARADAY_FUTURE    | Faraday Future    | Automotive / Electric Vehicles                               | El Segundo, California, United States    | 62    |
+| 793  | 788   | `fastspring`       | FASTSPRING        | FastSpring        | Fintech / Merchant-of-Record Commerce & Subscription Billing | Santa Barbara, California, United States | 5     |
+| 794  | 789   | `gravity`          | GRAVITY_R_D       | Gravity R&D       | AdTech / Recommendation & Personalization Software           | Budapest, Hungary                        | 4     |
+| 795  | 790   | `runwise`          | RUNWISE           | Runwise           | Climate Tech / Smart Building Energy Management              | New York, New York, USA                  | 7     |
+| 796  | 791   | `sesai`            | SES_AI            | SES AI            | Battery Technology / EV Energy Storage (Li-Metal)            | Woburn, Massachusetts, USA               | 43    |
+| 797  | 792   | `solarisbank`      | SOLARIS           | Solaris           | Fintech / Banking-as-a-Service (Embedded Finance)            | Berlin, Germany                          | 16    |
+| 798  | 793   | `stackav`          | STACK_AV          | Stack AV          | Autonomous Vehicles / Self-Driving Trucking                  | Pittsburgh, Pennsylvania, USA            | 22    |
+| 799  | 794   | `tastytrade`       | TASTYTRADE        | tastytrade        | Fintech / Online Brokerage (Options & Futures Trading)       | Chicago, Illinois, USA                   | 7     |
+| 800  | 795   | `torcrobotics`     | TORC_ROBOTICS     | Torc Robotics     | Autonomous Vehicles / Self-Driving Trucking                  | Blacksburg, Virginia, USA                | 58    |
+| 801  | 796   | `ursamajor`        | URSA_MAJOR        | Ursa Major        | Aerospace & Defense / Rocket Propulsion                      | Berthoud, Colorado, USA                  | 43    |
+| 802  | 797   | `via`              | VIA               | Via               | TransitTech / Mobility Software (SaaS + Operations)          | New York City, New York, USA             | 165   |
+| 803  | 798   | `zuora`            | ZUORA             | Zuora             | Enterprise SaaS / Subscription Billing & Quote-to-Cash       | Redwood City, California, USA            | 34    |
 
 **Baseline at run start:** Local `develop` was 7 commits behind `origin/develop`; fast-forwarded
 to `d2a95cc8` (NestJS 11 + Apollo Server 5 upgrade) before any work — the prior CI run was
@@ -826,6 +861,7 @@ Promotes the parsing into a shared `@ever-jobs/common` helper and adopts it in
 breezyhr + paylocity, plus a new generic aggregator-bucket plugin.
 
 **Common (`packages/common/src/utils/jsonld.ts`, new):**
+
 - `parseJobPostingLd(html)` — finds every `<script type="application/ld+json">`
   block, parses defensively (malformed skipped), unwraps single / array /
   `@graph` / `ItemList`(`ListItem.item`) shapes, accepts `@type` as a string or
@@ -875,6 +911,7 @@ front-end itself consumes. Repointed the plugin there and applied the full ATS
 checklist (`docs_fetch1/ats-plugin-feature-checklist-SPEC.md`).
 
 **Plugin rework (`packages/plugins/source-ats-manatal`):**
+
 - `manatal.constants.ts` — replaced the dead `api.manatal.com` endpoint with
   `MANATAL_API_BASE` (`https://www.careers-page.com/api/v1.0`) + `MANATAL_SITE_BASE`
   and builders `manatalListUrl(slug, page?)`, `manatalCompanyUrl(slug)`,
@@ -910,6 +947,7 @@ page. Reworked the plugin to that source and applied the same comprehensive
 field extraction as the other ATS plugins.
 
 **Plugin rework (`packages/plugins/source-ats-paylocity`):**
+
 - `paylocity.constants.ts` — replaced the feed base with `PAYLOCITY_BASE`,
   `paylocityBoardUrl(guid)` (`/recruiting/jobs/All/{GUID}`) and
   `paylocityDetailUrl(guid, jobId)` (`/recruiting/jobs/Details/{JobId}/{GUID}`);
@@ -945,6 +983,7 @@ level, or work mode) were collapsing to a single tier. Promoted the
 every plugin that exposes multiple bands reports the true overall envelope.
 
 **Helper added (`packages/common/src/utils/helpers.ts`):**
+
 - `CompensationRange` interface + `aggregateCompensation(ranges)` — folds many
   bounded ranges into `min(floors)…max(ceilings)`. The first bounded range sets
   the basis currency+interval; only ranges sharing that basis contribute, so a
@@ -952,6 +991,7 @@ every plugin that exposes multiple bands reports the true overall envelope.
   range carries a bounded amount.
 
 **Plugins refactored onto the helper:**
+
 - ashby — tiered path now folds every tier of the chosen base/salary component
   (was `tiers[0]`); flat path folds every component sharing the chosen salary's
   `compensationType` (equity/bonus rows stay out). New overall-range behavior.
@@ -976,6 +1016,7 @@ wire data first, then `extractSalary(description)` fallback) into three shared
 this cycle.
 
 **Helpers added (`packages/common/src/utils/helpers.ts`):**
+
 - `compensationFromSalary(result)` — maps an `ExtractSalaryResult` envelope to a
   `CompensationDto` (null when no bounded amount; interval via `getCompensationInterval`).
 - `salaryToCompensation(text, options?)` — `extractSalary` + `compensationFromSalary`;
@@ -1212,20 +1253,21 @@ stay for other tenants). No change to `@ever-jobs/common` or `@ever-jobs/models`
 fresh 246-job / 15-board harvest gap-checked against `makedeeply`. (1)
 **Compensation** was null on 100% of jobs, broken two ways: `enrichJobFromDetail`
 never copied `payRangeDetails` from the detail payload, and `extractCompensation`
-+ the `RipplingPayRangeDetail` type read the wrong field names
-(`min_value`/`max_value`/`interval` vs the live `rangeStart`/`rangeEnd`/
-`frequency`). The rewrite reads structured `payRangeDetails` first, collapses
-multiple bands into a min–max envelope, and preserves per-band detail in
-`salarySource` (semicolon-joined, e.g. `Oakland, CA 130,000–200,000; Sandy, UT
+
+- the `RipplingPayRangeDetail` type read the wrong field names
+  (`min_value`/`max_value`/`interval` vs the live `rangeStart`/`rangeEnd`/
+  `frequency`). The rewrite reads structured `payRangeDetails` first, collapses
+  multiple bands into a min–max envelope, and preserves per-band detail in
+  `salarySource` (semicolon-joined, e.g. `Oakland, CA 130,000–200,000; Sandy, UT
 115,000–155,000`) when the bands carry distinct ranges; when no structured range
-exists it falls back to the shared `extractSalary` over the description body
-(pay-transparency text). (2) **workFromHomeType** is now derived from the
-per-location `workplaceType` (HYBRID/REMOTE/both), else from parsed labels. (3)
-**Multi-location** now routes all location labels through the shared
-`parseLocationList` instead of using `locations[0]` only. Also copies
-`locations`/`workLocations` from the detail payload. No change to
-`@ever-jobs/common` or `@ever-jobs/models` (reuses `extractSalary`,
-`parseLocationList`, `getCompensationInterval`).
+  exists it falls back to the shared `extractSalary` over the description body
+  (pay-transparency text). (2) **workFromHomeType** is now derived from the
+  per-location `workplaceType` (HYBRID/REMOTE/both), else from parsed labels. (3)
+  **Multi-location** now routes all location labels through the shared
+  `parseLocationList` instead of using `locations[0]` only. Also copies
+  `locations`/`workLocations` from the detail payload. No change to
+  `@ever-jobs/common` or `@ever-jobs/models` (reuses `extractSalary`,
+  `parseLocationList`, `getCompensationInterval`).
 
 **Verification:** `npx jest source-ats-rippling` green (26 tests, 10 new),
 `npm run build` and `npm run lint:docs` pass. Spec triad
@@ -1292,7 +1334,7 @@ entity-encoded HTML (`&lt;div&gt;&lt;p&gt;…`), so the shared `htmlToPlainText`
 markup in 100% of descriptions. The plugin now detects entity-encoding per job
 (no literal block tags but present entity-encoded block tags) and decodes the
 entity layer first, leaving real HTML untouched. (2) Location now flows through
-the shared `parseLocationList` — `location.name` is split on `;`/` or `/newlines
+the shared `parseLocationList` — `location.name` is split on `;`/`or`/newlines
 into discrete labels, setting `location`, `isRemote`, and `workFromHomeType`;
 `location.name` stays the single source (offices used only as fallback). (3)
 Company-defined `metadata[]` is mapped by `value_type`: `currency_range` →
@@ -1463,36 +1505,38 @@ in-repo; every board below is documented purely on its own public merits.
 **Discovery (live, 2026-06-21, `verified=false` — unauthenticated public Job-Board API):** 245
 candidate slugs across defense/space, industrial & ag robotics, AI-silicon, healthtech, biotech and
 agbio verticals were probed against `https://boards-api.greenhouse.io/v1/boards/<slug>` (board name)
-+ `…/<slug>/jobs` (listings) at concurrency 16, across two batches (a hyphenated-guess batch of 166
-and a hyphen-stripped + fresh batch of 79). The gate (`MIN_JOBS = 3` live roles **and** a non-empty
-board `name`) admitted **15 survivors**. Brand metadata for each survivor was produced by a **15-way
-parallel enrichment workflow** (one verification agent per board), each agent forbidden from
-referencing competitors and instructed to keep disambiguating context out of the canonical
-`displayName` (which single-sources the `className` / `enumKey` / `serviceName`): board `Etched`
-→ `displayName = "Etched"` (transformer-inference ASIC startup); board `Cortica` → `"Cortica"`
-(pediatric neuro-developmental care, distinct from any homonym); board `Carbon Robotics` →
-`"Carbon Robotics"` (enumKey `CARBON_ROBOTICS`, distinct from the existing `source-company-carbon`
-plugin); board `Path Robotics` → `"Path Robotics"` (distinct from the existing `source-company-pathai`).
+
+- `…/<slug>/jobs` (listings) at concurrency 16, across two batches (a hyphenated-guess batch of 166
+  and a hyphen-stripped + fresh batch of 79). The gate (`MIN_JOBS = 3` live roles **and** a non-empty
+  board `name`) admitted **15 survivors**. Brand metadata for each survivor was produced by a **15-way
+  parallel enrichment workflow** (one verification agent per board), each agent forbidden from
+  referencing competitors and instructed to keep disambiguating context out of the canonical
+  `displayName` (which single-sources the `className` / `enumKey` / `serviceName`): board `Etched`
+  → `displayName = "Etched"` (transformer-inference ASIC startup); board `Cortica` → `"Cortica"`
+  (pediatric neuro-developmental care, distinct from any homonym); board `Carbon Robotics` →
+  `"Carbon Robotics"` (enumKey `CARBON_ROBOTICS`, distinct from the existing `source-company-carbon`
+  plugin); board `Path Robotics` → `"Path Robotics"` (distinct from the existing `source-company-pathai`).
 
 **Shipped plugins (Spec / enum Phase / slug / display name / sector / HQ / live roles at probe):**
 
-| Spec | Phase | Slug | Display name | Sector | HQ | Roles |
-| ---- | ----- | ---- | ------------ | ------ | -- | ----- |
-| 772 | 768 | `carbonrobotics` | Carbon Robotics | Robotics / Agriculture (AgTech) | Seattle, Washington, USA | 23 |
-| 773 | 769 | `chaosindustries` | CHAOS Industries | Defense Tech / Aerospace | El Segundo, California, United States | 155 |
-| 774 | 770 | `coherehealth` | Cohere Health | Health Tech / Clinical Intelligence | Boston, Massachusetts, USA | 62 |
-| 775 | 771 | `cortica` | Cortica | Healthcare / Pediatric Neurodevelopmental Care | San Diego, California, United States | 66 |
-| 776 | 772 | `dynotherapeutics` | Dyno Therapeutics | Biotech / Gene Therapy | Watertown, Massachusetts, United States | 3 |
-| 777 | 773 | `eikontherapeutics` | Eikon Therapeutics | Biotechnology / Drug Discovery | Millbrae, California, USA | 21 |
-| 778 | 774 | `etchedai` | Etched | Semiconductors / AI Hardware | Cupertino, California, United States | 25 |
-| 779 | 775 | `formic` | Formic | Robotics / Manufacturing Automation | Chicago, Illinois, USA | 31 |
-| 780 | 776 | `garnerhealth` | Garner Health | Health Tech / Employee Benefits | New York, New York, USA | 49 |
-| 781 | 777 | `helsing` | Helsing | Defense Tech / AI | Munich, Bavaria, Germany | 134 |
-| 782 | 778 | `pathrobotics` | Path Robotics | Robotics / Industrial Automation | Columbus, Ohio, USA | 42 |
-| 783 | 779 | `pivotbio` | Pivot Bio | AgTech / Agricultural Biotechnology | Berkeley, California, USA | 18 |
-| 784 | 780 | `sambanovasystems` | SambaNova Systems | AI Hardware / Semiconductors | San Jose, California, United States | 19 |
-| 785 | 781 | `slingshotaerospace` | Slingshot Aerospace | Space Tech / Defense / AI | El Segundo, California, USA | 35 |
-| 786 | 782 | `soundagriculture` | Sound Agriculture | AgTech / Agricultural Biotechnology | Emeryville, California, USA | 4 |
+| Spec | Phase | Slug                 | Display name        | Sector                                         | HQ                                      | Roles |
+| ---- | ----- | -------------------- | ------------------- | ---------------------------------------------- | --------------------------------------- | ----- |
+| 772  | 768   | `carbonrobotics`     | Carbon Robotics     | Robotics / Agriculture (AgTech)                | Seattle, Washington, USA                | 23    |
+| 773  | 769   | `chaosindustries`    | CHAOS Industries    | Defense Tech / Aerospace                       | El Segundo, California, United States   | 155   |
+| 774  | 770   | `coherehealth`       | Cohere Health       | Health Tech / Clinical Intelligence            | Boston, Massachusetts, USA              | 62    |
+| 775  | 771   | `cortica`            | Cortica             | Healthcare / Pediatric Neurodevelopmental Care | San Diego, California, United States    | 66    |
+| 776  | 772   | `dynotherapeutics`   | Dyno Therapeutics   | Biotech / Gene Therapy                         | Watertown, Massachusetts, United States | 3     |
+| 777  | 773   | `eikontherapeutics`  | Eikon Therapeutics  | Biotechnology / Drug Discovery                 | Millbrae, California, USA               | 21    |
+| 778  | 774   | `etchedai`           | Etched              | Semiconductors / AI Hardware                   | Cupertino, California, United States    | 25    |
+| 779  | 775   | `formic`             | Formic              | Robotics / Manufacturing Automation            | Chicago, Illinois, USA                  | 31    |
+| 780  | 776   | `garnerhealth`       | Garner Health       | Health Tech / Employee Benefits                | New York, New York, USA                 | 49    |
+| 781  | 777   | `helsing`            | Helsing             | Defense Tech / AI                              | Munich, Bavaria, Germany                | 134   |
+| 782  | 778   | `pathrobotics`       | Path Robotics       | Robotics / Industrial Automation               | Columbus, Ohio, USA                     | 42    |
+| 783  | 779   | `pivotbio`           | Pivot Bio           | AgTech / Agricultural Biotechnology            | Berkeley, California, USA               | 18    |
+| 784  | 780   | `sambanovasystems`   | SambaNova Systems   | AI Hardware / Semiconductors                   | San Jose, California, United States     | 19    |
+| 785  | 781   | `slingshotaerospace` | Slingshot Aerospace | Space Tech / Defense / AI                      | El Segundo, California, USA             | 35    |
+| 786  | 782   | `soundagriculture`   | Sound Agriculture   | AgTech / Agricultural Biotechnology            | Emeryville, California, USA             | 4     |
+
 **Per-plugin shape (uniform Greenhouse company-direct template):** each `*.service.ts` fetches
 `https://api.greenhouse.io/v1/boards/<slug>/jobs?content=true`, maps each Greenhouse job to a
 `JobPostDto` with `id` prefixed `<slug>-`, `site === Site.<ENUMKEY>`, canonical URL
@@ -1566,24 +1610,24 @@ the run-#436 `source-company-ophelos` / Ophelos plugin); board `Suki` → `"Suki
 
 **Shipped plugins (Spec / enum Phase / slug / display name / sector / HQ / live roles at probe):**
 
-| Spec | Phase | Slug | Display name | Sector | HQ | Roles |
-| ---- | ----- | ---- | ------------ | ------ | -- | ----- |
-| 756 | 752 | `absci` | Absci | BioTech / AI Drug Discovery | Vancouver, Washington, United States | 3 |
-| 757 | 753 | `astranis` | Astranis | Space / Satellite Communications | San Francisco, California, USA | 89 |
-| 758 | 754 | `astspacemobile` | AST SpaceMobile | Space / Satellite Telecommunications | Midland, Texas, United States | 223 |
-| 759 | 755 | `blacksky` | BlackSky Technology | SpaceTech / Geospatial Intelligence | Herndon, Virginia, USA | 31 |
-| 760 | 756 | `elationhealth` | Elation Health | HealthTech / Clinical EHR | San Francisco, California, United States | 16 |
-| 761 | 757 | `flatironhealth` | Flatiron Health | HealthTech / Oncology Real-World Data | New York, New York, USA | 22 |
-| 762 | 758 | `formbio` | Form Bio | BioTech / Computational Life Sciences | Dallas, Texas, United States | 3 |
-| 763 | 759 | `hawkeye360` | HawkEye 360 | SpaceTech / RF Geospatial Analytics | Herndon, Virginia, USA | 13 |
-| 764 | 760 | `hubblenetwork` | Hubble Network | Space / IoT Connectivity | Seattle, Washington, United States | 8 |
-| 765 | 761 | `komodohealth` | Komodo Health | HealthTech / Healthcare Data & Analytics | San Francisco, California, United States | 36 |
-| 766 | 762 | `ophelia` | Ophelia Health | HealthTech / Telehealth (Addiction Treatment) | New York, New York, United States | 19 |
-| 767 | 763 | `peakenergy` | Peak Energy | CleanTech / Energy Storage | Broomfield, Colorado, USA | 30 |
-| 768 | 764 | `qventus` | Qventus | HealthTech / AI Operations | Mountain View, California, United States | 19 |
-| 769 | 765 | `silananotechnologies` | Sila Nanotechnologies | Battery Materials / CleanTech | Alameda, California, USA | 27 |
-| 770 | 766 | `suki` | Suki AI | HealthTech / Clinical AI | Redwood City, California, United States | 8 |
-| 771 | 767 | `twistbioscience` | Twist Bioscience | Synthetic Biology / Genomics | South San Francisco, California, USA | 27 |
+| Spec | Phase | Slug                   | Display name          | Sector                                        | HQ                                       | Roles |
+| ---- | ----- | ---------------------- | --------------------- | --------------------------------------------- | ---------------------------------------- | ----- |
+| 756  | 752   | `absci`                | Absci                 | BioTech / AI Drug Discovery                   | Vancouver, Washington, United States     | 3     |
+| 757  | 753   | `astranis`             | Astranis              | Space / Satellite Communications              | San Francisco, California, USA           | 89    |
+| 758  | 754   | `astspacemobile`       | AST SpaceMobile       | Space / Satellite Telecommunications          | Midland, Texas, United States            | 223   |
+| 759  | 755   | `blacksky`             | BlackSky Technology   | SpaceTech / Geospatial Intelligence           | Herndon, Virginia, USA                   | 31    |
+| 760  | 756   | `elationhealth`        | Elation Health        | HealthTech / Clinical EHR                     | San Francisco, California, United States | 16    |
+| 761  | 757   | `flatironhealth`       | Flatiron Health       | HealthTech / Oncology Real-World Data         | New York, New York, USA                  | 22    |
+| 762  | 758   | `formbio`              | Form Bio              | BioTech / Computational Life Sciences         | Dallas, Texas, United States             | 3     |
+| 763  | 759   | `hawkeye360`           | HawkEye 360           | SpaceTech / RF Geospatial Analytics           | Herndon, Virginia, USA                   | 13    |
+| 764  | 760   | `hubblenetwork`        | Hubble Network        | Space / IoT Connectivity                      | Seattle, Washington, United States       | 8     |
+| 765  | 761   | `komodohealth`         | Komodo Health         | HealthTech / Healthcare Data & Analytics      | San Francisco, California, United States | 36    |
+| 766  | 762   | `ophelia`              | Ophelia Health        | HealthTech / Telehealth (Addiction Treatment) | New York, New York, United States        | 19    |
+| 767  | 763   | `peakenergy`           | Peak Energy           | CleanTech / Energy Storage                    | Broomfield, Colorado, USA                | 30    |
+| 768  | 764   | `qventus`              | Qventus               | HealthTech / AI Operations                    | Mountain View, California, United States | 19    |
+| 769  | 765   | `silananotechnologies` | Sila Nanotechnologies | Battery Materials / CleanTech                 | Alameda, California, USA                 | 27    |
+| 770  | 766   | `suki`                 | Suki AI               | HealthTech / Clinical AI                      | Redwood City, California, United States  | 8     |
+| 771  | 767   | `twistbioscience`      | Twist Bioscience      | Synthetic Biology / Genomics                  | South San Francisco, California, USA     | 27    |
 
 **Per-plugin shape (uniform Greenhouse company-direct template):** each `*.service.ts` fetches
 `https://api.greenhouse.io/v1/boards/<slug>/jobs?content=true`, maps each Greenhouse job to a
@@ -1620,7 +1664,6 @@ malformed body, empty board) degrades to an empty result — `scrape()` never th
 
 ---
 
-
 ## 2026-06-19 — Scheduled run #436 (**fourteen new Source Company Plugins** — Specs 742–755)
 
 **Scope:** Expand the corpus with **14 new Greenhouse-backed company-direct source plugins**,
@@ -1649,22 +1692,22 @@ distinct from the pre-existing `source-company-figureai` / Figure AI robotics pl
 
 **Shipped plugins (Spec / enum Phase / slug / board name / live roles at probe):**
 
-| Spec | Phase | Slug | Display name | Sector | HQ | Roles |
-| ---- | ----- | ---- | ------------ | ------ | -- | ----- |
-| 742 | 738 | `butterflynetwork` | Butterfly Network | Medical Devices / Digital Health | Burlington, MA, USA | 19 |
-| 743 | 739 | `figure` | Figure Lending | Fintech / Lending | San Francisco, CA, USA | 22 |
-| 744 | 740 | `goguardian` | GoGuardian | EdTech / K-12 | El Segundo, CA, USA | 10 |
-| 745 | 741 | `highradius` | HighRadius | Fintech / Office-of-the-CFO SaaS | Houston, TX, USA | 72 |
-| 746 | 742 | `khanacademy` | Khan Academy | EdTech / Nonprofit | Mountain View, CA, USA | 22 |
-| 747 | 743 | `locusrobotics` | Locus Robotics | Robotics / Warehouse Automation | Wilmington, MA, USA | 18 |
-| 748 | 744 | `motional` | Motional | Autonomous Vehicles / Robotics | Boston, MA, USA | 103 |
-| 749 | 745 | `nauto` | Nauto | Automotive / Fleet Safety AI | Palo Alto, CA, USA | 4 |
-| 750 | 746 | `netradyne` | Netradyne | Fleet Safety / Video Telematics | San Diego, CA, USA | 70 |
-| 751 | 747 | `newsela` | Newsela | EdTech / K-12 Content | New York, NY, USA | 16 |
-| 752 | 748 | `offerup` | OfferUp | Marketplace / E-commerce | Bellevue, WA, USA | 9 |
-| 753 | 749 | `ophelos` | Ophelos | Fintech / Debt Resolution | London, UK | 4 |
-| 754 | 750 | `oportun` | Oportun | Fintech / Consumer Lending | San Carlos, CA, USA | 32 |
-| 755 | 751 | `udacity` | Udacity | EdTech / Online Learning | Mountain View, CA, USA | 14 |
+| Spec | Phase | Slug               | Display name      | Sector                           | HQ                     | Roles |
+| ---- | ----- | ------------------ | ----------------- | -------------------------------- | ---------------------- | ----- |
+| 742  | 738   | `butterflynetwork` | Butterfly Network | Medical Devices / Digital Health | Burlington, MA, USA    | 19    |
+| 743  | 739   | `figure`           | Figure Lending    | Fintech / Lending                | San Francisco, CA, USA | 22    |
+| 744  | 740   | `goguardian`       | GoGuardian        | EdTech / K-12                    | El Segundo, CA, USA    | 10    |
+| 745  | 741   | `highradius`       | HighRadius        | Fintech / Office-of-the-CFO SaaS | Houston, TX, USA       | 72    |
+| 746  | 742   | `khanacademy`      | Khan Academy      | EdTech / Nonprofit               | Mountain View, CA, USA | 22    |
+| 747  | 743   | `locusrobotics`    | Locus Robotics    | Robotics / Warehouse Automation  | Wilmington, MA, USA    | 18    |
+| 748  | 744   | `motional`         | Motional          | Autonomous Vehicles / Robotics   | Boston, MA, USA        | 103   |
+| 749  | 745   | `nauto`            | Nauto             | Automotive / Fleet Safety AI     | Palo Alto, CA, USA     | 4     |
+| 750  | 746   | `netradyne`        | Netradyne         | Fleet Safety / Video Telematics  | San Diego, CA, USA     | 70    |
+| 751  | 747   | `newsela`          | Newsela           | EdTech / K-12 Content            | New York, NY, USA      | 16    |
+| 752  | 748   | `offerup`          | OfferUp           | Marketplace / E-commerce         | Bellevue, WA, USA      | 9     |
+| 753  | 749   | `ophelos`          | Ophelos           | Fintech / Debt Resolution        | London, UK             | 4     |
+| 754  | 750   | `oportun`          | Oportun           | Fintech / Consumer Lending       | San Carlos, CA, USA    | 32    |
+| 755  | 751   | `udacity`          | Udacity           | EdTech / Online Learning         | Mountain View, CA, USA | 14    |
 
 **Per-plugin shape (uniform Greenhouse company-direct template):** each `*.service.ts` fetches
 `https://api.greenhouse.io/v1/boards/<slug>/jobs?content=true`, maps each Greenhouse job to a
@@ -1721,13 +1764,14 @@ that intel is referenced in-repo; the Beisen public surface is documented purely
 
 **Public surface (researched 2026-06-18, no auth — `verified=false`):** a deterministic two-step,
 fully-anonymous flow:
+
 1. **GET** `https://{slug}.zhiye.com/portal/registerSystemInfo` → HTML inlining
    `var BSGlobal = { Key, Name, PortalId, Code }`. The adapter extracts `PortalId` (required) and
    the branded `Name` via a **string/escape-aware balanced-brace JSON scan** (handles nested config),
    plus the numeric tenant id from `stcms.beisen.com/image/{id}` CDN URLs (provenance only).
 2. **POST** `https://{slug}.zhiye.com/api/Jobad/GetJobAdPageList` with `{ PageIndex, PageSize:50,
-   KeyWords:"", SpecialType:0, PortalId, DisplayFields:[…] }` → `{ Code, Count, Data:[ { JobAdId,
-   JobAdName, LocNames[], Duty, Require, Salary, Category, ChangeDate, PostDate } ] }`, paged via
+KeyWords:"", SpecialType:0, PortalId, DisplayFields:[…] }` → `{ Code, Count, Data:[ { JobAdId,
+JobAdName, LocNames[], Duty, Require, Salary, Category, ChangeDate, PostDate } ] }`, paged via
    `PageIndex` until a page is empty / short / yields no new roles, or the cumulative count reaches
    the envelope `Count` (hard `MAX_PAGES=100` ceiling).
 
@@ -1791,6 +1835,7 @@ This run ships **9 new large-company Greenhouse-direct source plugins** (Specs 7
 
 **Candidate discovery (live probe):** two deduped candidate batches were probed concurrently (16-way)
 against the public Greenhouse Job-Board API:
+
 - Batch A — 121 candidates (consumer fintech / food / energy / health / e-commerce / comp-bio /
   robotics verticals; 13 already-existing slugs removed): **5 survived** — Agility Robotics (44),
   Arc Institute (26), Mesh Payments / board "Mesh" (22), Xaira Therapeutics (16), Zola (3).
@@ -1815,12 +1860,12 @@ networking (QphoX), and AI developer tools (Zencoder).
 **Changes:**
 
 - Added **9 new source-company plugin packages** under `packages/plugins/source-company-{agilityrobotics,
-  arcinstitute,mesh,xairatherapeutics,zola,cerebrassystems,parloa,qphox,zencoder}/` (90 files:
-  package.json, tsconfig.json, src/index.ts, src/*.module.ts, src/*.service.ts,
-  __tests__/*.service.spec.ts, __tests__/fixtures/*-jobs.json each).
+arcinstitute,mesh,xairatherapeutics,zola,cerebrassystems,parloa,qphox,zencoder}/` (90 files:
+  package.json, tsconfig.json, src/index.ts, src/_.module.ts, src/_.service.ts,
+  **tests**/_.service.spec.ts, **tests**/fixtures/_-jobs.json each).
 - Added **9 new specs** under `.specify/specs/723-731-source-company-*` (spec.md, plan.md, tasks.md each).
 - Wired all 9 into the four shared registration files (`site.enum.ts` Phases 728–736, `packages/plugins/
-  index.ts`, `tsconfig.base.json`, `jest.config.js`) via the idempotent `wire-company-source.ts`.
+index.ts`, `tsconfig.base.json`, `jest.config.js`) via the idempotent `wire-company-source.ts`.
 - `docs/index.md` — appended rows 723–731 to the spec index (§7); doc-lint re-verified clean.
 - `docs/log.md` — this entry.
 
@@ -1864,12 +1909,12 @@ boards; the AI/dev-tools round confirmed the prior finding that pure AI/dev-infr
 **Changes:**
 
 - Added **10 new source-company plugin packages** under `packages/plugins/source-company-{betterhelp,
-  bybit,falconx,okx,prove,securitize,solidpower,coreweave,nebius,udio}/` (100 files: package.json,
-  tsconfig.json, src/index.ts, src/*.module.ts, src/*.service.ts, __tests__/*.service.spec.ts,
-  __tests__/fixtures/*-jobs.json each).
+bybit,falconx,okx,prove,securitize,solidpower,coreweave,nebius,udio}/` (100 files: package.json,
+  tsconfig.json, src/index.ts, src/_.module.ts, src/_.service.ts, **tests**/_.service.spec.ts,
+  **tests**/fixtures/_-jobs.json each).
 - Added **10 new specs** under `.specify/specs/708-717-source-company-*` (spec.md, plan.md, tasks.md each).
 - Wired all 10 into the four shared registration files (`site.enum.ts` Phases 717–726, `packages/plugins/
-  index.ts`, `tsconfig.base.json`, `jest.config.js`) via the idempotent `wire-company-source.ts`.
+index.ts`, `tsconfig.base.json`, `jest.config.js`) via the idempotent `wire-company-source.ts`.
 - `docs/index.md` — appended rows 708–717 to the spec index (§7); doc-lint re-verified clean.
 - `docs/log.md` — this entry.
 
@@ -1943,7 +1988,7 @@ capability gaps** in existing scrapers; all four were closed this session as Spe
 **Verification:**
 
 - `npx jest packages/plugins/source-solidjobs packages/plugins/liveness-http
-  packages/plugins/source-ats-ashby packages/plugins/source-ats-workday --silent` →
+packages/plugins/source-ats-ashby packages/plugins/source-ats-workday --silent` →
   **8 suites / 130 tests passed** (ERROR log lines in the output are the expected
   error-path fixtures: SolidJobs 500, Workday 500, Ashby 404/timeout).
 - `npx jest packages/models/ packages/plugin/ --silent` → **9 suites / 132 tests passed**
@@ -2015,7 +2060,7 @@ pair).
   original default budgets** (250 ms / 2 500 ms / 500 ms), including the four previously
   failing tests and the new golden/banding/grouping/transitive-merge unit tests.
 - `npx jest packages/plugins/merge-default packages/plugins/store-memory
-  packages/plugins/liveness-http --silent` → **4 suites / 133 tests passed** (the remaining
+packages/plugins/liveness-http --silent` → **4 suites / 133 tests passed** (the remaining
   suites of the new CI job, verified green before wiring the job).
 
 ---
@@ -2059,7 +2104,7 @@ foot-gun).
 **Changes:**
 
 - **7 new source-company plugin packages** under `packages/plugins/source-company-{hometap,lightmatter,
-  psiquantum,quilt,riverlane,selffinancial,xendit}/` — each with `package.json`, `tsconfig.json`,
+psiquantum,quilt,riverlane,selffinancial,xendit}/` — each with `package.json`, `tsconfig.json`,
   `src/index.ts`, `src/<slug>.module.ts`, `src/<slug>.service.ts`, `__tests__/<slug>.service.spec.ts`,
   and a 3-listing fixture. All mirror the canonical variant-2 + D-08 company-direct template (wire
   `company_name` pass-through; defensive D-10/D-11 title/department trim; entity-decode-then-tag-strip
@@ -2124,7 +2169,7 @@ foot-gun).
 **Changes:**
 
 - **5 new source-company plugin packages** under `packages/plugins/source-company-{amperity,keepersecurity,
-  mabl,proton,stackblitz}/` — each with `package.json`, `tsconfig.json`, `src/index.ts`,
+mabl,proton,stackblitz}/` — each with `package.json`, `tsconfig.json`, `src/index.ts`,
   `src/<slug>.module.ts`, `src/<slug>.service.ts`, `__tests__/<slug>.service.spec.ts`, and a 3-listing
   fixture. All mirror the canonical variant-2 + D-08 company-direct template (wire `company_name`
   pass-through; defensive D-10/D-11 title/department trim; entity-decode-then-tag-strip descriptions;
@@ -2193,7 +2238,7 @@ foot-gun).
 **Changes:**
 
 - **13 new source-company plugin packages** under `packages/plugins/source-company-{bitpanda,bvnk,chargepoint,
-  cleo,inceptive,momentous,newlimit,ozow,profluent,saatva,sumup,valencelabs,verve}/` — each with
+cleo,inceptive,momentous,newlimit,ozow,profluent,saatva,sumup,valencelabs,verve}/` — each with
   `package.json`, `tsconfig.json`, `src/index.ts`, `src/<slug>.module.ts`, `src/<slug>.service.ts`,
   `__tests__/<slug>.service.spec.ts`, and a 3-listing fixture. All mirror the canonical variant-2 + D-08
   company-direct template (wire `company_name` pass-through; defensive D-10/D-11 title/department trim;
@@ -2264,8 +2309,8 @@ foot-gun).
 **Changes:**
 
 - **20 new source-company plugin packages** under `packages/plugins/source-company-{onrunning,charliehealth,
-  twochairs,nexamp,firsthand,atoms,formhealth,ilia,factorialenergy,sidecarhealth,ownwell,grovecollaborative,
-  patch,nanit,nutrafol,waymark,seed,uniteus,banyaninfrastructure,camusenergy}/` — each with `package.json`,
+twochairs,nexamp,firsthand,atoms,formhealth,ilia,factorialenergy,sidecarhealth,ownwell,grovecollaborative,
+patch,nanit,nutrafol,waymark,seed,uniteus,banyaninfrastructure,camusenergy}/` — each with `package.json`,
   `tsconfig.json`, `src/index.ts`, `src/<slug>.module.ts`, `src/<slug>.service.ts`,
   `__tests__/<slug>.service.spec.ts`, and a 3-listing fixture (200 files total). All mirror the canonical
   variant-2 + D-08 company-direct template (wire `company_name` pass-through; defensive D-10/D-11
@@ -2313,7 +2358,7 @@ each plugin's 3-listing fixture so the unit suites assert against real-world wir
 
 **Collision guard:** the enrichment agent returned displayName **"Ethos"** for the `ethoslife` board, which
 would have derived `enumKey ETHOS` / `className Ethos` — a hard collision with the **existing
-`source-company-ethos` plugin** (Spec 623, a *different* company: a London expert-network / AI knowledge
+`source-company-ethos` plugin** (Spec 623, a _different_ company: a London expert-network / AI knowledge
 marketplace). The descriptor was overridden to displayName **"Ethos Life"** (→ `ETHOS_LIFE` / `EthosLife` /
 `EthosLifeService`), keeping both distinct companies cleanly addressable.
 
@@ -2322,7 +2367,7 @@ marketplace). The descriptor was overridden to displayName **"Ethos Life"** (→
 (one agent per company, each grounded STRICTLY on the live board name + sample job titles + role locations,
 schema-validated output). Locations were the key disambiguator for short brand names (e.g. São Paulo +
 fraud-prevention/AML titles ⇒ C6 Bank = Brazilian digital bank; Bogotá/Mexico City bill-pay AE titles ⇒
-Clara = LatAm corporate-spend fintech, *not* the similarly named US/EDI brands). Spec/plan/tasks + package
+Clara = LatAm corporate-spend fintech, _not_ the similarly named US/EDI brands). Spec/plan/tasks + package
 files were materialised by the deterministic `scaffold-company-source.ts` generator and registered by the
 idempotent, replacement-function-based `wire-company-source.ts` helper (avoids the jest-config `$'`
 foot-gun).
@@ -2330,8 +2375,8 @@ foot-gun).
 **Changes:**
 
 - **16 new source-company plugin packages** under `packages/plugins/source-company-{c6bank,carrotfertility,
-  clara,ebanx,ethoslife,flohealth,harrys,insurify,ledgy,missionlane,mochihealth,pieinsurance,quintoandar,
-  quip,rondoenergy,siliconranch}/` — each with `package.json`, `tsconfig.json`, `src/index.ts`,
+clara,ebanx,ethoslife,flohealth,harrys,insurify,ledgy,missionlane,mochihealth,pieinsurance,quintoandar,
+quip,rondoenergy,siliconranch}/` — each with `package.json`, `tsconfig.json`, `src/index.ts`,
   `src/<slug>.module.ts`, `src/<slug>.service.ts`, `__tests__/<slug>.service.spec.ts`, and a 3-listing
   fixture (160 files total). All mirror the canonical variant-2 + D-08 company-direct template
   (wire `company_name` pass-through; defensive D-10/D-11 title/department trim; entity-decode-then-tag-strip
@@ -2372,6 +2417,7 @@ at-home health & biotech screening, advanced manufacturing & aerospace, proptech
 against the 501 existing company slugs — and probed concurrently via `scripts/probe-company-source.ts`
 (16-way) against the public Greenhouse Job-Board API. **14 survived** the ≥ 3-roles + brand-match gate.
 Three survivors were **dropped at quality review** per the brand-match discipline:
+
 - **`regent`** — board "Regent" mixed unrelated industries (Warsaw NetScaler engineer + Beverly Hills
   general contractor); reads as an aggregator/holding board, not a single brand. Non-matching HQ vs the
   REGENT seaglider company.
@@ -2392,17 +2438,18 @@ Fay (5). Real probed listings (id / title / location / updated_at) were used to 
 3 highlights) for all candidates was produced by an **11-agent parallel `Workflow`** (one agent per
 company, each grounded STRICTLY on the live board name + sample job titles + role locations,
 schema-validated output) — the locations were the key disambiguator for generic names (e.g. Nairobi/Ghana
-+ AML compliance roles ⇒ Ezra = African B2B digital-lending fintech, not the similarly-named MRI company;
-"Astronaut Operations" + Long Beach ⇒ Vast = commercial space-station developer). Agent output was
-HTML-entity-decoded (`&amp;` → `&` etc.) before assembly. Spec/plan/tasks + package files were
-materialised by the deterministic `scaffold-company-source.ts` generator and registered by the
-idempotent, replacement-function-based `wire-company-source.ts` helper (avoids the jest-config `$'`
-foot-gun).
+
+- AML compliance roles ⇒ Ezra = African B2B digital-lending fintech, not the similarly-named MRI company;
+  "Astronaut Operations" + Long Beach ⇒ Vast = commercial space-station developer). Agent output was
+  HTML-entity-decoded (`&amp;` → `&` etc.) before assembly. Spec/plan/tasks + package files were
+  materialised by the deterministic `scaffold-company-source.ts` generator and registered by the
+  idempotent, replacement-function-based `wire-company-source.ts` helper (avoids the jest-config `$'`
+  foot-gun).
 
 **Changes:**
 
 - **10 new source-company plugin packages** under `packages/plugins/source-company-{axiom,bitso,ezra,fay,
-  fingerprint,incode,jumio,perpay,prenuvo,vast}/` — each with `package.json`, `tsconfig.json`,
+fingerprint,incode,jumio,perpay,prenuvo,vast}/` — each with `package.json`, `tsconfig.json`,
   `src/index.ts`, `src/<slug>.module.ts`, `src/<slug>.service.ts`,
   `__tests__/<slug>.service.spec.ts`, and a 3-listing fixture. All mirror the canonical variant-2 + D-08
   company-direct template (wire `company_name` pass-through; defensive D-10/D-11 title/department trim;
@@ -2421,11 +2468,11 @@ foot-gun).
 
 **Notes / decisions:**
 
-- *Brand-name disambiguation:* "Axiom" board (AE/BD roles, London/Sydney/Chicago) resolved to Axiom the
+- _Brand-name disambiguation:_ "Axiom" board (AE/BD roles, London/Sydney/Chicago) resolved to Axiom the
   alternative-legal-services provider (NYC); "Fay" (NYC/SF, CFO/BizOps) → Fay Nutrition (insurance-covered
   dietitian marketplace); "Ezra" (Nairobi/Ghana, AMLRO) → African B2B digital-lending fintech (NOT the
   NYC MRI-screening company). All recorded in the index rows.
-- *Phase numbering:* enum Phases 646–655 map 1:1 to Specs 637–646.
+- _Phase numbering:_ enum Phases 646–655 map 1:1 to Specs 637–646.
 
 ---
 
@@ -2478,15 +2525,13 @@ replacement-function-based `wire-company-source.ts` helper (avoids the jest-conf
 
 **Notes / decisions:**
 
-- *Brand-name disambiguation:* "Ethos", "Ghost", "Loop", "Wing", "Clutch" are generic board names; each
+- _Brand-name disambiguation:_ "Ethos", "Ghost", "Loop", "Wing", "Clutch" are generic board names; each
   enrichment agent inferred the specific company from the live board name + job titles. Recorded results:
   Ethos = AI expert network (London); Ghost = B2B surplus-inventory marketplace (LA); Loop = logistics-AI
   freight-audit platform (SF); Wing = Alphabet drone-delivery (Palo Alto); Clutch = Canadian online
   used-car retailer (Toronto). `truebill` slug hosts the canonical **Rocket Money** board (displayName
   pinned to "Rocket Money", `enumKey ROCKET_MONEY`).
-- *Phase numbering:* enum Phases 629–645 map 1:1 to Specs 620–636.
-
-
+- _Phase numbering:_ enum Phases 629–645 map 1:1 to Specs 620–636.
 
 **Scope:** Direct continuation of the run-#424 company-direct Greenhouse direction. At run start the
 corpus held **470 `source-company-*` plugins / 753 source plugin packages total / 600 spec dirs / 753
@@ -2521,8 +2566,8 @@ against real-world wire shapes.
 **Changes:**
 
 - **14 new source-company plugin packages** under `packages/plugins/source-company-{aloyoga,kodiak,
-  altruist,onenergy,divergent,typeface,range,upgrade,bombas,overstory,stackline,pagaya,letsgetchecked,
-  happymoney}/` — each with `package.json`, `tsconfig.json`, `src/index.ts`, `src/<slug>.module.ts`,
+altruist,onenergy,divergent,typeface,range,upgrade,bombas,overstory,stackline,pagaya,letsgetchecked,
+happymoney}/` — each with `package.json`, `tsconfig.json`, `src/index.ts`, `src/<slug>.module.ts`,
   `src/<slug>.service.ts`, `__tests__/<slug>.service.spec.ts`, and a 3-listing fixture. All mirror the
   canonical variant-2 + D-08 company-direct template (wire `company_name` pass-through; defensive
   D-10/D-11 title/department trim; entity-decode-then-tag-strip descriptions; graceful degradation to
@@ -2585,7 +2630,7 @@ gate. Real probed listings (id / title / location / updated_at) were used to bui
 **Changes:**
 
 - **12 new source-company plugin packages** under `packages/plugins/source-company-{cargurus,
-  ruggable,quince,everlane,zennioptical,goodr,thirdlove,cuyana,kikoff,drivewealth,karat,suitsupply}/`
+ruggable,quince,everlane,zennioptical,goodr,thirdlove,cuyana,kikoff,drivewealth,karat,suitsupply}/`
   — each with `package.json`, `tsconfig.json`, `src/index.ts`, `src/<slug>.module.ts`,
   `src/<slug>.service.ts`, `__tests__/<slug>.service.spec.ts`, and a 3-listing fixture. All mirror the
   canonical variant-2 + D-08 company-direct template (wire `company_name` pass-through; defensive
@@ -3531,7 +3576,7 @@ parallel-edit races.
   - **399 `source-ats-greythr`** — GreytHR (greythr.com, India SMB HR by Greytip).
     Public anonymous `POST https://{tenant}.greythr.com/hire/api/career/published_jobs/`
     with empty `{}` body → `{ data: [{ id(UUID), title, slug, description(HTML),
-    job_type, is_remote, designation, apply_url }] }`. **Verified live 2026-06-03**
+job_type, is_remote, designation, apply_url }] }`. **Verified live 2026-06-03**
     (tenants `greytip`, `fint`).
   - **400 `source-ats-recruitly`** — Recruitly (recruitly.io, UK recruitment CRM).
     Public anonymous job feed `GET https://api.recruitly.io/api/job?apiKey={apiKey}`
@@ -3715,7 +3760,7 @@ sequentially — agents did **not** touch shared files, avoiding parallel-edit r
     schema.org JobPosting JSON-LD. **Verified live** (tenant `rinascente`).
   - **376 `source-ats-altamira`** — Altamira Recruiting (altamirahrm.com, IT).
     Server-rendered `{tenant}.altamiraweb.com/jobs` index; `/jobs/{slug}-{JobID}.htm`
-    + `job-details?JobID=` anchors. **Verified live** (tenant `etinars`).
+    - `job-details?JobID=` anchors. **Verified live** (tenant `etinars`).
   - **377 `source-ats-oleeo`** — Oleeo (tal.net, UK enterprise ATS). Server-rendered
     `{tenant}.tal.net` candidate board; `/opp/{ID}-{slug}` anchors + per-role detail
     hydration. **Verified live** (tenant `fcdo`).
@@ -3843,7 +3888,7 @@ loop) then wired the four shared registration points sequentially — agents did
   - **372 `source-ats-hibob`** — HiBob ("bob", HR platform). Tenant-addressed
     customer careers pages / public jobs JSON. Defensive.
 - **Registration (4 files):** added `Site.{LIVEHIRE,SCOUTTALENT,TURBOHIRE,ZWAYAM,
-  TRACKERRMS,AKKENCLOUD,MINDSCOPE,HIBOB}` enum members (Phases 374–381); appended
+TRACKERRMS,AKKENCLOUD,MINDSCOPE,HIBOB}` enum members (Phases 374–381); appended
   imports + `ALL_SOURCE_MODULES` entries in `packages/plugins/index.ts`; added the
   eight `@ever-jobs/source-ats-*` path aliases in `tsconfig.base.json` and the
   matching `moduleNameMapper` entries in `jest.config.js`. All four edits made
@@ -3915,7 +3960,7 @@ parallel-edit races.
   - **357 `source-ats-brassring`** — BrassRing (IBM Kenexa / Infinite). Shared
     `sjobs.brassring.com` host addressed by a partnerid+siteid pair; public Talent
     Gateway AJAX endpoint (`POST /TgNewUI/Search/Ajax/MatchedJobs`, `{ Jobs,
-    JobsCount }`) + per-role JSON-LD enrichment. Defensive (verified=false).
+JobsCount }`) + per-role JSON-LD enrichment. Defensive (verified=false).
   - **358 `source-ats-namely`** — Namely (US HR/recruiting). Per-tenant
     `{tenant}.namely.com` XML sitemap → `/careersite/job/{jobId}` schema.org
     JobPosting JSON-LD detail pages. Defensive (verified=false).
@@ -3941,7 +3986,7 @@ parallel-edit races.
     (`GET /api/career/jobs/?company_slug={tenant}&page={n}`) + per-role detail
     (`GET /api/career/jobs/{id}/?company_slug={tenant}`). Verified live 2026-06-03.
 - **Registration (4 files):** added `Site.{PAYCOM,PAGEUP,BRASSRING,NAMELY,
-  TEMPWORKS,KEKA,SNAPHUNT,DOVER,PAYCHEX,PYJAMAHR}` enum members (Phases 364–373);
+TEMPWORKS,KEKA,SNAPHUNT,DOVER,PAYCHEX,PYJAMAHR}` enum members (Phases 364–373);
   appended imports + `ALL_SOURCE_MODULES` entries in `packages/plugins/index.ts`;
   added the ten `@ever-jobs/source-ats-*` path aliases in `tsconfig.base.json` and
   the matching `moduleNameMapper` entries in `jest.config.js`. All four edits made
@@ -4029,7 +4074,7 @@ the orchestrator wired all four sequentially to avoid parallel-edit races.
     `{tenant}.livevacancies.co.uk` XML sitemap → per-vacancy schema.org
     JobPosting JSON-LD detail. Defensive parser with graceful degradation.
 - **Registration (4 files):** added `Site.{APPLICANTSTACK,PAYCOR,ARCORO,REACHMEE,
-  JOBTRAIN,AVIONTE,EXACTHIRE,HIREFUL}` enum members (Phases 356–363); appended
+JOBTRAIN,AVIONTE,EXACTHIRE,HIREFUL}` enum members (Phases 356–363); appended
   imports + `ALL_SOURCE_MODULES` entries in `packages/plugins/index.ts`; added
   `tsconfig.base.json` path aliases and `jest.config.js` `moduleNameMapper`
   entries for all eight `@ever-jobs/source-ats-*` packages.
@@ -4103,7 +4148,7 @@ metadata for the orchestrator to wire into the four shared registration points
   - **346 `source-ats-talentreef`** — TalentReef (Mitratech) US hourly-hiring
     ATS. Public job boards + schema.org JobPosting markup. Verified live 2026-06-03.
 - **Registration (4 files):** added `Site.{JOBDIVA,EASYCRUIT,VARBI,TALENTSOFT,
-  BEETWEEN,APPLICANTPRO,DARWINBOX,TALENTREEF}` enum members (Phases 348–355);
+BEETWEEN,APPLICANTPRO,DARWINBOX,TALENTREEF}` enum members (Phases 348–355);
   appended imports + `ALL_SOURCE_MODULES` entries in `packages/plugins/index.ts`;
   added `tsconfig.base.json` path aliases and `jest.config.js`
   `moduleNameMapper` entries for all eight `@ever-jobs/source-ats-*` packages.
@@ -4820,12 +4865,12 @@ boards.
   padding/empty-dept contract, spec frontmatter).
 - **NEW** 16 plugin packages
   `packages/plugins/source-company-{adaptivefinancialconsulting,
-  adcouncil,addepar1,adelphiresearch,advancedspace,
-  advancedtechnologyservices,advocateconstruction,aec,
-  aechelontechnology,aegisventures,aerospike,aestudio,affinidi,
-  affinity,afresh,aftership}` — each with `package.json`,
+adcouncil,addepar1,adelphiresearch,advancedspace,
+advancedtechnologyservices,advocateconstruction,aec,
+aechelontechnology,aegisventures,aerospike,aestudio,affinidi,
+affinity,afresh,aftership}` — each with `package.json`,
   `tsconfig.json`, `src/{index.ts,<slug>.module.ts,
-  <slug>.service.ts}`, `__tests__/<slug>.service.spec.ts`
+<slug>.service.ts}`, `__tests__/<slug>.service.spec.ts`
   (11-case suite), `__tests__/fixtures/<slug>-jobs.json`
   (3-listing real-data fixture).
 - **NEW** 16 spec folders
@@ -4876,7 +4921,7 @@ boards.
 
 ---
 
-## 2026-05-27 — Scheduled run #397 (Spec 187 closed end-to-end; new `source-company-adaptivebiotechnologies` plugin shipped — 10-case test spec authored against a 3-listing fixture; **13th plugin in the eleventh fresh probe sweep**. Authored Spec 187, added `Site.ADAPTIVEBIOTECHNOLOGIES = 'adaptivebiotechnologies'` enum under `// Phase 197`, scaffolded the package modeled on the `source-company-acurussolutions` template with **one structural deviation**: **D-04 sub-axis** (Acurus Solutions's variant 2 canonical Greenhouse host `https://job-boards.greenhouse.io/<slug>/jobs/<id>` → **NEW wire-shape variant 47** (first cohort observation): `https://www.adaptivebiotech.com/career-listings/listing?gh_jid=<id>` — HTTPS + `www.`-prefixed truncated-bare-brand `.com` (drop `nologies` from `biotechnologies` → 19-byte domain `adaptivebiotech.com`) + 2-segment `/career-listings/listing` apply-page path **without a trailing slash** + **single-id query** `?gh_jid=<id>`; the **fiftieth distinct wire-shape variant** in the company-direct cohort; **first cohort observation of brand-domain-token-truncation** — slug retains full `biotechnologies` while domain drops `nologies`; **first cohort observation of no-trailing-slash 2-segment apply-page path within a NEW-variant D-04 observation** (Textio variant 46 at Spec 174 carried a *trailing-slash* `/careers/apply/` path); **first cohort observation of single-id `?gh_jid=`-only query within a NEW-variant D-04 observation** (Textio variant 46 carried dual-id `?job=<id>&gh_jid=<id>`)). Wired `AdaptiveBiotechnologiesModule` between `AcurussolutionsModule` and `AdyenModule` (alphabetical insertion — `'adaptivebiotechnologies'` sorts after `'acurussolutions'` and before `'adyen'`), authored 10-case test spec with **D-04 NEW variant-47 URL byte-for-byte lock** (regex `^https://www\.adaptivebiotech\.com/career-listings/listing\?gh_jid=\d+$` + negative pins against variant-2 and Textio's variant-46 dual-id form) + **D-09 2-token PascalCase byte-for-byte wire lock** (`'Adaptive Biotechnologies'` 24 bytes; 2 wire tokens PascalCase cap-at-byte-0-only; 1 ASCII space) + **D-09 case-symmetric slug derivation lock** (slug `adaptivebiotechnologies` 23 bytes is byte-for-byte the space-strip + lowercase of the wire) + **D-10 trailing-pad title-trim lock** + **D-11 clean-pass-through dept lock**, updated docs. The run-397 probe sampled **13 visible roles** via direct curl probe of `https://api.greenhouse.io/v1/boards/adaptivebiotechnologies/jobs?content=true`. This is the **176th Greenhouse-backed company-direct plugin** in the catalogue; the **143rd** cohort plugin to use the entity-decode-then-tag-strip description pipeline. **D-09 omitted at runtime** (wire pass-through); **134th cohort plugin to omit D-09**. **D-10 applied** (`.trim()` overlay) — 1 of 13 wire titles padded (~7.7 %, trailing-only sub-form); **87th cohort plugin to apply D-10**. **D-11 omitted** (clean pass-through) — 0 of 10 unique wire department names padded (`'Commercial Operations'`, `'Diagnostics Clinical Services'`, `'Diagnostics Sales'`, `'Digital Health'`, `'Executive'`, `'IT Systems & Infrastructure'`, `'Laboratory Operations'`, `'Legal'`, `'Research and Innovation'`, `'Sales & Business Development'`); **114th cohort plugin with fully-clean department pass-through.** Adaptive Biotechnologies Corporation — Seattle, WA HQ commercial immunosequencing platform (NASDAQ: ADPT; founded by Harlan & Chad Robins in 2009; built around the immunoSEQ T-cell / B-cell receptor repertoire assay, the FDA-cleared clonoSEQ minimal-residual-disease blood test for lymphoid malignancies, and the T-Detect COVID/Lyme/CMV antigen-mapping diagnostic line; competes with Natera, Guardant Health, Exact Sciences, and Veracyte across the blood-cancer MRD segment).)
+## 2026-05-27 — Scheduled run #397 (Spec 187 closed end-to-end; new `source-company-adaptivebiotechnologies` plugin shipped — 10-case test spec authored against a 3-listing fixture; **13th plugin in the eleventh fresh probe sweep**. Authored Spec 187, added `Site.ADAPTIVEBIOTECHNOLOGIES = 'adaptivebiotechnologies'` enum under `// Phase 197`, scaffolded the package modeled on the `source-company-acurussolutions` template with **one structural deviation**: **D-04 sub-axis** (Acurus Solutions's variant 2 canonical Greenhouse host `https://job-boards.greenhouse.io/<slug>/jobs/<id>` → **NEW wire-shape variant 47** (first cohort observation): `https://www.adaptivebiotech.com/career-listings/listing?gh_jid=<id>` — HTTPS + `www.`-prefixed truncated-bare-brand `.com` (drop `nologies` from `biotechnologies` → 19-byte domain `adaptivebiotech.com`) + 2-segment `/career-listings/listing` apply-page path **without a trailing slash** + **single-id query** `?gh_jid=<id>`; the **fiftieth distinct wire-shape variant** in the company-direct cohort; **first cohort observation of brand-domain-token-truncation** — slug retains full `biotechnologies` while domain drops `nologies`; **first cohort observation of no-trailing-slash 2-segment apply-page path within a NEW-variant D-04 observation** (Textio variant 46 at Spec 174 carried a _trailing-slash_ `/careers/apply/` path); **first cohort observation of single-id `?gh_jid=`-only query within a NEW-variant D-04 observation** (Textio variant 46 carried dual-id `?job=<id>&gh_jid=<id>`)). Wired `AdaptiveBiotechnologiesModule` between `AcurussolutionsModule` and `AdyenModule` (alphabetical insertion — `'adaptivebiotechnologies'` sorts after `'acurussolutions'` and before `'adyen'`), authored 10-case test spec with **D-04 NEW variant-47 URL byte-for-byte lock** (regex `^https://www\.adaptivebiotech\.com/career-listings/listing\?gh_jid=\d+$` + negative pins against variant-2 and Textio's variant-46 dual-id form) + **D-09 2-token PascalCase byte-for-byte wire lock** (`'Adaptive Biotechnologies'` 24 bytes; 2 wire tokens PascalCase cap-at-byte-0-only; 1 ASCII space) + **D-09 case-symmetric slug derivation lock** (slug `adaptivebiotechnologies` 23 bytes is byte-for-byte the space-strip + lowercase of the wire) + **D-10 trailing-pad title-trim lock** + **D-11 clean-pass-through dept lock**, updated docs. The run-397 probe sampled **13 visible roles** via direct curl probe of `https://api.greenhouse.io/v1/boards/adaptivebiotechnologies/jobs?content=true`. This is the **176th Greenhouse-backed company-direct plugin** in the catalogue; the **143rd** cohort plugin to use the entity-decode-then-tag-strip description pipeline. **D-09 omitted at runtime** (wire pass-through); **134th cohort plugin to omit D-09**. **D-10 applied** (`.trim()` overlay) — 1 of 13 wire titles padded (~7.7 %, trailing-only sub-form); **87th cohort plugin to apply D-10**. **D-11 omitted** (clean pass-through) — 0 of 10 unique wire department names padded (`'Commercial Operations'`, `'Diagnostics Clinical Services'`, `'Diagnostics Sales'`, `'Digital Health'`, `'Executive'`, `'IT Systems & Infrastructure'`, `'Laboratory Operations'`, `'Legal'`, `'Research and Innovation'`, `'Sales & Business Development'`); **114th cohort plugin with fully-clean department pass-through.** Adaptive Biotechnologies Corporation — Seattle, WA HQ commercial immunosequencing platform (NASDAQ: ADPT; founded by Harlan & Chad Robins in 2009; built around the immunoSEQ T-cell / B-cell receptor repertoire assay, the FDA-cleared clonoSEQ minimal-residual-disease blood test for lymphoid malignancies, and the T-Detect COVID/Lyme/CMV antigen-mapping diagnostic line; competes with Natera, Guardant Health, Exact Sciences, and Veracyte across the blood-cancer MRD segment).)
 
 **Scope:** Run #397 is the **thirteenth** plugin in the
 eleventh fresh probe sweep with Adaptive Biotechnologies —
@@ -4899,9 +4944,9 @@ backed company-direct plugin.
 - `.specify/specs/187-source-company-adaptivebiotechnologies/{spec,plan,tasks}.md`
   — new spec.
 - `packages/plugins/source-company-adaptivebiotechnologies/{package.json,
-  tsconfig.json,src/{index.ts,adaptivebiotechnologies.module.ts,
-  adaptivebiotechnologies.service.ts},__tests__/{adaptivebiotechnologies.service.spec.ts,
-  fixtures/adaptivebiotechnologies-jobs.json}}`
+tsconfig.json,src/{index.ts,adaptivebiotechnologies.module.ts,
+adaptivebiotechnologies.service.ts},__tests__/{adaptivebiotechnologies.service.spec.ts,
+fixtures/adaptivebiotechnologies-jobs.json}}`
   — new plugin scaffold + 10-case test spec + 3-listing fixture.
 - `packages/models/src/enums/site.enum.ts` — append
   `ADAPTIVEBIOTECHNOLOGIES = 'adaptivebiotechnologies'` under
@@ -4967,9 +5012,9 @@ Greenhouse-backed company-direct plugin.
 - `.specify/specs/186-source-company-acurussolutions/{spec,plan,tasks}.md`
   — new spec.
 - `packages/plugins/source-company-acurussolutions/{package.json,
-  tsconfig.json,src/{index.ts,acurussolutions.module.ts,
-  acurussolutions.service.ts},__tests__/{acurussolutions.service.spec.ts,
-  fixtures/acurussolutions-jobs.json}}`
+tsconfig.json,src/{index.ts,acurussolutions.module.ts,
+acurussolutions.service.ts},__tests__/{acurussolutions.service.spec.ts,
+fixtures/acurussolutions-jobs.json}}`
   — new plugin scaffold + 11-case test spec + 3-listing fixture.
 - `packages/models/src/enums/site.enum.ts` — append
   `ACURUSSOLUTIONS = 'acurussolutions'` under Phase 196.
@@ -5021,7 +5066,7 @@ Greenhouse-backed company-direct plugin.
   parsing fallback); Jobspy-api unchanged. No Acurus
   Solutions row change in upstream `greenhouse.csv` — same
   `Acurus Solutions Private Limited,acurussolutions,
-  https://job-boards.greenhouse.io/acurussolutions` line as
+https://job-boards.greenhouse.io/acurussolutions` line as
   prior runs.
 
 ---
@@ -5047,9 +5092,9 @@ omitted), the **132nd** cohort plugin to omit D-09, and the
 - `.specify/specs/185-source-company-acumen/{spec,plan,tasks}.md`
   — new spec.
 - `packages/plugins/source-company-acumen/{package.json,
-  tsconfig.json,src/{index.ts,acumen.module.ts,
-  acumen.service.ts},__tests__/{acumen.service.spec.ts,
-  fixtures/acumen-jobs.json}}`
+tsconfig.json,src/{index.ts,acumen.module.ts,
+acumen.service.ts},__tests__/{acumen.service.spec.ts,
+fixtures/acumen-jobs.json}}`
   — new plugin scaffold + 11-case test spec + 3-listing fixture.
 - `packages/models/src/enums/site.enum.ts` — append
   `ACUMEN = 'acumen'` under Phase 195.
@@ -5116,9 +5161,9 @@ company-direct plugin.
 - `.specify/specs/184-source-company-acryldata/{spec,plan,tasks}.md`
   — new spec.
 - `packages/plugins/source-company-acryldata/{package.json,
-  tsconfig.json,src/{index.ts,acryldata.module.ts,
-  acryldata.service.ts},__tests__/{acryldata.service.spec.ts,
-  fixtures/acryldata-jobs.json}}`
+tsconfig.json,src/{index.ts,acryldata.module.ts,
+acryldata.service.ts},__tests__/{acryldata.service.spec.ts,
+fixtures/acryldata-jobs.json}}`
   — new plugin scaffold + 11-case test spec + 3-listing fixture.
 - `packages/models/src/enums/site.enum.ts` — append
   `ACRYLDATA = 'acryldata'` under Phase 194.
@@ -5181,9 +5226,9 @@ plugin.
 - `.specify/specs/183-source-company-acrisureinnovation/{spec,plan,tasks}.md`
   — new spec.
 - `packages/plugins/source-company-acrisureinnovation/{package.json,
-  tsconfig.json,src/{index.ts,acrisure-innovation.module.ts,
-  acrisure-innovation.service.ts},__tests__/{acrisure-
-  innovation.service.spec.ts,fixtures/acrisureinnovation-jobs.json}}`
+tsconfig.json,src/{index.ts,acrisure-innovation.module.ts,
+acrisure-innovation.service.ts},__tests__/{acrisure-
+innovation.service.spec.ts,fixtures/acrisureinnovation-jobs.json}}`
   — new plugin scaffold + 11-case test spec + 4-listing fixture.
 - `packages/models/src/enums/site.enum.ts` — append
   `ACRISUREINNOVATION = 'acrisureinnovation'` under Phase 193.
@@ -5239,9 +5284,9 @@ re-spin (zero structural deviations off Coursera).
 - `.specify/specs/182-source-company-acquia/{spec,plan,tasks}.md`
   — new spec.
 - `packages/plugins/source-company-acquia/{package.json,
-  tsconfig.json,src/{index.ts,acquia.module.ts,
-  acquia.service.ts},__tests__/{acquia.service.spec.ts,
-  fixtures/acquia-jobs.json}}` — new plugin scaffold + 10-
+tsconfig.json,src/{index.ts,acquia.module.ts,
+acquia.service.ts},__tests__/{acquia.service.spec.ts,
+fixtures/acquia-jobs.json}}` — new plugin scaffold + 10-
   case test spec + fixture.
 - `packages/models/src/enums/site.enum.ts` — append
   `ACQUIA = 'acquia'` under Phase 192.
@@ -5270,7 +5315,7 @@ re-spin (zero structural deviations off Coursera).
   - Clean re-spin (zero structural deviations off Coursera).
 - **Test stats:** 10/10 cases green for Acquia in 9.247 s;
   5-suite cross-regression (Acquia + ACP + aCommerce + ACOG
-  + ACLU) 49/49 green in 11.94 s.
+  - ACLU) 49/49 green in 11.94 s.
 - **Upstream churn check at run-392 start:** unchanged from
   run-391 (Ats-scrapers `71d9a56`, JobSpy `fda080a`, Jobspy-
   api `26bb6f4`).
@@ -5299,8 +5344,8 @@ through, the **128th** cohort plugin to omit D-09, and the
 - `.specify/specs/181-source-company-acp/{spec,plan,tasks}.md`
   — new spec.
 - `packages/plugins/source-company-acp/{package.json,
-  tsconfig.json,src/{index.ts,acp.module.ts,acp.service.ts},
-  __tests__/{acp.service.spec.ts,fixtures/acp-jobs.json}}` —
+tsconfig.json,src/{index.ts,acp.module.ts,acp.service.ts},
+__tests__/{acp.service.spec.ts,fixtures/acp-jobs.json}}` —
   new plugin scaffold + 10-case test spec + fixture.
 - `packages/models/src/enums/site.enum.ts` — append
   `ACP = 'acp'` under Phase 191.
@@ -5348,14 +5393,15 @@ clean non-numeric-slug entry from the upstream
 `OTHERS/Ats-scrapers/ats-companies/greenhouse.csv` corpus
 not already represented in `packages/plugins/source-company-*`
 after ACOG (run #389) — sampling 60 visible roles. Run #390
-marks the **first cohort observation of (a) single-token
+marks the \*\*first cohort observation of (a) single-token
 camelCase classical wire form (lowercase-prefix + single-cap
-+ lowercase-tail) AND (b) cap-at-byte-1-only D-09 sub-
-pattern** (two structurally novel D-09 sub-pattern threads),
-the **79th** variant-2 plugin, the **83rd D-10 application**,
-the **107th** cohort plugin with fully-clean department
-pass-through, the **127th** cohort plugin to omit D-09, and
-the **169th** Greenhouse-backed company-direct plugin.
+
+- lowercase-tail) AND (b) cap-at-byte-1-only D-09 sub-
+  pattern** (two structurally novel D-09 sub-pattern threads),
+  the **79th** variant-2 plugin, the **83rd D-10 application**,
+  the **107th** cohort plugin with fully-clean department
+  pass-through, the **127th** cohort plugin to omit D-09, and
+  the **169th\*\* Greenhouse-backed company-direct plugin.
 
 **Changes:**
 
@@ -5363,9 +5409,9 @@ the **169th** Greenhouse-backed company-direct plugin.
   — new spec defining axes / cohort thresholds / FRs /
   acceptance.
 - `packages/plugins/source-company-acommerce/{package.json,
-  tsconfig.json,src/{index.ts,acommerce.module.ts,
-  acommerce.service.ts},__tests__/{acommerce.service.spec.ts,
-  fixtures/acommerce-jobs.json}}` — new plugin scaffold +
+tsconfig.json,src/{index.ts,acommerce.module.ts,
+acommerce.service.ts},__tests__/{acommerce.service.spec.ts,
+fixtures/acommerce-jobs.json}}` — new plugin scaffold +
   10-case test spec + fixture.
 - `packages/models/src/enums/site.enum.ts` — append
   `ACOMMERCE = 'acommerce'` under Phase 190.
@@ -5403,8 +5449,8 @@ the **169th** Greenhouse-backed company-direct plugin.
   Ackermann Group + ACI Learning) 47/47 green in 11.874 s.
 - **Upstream churn check at run-390 start:** Ats-scrapers
   `6dbb622 → 71d9a56` (2 new commits: `[codex] Add EURES
-  description fallback (#138)` + `Fix public package
-  defaults and docs` — confined to EURES scraper /
+description fallback (#138)` + `Fix public package
+defaults and docs` — confined to EURES scraper /
   pipeline guards / CLI / Workday guards; **zero corpus
   churn** on the `ats-companies/` directory — all 5 004
   verified Greenhouse tenants preserved byte-for-byte).
@@ -5439,8 +5485,8 @@ plugin.
   — new spec defining axes / cohort thresholds / FRs /
   acceptance.
 - `packages/plugins/source-company-acog/{package.json,
-  tsconfig.json,src/{index.ts,acog.module.ts,acog.service.ts},
-  __tests__/{acog.service.spec.ts,fixtures/acog-jobs.json}}` —
+tsconfig.json,src/{index.ts,acog.module.ts,acog.service.ts},
+__tests__/{acog.service.spec.ts,fixtures/acog-jobs.json}}` —
   new plugin scaffold + 10-case test spec + fixture.
 - `packages/models/src/enums/site.enum.ts` — append
   `ACOG = 'acog'` under Phase 189.
@@ -5507,8 +5553,8 @@ the **167th** Greenhouse-backed company-direct plugin.
   — new spec defining axes / cohort thresholds / FRs /
   acceptance.
 - `packages/plugins/source-company-aclu/{package.json,
-  tsconfig.json,src/{index.ts,aclu.module.ts,aclu.service.ts},
-  __tests__/{aclu.service.spec.ts,fixtures/aclu-jobs.json}}` —
+tsconfig.json,src/{index.ts,aclu.module.ts,aclu.service.ts},
+__tests__/{aclu.service.spec.ts,fixtures/aclu-jobs.json}}` —
   new plugin scaffold + 9-case test spec + fixture.
 - `packages/models/src/enums/site.enum.ts` — append
   `ACLU = 'aclu'` under Phase 188.
@@ -5542,7 +5588,7 @@ the **167th** Greenhouse-backed company-direct plugin.
   - **22nd** cohort plugin to apply D-11 (21 → 22).
 - **Test stats:** 9/9 cases green for ACLU in 9.336 s;
   5-suite cross-regression (ACLU + AccuWeather + ACI Learning
-  + Ackermann Group + Shopmonkey) 44/44 green in 11.796 s.
+  - Ackermann Group + Shopmonkey) 44/44 green in 11.796 s.
 - **Upstream churn check at run-388 start:** Ats-scrapers
   unchanged on `6dbb622` (3 zero-churn runs since run #385).
   JobSpy unchanged on `fda080a` (145 zero-churn runs).
@@ -5577,9 +5623,9 @@ plugin.
   — new spec defining axes / cohort thresholds / FRs /
   acceptance.
 - `packages/plugins/source-company-ackermanngroup/{package.json,
-  tsconfig.json,src/{index.ts,ackermann-group.module.ts,
-  ackermann-group.service.ts},__tests__/{ackermann-group.service.spec.ts,
-  fixtures/ackermanngroup-jobs.json}}` — new plugin scaffold +
+tsconfig.json,src/{index.ts,ackermann-group.module.ts,
+ackermann-group.service.ts},__tests__/{ackermann-group.service.spec.ts,
+fixtures/ackermanngroup-jobs.json}}` — new plugin scaffold +
   9-case test spec + fixture.
 - `packages/models/src/enums/site.enum.ts` — append
   `ACKERMANNGROUP = 'ackermanngroup'` under Phase 187.
@@ -5642,9 +5688,9 @@ Greenhouse-backed company-direct plugin.
   — new spec defining axes / cohort thresholds / FRs /
   acceptance.
 - `packages/plugins/source-company-acilearning/{package.json,
-  tsconfig.json,src/{index.ts,aci-learning.module.ts,
-  aci-learning.service.ts},__tests__/{aci-learning.service.spec.ts,
-  fixtures/acilearning-jobs.json}}` — new plugin scaffold +
+tsconfig.json,src/{index.ts,aci-learning.module.ts,
+aci-learning.service.ts},__tests__/{aci-learning.service.spec.ts,
+fixtures/acilearning-jobs.json}}` — new plugin scaffold +
   9-case test spec + fixture.
 - `packages/models/src/enums/site.enum.ts` — append
   `ACILEARNING = 'acilearning'` under Phase 186.
@@ -5716,9 +5762,9 @@ with this run.
   — new spec defining axes / cohort thresholds / FRs /
   acceptance.
 - `packages/plugins/source-company-accuweather/{package.json,
-  tsconfig.json,src/{index.ts,accuweather.module.ts,
-  accuweather.service.ts},__tests__/{accuweather.service.spec.ts,
-  fixtures/accuweather-jobs.json}}` — new plugin scaffold +
+tsconfig.json,src/{index.ts,accuweather.module.ts,
+accuweather.service.ts},__tests__/{accuweather.service.spec.ts,
+fixtures/accuweather-jobs.json}}` — new plugin scaffold +
   9-case test spec + fixture.
 - `packages/models/src/enums/site.enum.ts` — append
   `ACCUWEATHER = 'accuweather'` under Phase 185.
@@ -5792,9 +5838,9 @@ launch the eleventh fresh probe sweep.
   — new spec defining axes / cohort thresholds / FRs /
   acceptance.
 - `packages/plugins/source-company-textio/{package.json,
-  tsconfig.json,src/{index.ts,textio.module.ts,
-  textio.service.ts},__tests__/{textio.service.spec.ts,
-  fixtures/textio-jobs.json}}` — new plugin scaffold +
+tsconfig.json,src/{index.ts,textio.module.ts,
+textio.service.ts},__tests__/{textio.service.spec.ts,
+fixtures/textio-jobs.json}}` — new plugin scaffold +
   9-case test spec + fixture.
 - `packages/models/src/enums/site.enum.ts` — append
   `TEXTIO = 'textio'` under Phase 184.
@@ -5834,9 +5880,9 @@ streak that began after run #380.
   — new spec defining axes / cohort thresholds / FRs /
   acceptance.
 - `packages/plugins/source-company-tatari/{package.json,
-  tsconfig.json,src/{index.ts,tatari.module.ts,
-  tatari.service.ts},__tests__/{tatari.service.spec.ts,
-  fixtures/tatari-jobs.json}}` — new plugin scaffold +
+tsconfig.json,src/{index.ts,tatari.module.ts,
+tatari.service.ts},__tests__/{tatari.service.spec.ts,
+fixtures/tatari-jobs.json}}` — new plugin scaffold +
   8-case test spec + fixture.
 - `packages/models/src/enums/site.enum.ts` — append
   `TATARI = 'tatari'` under Phase 183.
@@ -5883,13 +5929,14 @@ Per Spec 171's run #381 close-out note, this run takes
 from the tenth-fresh-sweep candidate pool, sampling 16
 visible roles. Run #382 marks the **first cohort observation
 of wire-shape variant 45** (HTTPS + bare brand-domain `.com`
-+ 2-segment `/company/apply` apply-page path + query-only
-`?gh_jid=<id>` form — 48th distinct variant), the **fifth
-cohort observation of slug-truncation D-09 sub-axis** (with
-the shortest non-zero token-truncation factor in cohort to
-date — 2 tokens dropped), the **38th D-10 omission**, and
-the **20th D-11 application** (crossing the 20-plugin D-11-
-application threshold).
+
+- 2-segment `/company/apply` apply-page path + query-only
+  `?gh_jid=<id>` form — 48th distinct variant), the **fifth
+  cohort observation of slug-truncation D-09 sub-axis** (with
+  the shortest non-zero token-truncation factor in cohort to
+  date — 2 tokens dropped), the **38th D-10 omission**, and
+  the **20th D-11 application** (crossing the 20-plugin D-11-
+  application threshold).
 
 **Changes:**
 
@@ -5897,9 +5944,9 @@ application threshold).
   — new spec defining axes / cohort thresholds / FRs /
   acceptance.
 - `packages/plugins/source-company-symphony/{package.json,
-  tsconfig.json,src/{index.ts,symphony.module.ts,
-  symphony.service.ts},__tests__/{symphony.service.spec.ts,
-  fixtures/symphony-jobs.json}}` — new plugin scaffold +
+tsconfig.json,src/{index.ts,symphony.module.ts,
+symphony.service.ts},__tests__/{symphony.service.spec.ts,
+fixtures/symphony-jobs.json}}` — new plugin scaffold +
   8-case test spec + fixture.
 - `packages/models/src/enums/site.enum.ts` — append
   `SYMPHONY = 'symphony'` under Phase 182.
@@ -5913,7 +5960,7 @@ application threshold).
 - `docs/SOURCE_ADOPTION_BACKLOG.md` — append a `shipped`
   row for `source-company-symphony`.
 - `docs/COMPANY_SLUG_DIRECTORY.md` — append `Symphony
-  Communication Services` row to the Greenhouse table.
+Communication Services` row to the Greenhouse table.
 - `docs/log.md` — this entry.
 
 **Notes:**
@@ -5964,9 +6011,9 @@ run** after the streak-broken observation in run #380.
   — new spec defining axes / cohort thresholds / FRs /
   acceptance.
 - `packages/plugins/source-company-simplisafe/{package.json,
-  tsconfig.json,src/{index.ts,simplisafe.module.ts,
-  simplisafe.service.ts},__tests__/{simplisafe.service.spec.ts,
-  fixtures/simplisafe-jobs.json}}` — new plugin scaffold +
+tsconfig.json,src/{index.ts,simplisafe.module.ts,
+simplisafe.service.ts},__tests__/{simplisafe.service.spec.ts,
+fixtures/simplisafe-jobs.json}}` — new plugin scaffold +
   8-case test spec + fixture.
 - `packages/models/src/enums/site.enum.ts` — append
   `SIMPLISAFE = 'simplisafe'` under Phase 181.
@@ -6033,9 +6080,9 @@ pattern.
   — new spec defining axes / cohort thresholds / FRs /
   acceptance.
 - `packages/plugins/source-company-shopmonkey/{package.json,
-  tsconfig.json,src/index.ts,src/shopmonkey.module.ts,
-  src/shopmonkey.service.ts,__tests__/shopmonkey.service.spec.ts,
-  __tests__/fixtures/shopmonkey-jobs.json}` — new plugin
+tsconfig.json,src/index.ts,src/shopmonkey.module.ts,
+src/shopmonkey.service.ts,__tests__/shopmonkey.service.spec.ts,
+__tests__/fixtures/shopmonkey-jobs.json}` — new plugin
   package.
 - `packages/models/src/enums/site.enum.ts` — append
   `SHOPMONKEY = 'shopmonkey'` under `// Phase 180`.
@@ -6047,7 +6094,7 @@ pattern.
 - `docs/index.md` — Spec 170 row appended.
 - `docs/log.md` — this entry.
 - `docs/COMPANY_SLUG_DIRECTORY.md` — `Shopmonkey /
-  shopmonkey / Vertical-SaaS Auto-Repair-Shop POS` row
+shopmonkey / Vertical-SaaS Auto-Repair-Shop POS` row
   added under Greenhouse table.
 - `docs/SOURCE_ADOPTION_BACKLOG.md` — Shopmonkey marked
   shipped.
@@ -6076,9 +6123,9 @@ in a single run, all collapsed identically by `.trim()`.
   — new spec defining axes / cohort thresholds / FRs /
   acceptance.
 - `packages/plugins/source-company-sezzle/{package.json,
-  tsconfig.json,src/index.ts,src/sezzle.module.ts,
-  src/sezzle.service.ts,__tests__/sezzle.service.spec.ts,
-  __tests__/fixtures/sezzle-jobs.json}` — new plugin
+tsconfig.json,src/index.ts,src/sezzle.module.ts,
+src/sezzle.service.ts,__tests__/sezzle.service.spec.ts,
+__tests__/fixtures/sezzle-jobs.json}` — new plugin
   package.
 - `packages/models/src/enums/site.enum.ts` — append
   `SEZZLE = 'sezzle'` under `// Phase 179`.
@@ -6090,7 +6137,7 @@ in a single run, all collapsed identically by `.trim()`.
 - `docs/index.md` — Spec 169 row appended.
 - `docs/log.md` — this entry.
 - `docs/COMPANY_SLUG_DIRECTORY.md` — `Sezzle / sezzle /
-  BNPL Payments / Fintech` row added under Greenhouse table.
+BNPL Payments / Fintech` row added under Greenhouse table.
 - `docs/SOURCE_ADOPTION_BACKLOG.md` — Sezzle marked shipped.
 
 ---
@@ -6117,9 +6164,9 @@ carrying ASCII-space pads on BOTH ends simultaneously) AND
   — new spec defining axes / cohort thresholds / FRs /
   acceptance.
 - `packages/plugins/source-company-samsara/{package.json,
-  tsconfig.json,src/index.ts,src/samsara.module.ts,
-  src/samsara.service.ts,__tests__/samsara.service.spec.ts,
-  __tests__/fixtures/samsara-jobs.json}` — new plugin
+tsconfig.json,src/index.ts,src/samsara.module.ts,
+src/samsara.service.ts,__tests__/samsara.service.spec.ts,
+__tests__/fixtures/samsara-jobs.json}` — new plugin
   package.
 - `packages/models/src/enums/site.enum.ts` — append
   `SAMSARA = 'samsara'` under `// Phase 178`.
@@ -6131,7 +6178,7 @@ carrying ASCII-space pads on BOTH ends simultaneously) AND
 - `docs/index.md` — Spec 168 row appended.
 - `docs/log.md` — this entry.
 - `docs/COMPANY_SLUG_DIRECTORY.md` — `Samsara / samsara /
-  Connected Operations / IoT` row added under Greenhouse table.
+Connected Operations / IoT` row added under Greenhouse table.
 - `docs/SOURCE_ADOPTION_BACKLOG.md` — Samsara marked shipped.
 
 ---
@@ -6175,9 +6222,9 @@ collapses to the same trimmed output.
   — new spec defining axes / cohort thresholds / FRs /
   acceptance.
 - `packages/plugins/source-company-cresta/{package.json,
-  tsconfig.json,src/index.ts,src/cresta.module.ts,
-  src/cresta.service.ts,__tests__/cresta.service.spec.ts,
-  __tests__/fixtures/cresta-jobs.json}` — new plugin
+tsconfig.json,src/index.ts,src/cresta.module.ts,
+src/cresta.service.ts,__tests__/cresta.service.spec.ts,
+__tests__/fixtures/cresta-jobs.json}` — new plugin
   package.
 - `packages/models/src/enums/site.enum.ts` — append
   `CRESTA = 'cresta'` under `// Phase 175`.
@@ -6189,7 +6236,7 @@ collapses to the same trimmed output.
 - `docs/index.md` — Spec 165 row appended.
 - `docs/log.md` — this entry.
 - `docs/COMPANY_SLUG_DIRECTORY.md` — `Cresta / cresta /
-  AI Contact Center` row added under Greenhouse table.
+AI Contact Center` row added under Greenhouse table.
 - `docs/SOURCE_ADOPTION_BACKLOG.md` — Cresta marked shipped.
 
 ---
@@ -6597,7 +6644,8 @@ eighth-fresh-sweep candidate pool. Run #343 marks the
 **80-plugin D-09-omission threshold** AND the **first cohort
 observation of slug-extra-word D-09 asymmetry sub-axis** AND
 the **first cohort observation of D-04 variant 35** (HTTP
-+ id-in-path + gh_jid + parent-domain `hioscar.com`).
+
+- id-in-path + gh_jid + parent-domain `hioscar.com`).
 
 ---
 
@@ -7044,7 +7092,7 @@ and was confirmed live via run #299's HTTP 200 probe.
 
 - **T01:** `Site.TYPEFORM = 'typeform'` enum already present
   in `packages/models/src/enums/site.enum.ts` under `// Phase
-  99: Spec 089 — Source Company Plugin: Typeform` (pre-
+99: Spec 089 — Source Company Plugin: Typeform` (pre-
   scaffolded by an out-of-band batch operation).
 - **T02:** `@ever-jobs/source-company-typeform` package
   scaffolded; mirrors `source-company-lattice` with the
@@ -7055,15 +7103,15 @@ and was confirmed live via run #299's HTTP 200 probe.
   files; placed alphabetically after `TwitchModule` and before
   `UberModule` (`Twi` < `Typ` < `Ube`).
 - **T04:** Authored `typeform.service.spec.ts` with **8 cases**
-  + `typeform-jobs.json` fixture (2 listings — clean dept
-  `'Sales'` first, D-11 trailing-pad dept `'Product '` second).
-  Happy-path test asserts D-04 variant-2 lock, decode-then-
-  strip pipeline cleanliness, case-symmetric wire `companyName
-  === 'Typeform'`, **D-10 omission lock** — both wire titles
-  pass through unchanged byte-for-byte (the wire is fully
-  clean across the run-299 probe), AND **D-11 application
-  lock** — `'Product '` → `'Product'` trim with byte-distinct
-  + 1-byte-shorter checks. All 8 cases green in 9.733 s.
+  - `typeform-jobs.json` fixture (2 listings — clean dept
+    `'Sales'` first, D-11 trailing-pad dept `'Product '` second).
+    Happy-path test asserts D-04 variant-2 lock, decode-then-
+    strip pipeline cleanliness, case-symmetric wire `companyName
+=== 'Typeform'`, **D-10 omission lock** — both wire titles
+    pass through unchanged byte-for-byte (the wire is fully
+    clean across the run-299 probe), AND **D-11 application
+    lock** — `'Product '` → `'Product'` trim with byte-distinct
+  - 1-byte-shorter checks. All 8 cases green in 9.733 s.
 - **T05:** Updated `docs/SOURCE_ADOPTION_BACKLOG.md` (added
   Typeform shipped row), `docs/index.md` (Spec 089 row
   appended), and `docs/log.md` (this entry).
@@ -7131,7 +7179,7 @@ probe.
 **Spec 087 — Source Company Plugin: Scopely — closed end-to-end:**
 
 - **T01:** Added `Site.SCOPELY = 'scopely'` enum under `// Phase
-  97: Spec 087 — Source Company Plugin: Scopely`.
+97: Spec 087 — Source Company Plugin: Scopely`.
 - **T02:** Scaffolded `@ever-jobs/source-company-scopely` —
   mirrors `source-company-marqeta` with the `marqeta` →
   `scopely`/`Scopely` substitutions and the inline doc-comment
@@ -7143,7 +7191,7 @@ probe.
 - **T04:** Authored `scopely.service.spec.ts` with **8 cases**.
   Happy-path test asserts D-04 variant-2 lock, decode-then-strip
   pipeline cleanliness, case-symmetric wire `companyName ===
-  'Scopely'`, **D-10 application lock with single-trailing-pad
+'Scopely'`, **D-10 application lock with single-trailing-pad
   form** — `'Accounting Specialist '` → `'Accounting Specialist'`
   trim with byte-distinct + 1-byte-shorter checks, AND D-11
   omission lock with operating-division banners (`'MonopolyGo'`,
@@ -7266,10 +7314,10 @@ words; case-asymmetric AND length-asymmetric with the wire
   Happy-path test asserts **D-10 application lock with BOTH-
   LEADING-AND-TRAILING-padded form** — emitted `title` for the
   dual-padded listing equals trimmed form `'Account Executive -
-  Commercial'` AND byte-distinct from wire `' Account Executive
+Commercial'` AND byte-distinct from wire `' Account Executive
   - Commercial '` AND exactly 2 bytes shorter (locking the
-  both-side-pad observable, **first cohort observation of
-  dual-pad on the title axis**). All 8 cases green in 9.279 s.
+    both-side-pad observable, **first cohort observation of
+    dual-pad on the title axis**). All 8 cases green in 9.279 s.
 - **T05:** Updated `docs/SOURCE_ADOPTION_BACKLOG.md` (added
   New Relic shipped row), `docs/index.md` (Spec 085 row
   appended), and `docs/log.md` (this entry).
@@ -7316,7 +7364,7 @@ probe of `https://api.greenhouse.io/v1/boards/marqeta/jobs?content=true`.
 
 - **T01:** Added `Site.MARQETA = 'marqeta'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 94:
-  Spec 084 — Source Company Plugin: Marqeta` header.
+Spec 084 — Source Company Plugin: Marqeta` header.
 - **T02:** Scaffolded `@ever-jobs/source-company-marqeta` with
   the five-file shape (`package.json`, `tsconfig.json`,
   `src/index.ts`, `src/marqeta.module.ts`,
@@ -7368,9 +7416,9 @@ arithmetic) will pivot to a **sixth fresh probe sweep**.
 
 **Scope:** Run #293 continues the user-owner-directed concrete-action
 deviation that runs #230–#292 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 082's run
+it's loop continuation without any changes etc."_ Per Spec 082's run
 #292 close-out note (which queued Lookout as run #293's bite — the
 alphabetically-fifth live hit from the fifth-fresh-sweep candidate
 pool), this run takes **Lookout**.
@@ -7397,7 +7445,7 @@ of `https://api.greenhouse.io/v1/boards/lookout/jobs?content=true`.
 
 - **T01:** Added `Site.LOOKOUT = 'lookout'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 93:
-  Spec 083 — Source Company Plugin: Lookout` header.
+Spec 083 — Source Company Plugin: Lookout` header.
 - **T02:** Scaffolded `@ever-jobs/source-company-lookout` with
   the five-file shape (`package.json`, `tsconfig.json`,
   `src/index.ts`, `src/lookout.module.ts`,
@@ -7454,9 +7502,9 @@ probe sweep**.
 
 **Scope:** Run #292 continues the user-owner-directed concrete-action
 deviation that runs #230–#291 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 081's run
+it's loop continuation without any changes etc."_ Per Spec 081's run
 #291 close-out note (which queued Fivetran as run #292's bite — the
 alphabetically-fourth live hit from the fifth-fresh-sweep candidate
 pool), this run takes **Fivetran**.
@@ -7483,7 +7531,7 @@ confirmed live via run #292's HTTP 200 probe of
 
 - **T01:** Added `Site.FIVETRAN = 'fivetran'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 92:
-  Spec 082 — Source Company Plugin: Fivetran` header.
+Spec 082 — Source Company Plugin: Fivetran` header.
 - **T02:** Scaffolded `@ever-jobs/source-company-fivetran` with
   the five-file shape (`package.json`, `tsconfig.json`,
   `src/index.ts`, `src/fivetran.module.ts`,
@@ -7505,14 +7553,14 @@ confirmed live via run #292's HTTP 200 probe of
   assertions for variant-19 URL pass-through, decode-then-strip
   pipeline cleanliness, **D-09 application lock** —
   `'Fivetran '` → `'Fivetran'` trim assertion with byte-distinct
-  + 1-byte-shorter + does-NOT-end-with-trailing-space + case-
-  insensitively-equal-to-slug checks; first cohort observation
-  of D-09 application, and D-10 + D-11 omission locks — wire-
-  clean title and department pass-through for both listings),
-  `resultsWanted=1` cap, `searchTerm` filter on title (case-
-  insensitive), `searchTerm` filter on department (case-
-  insensitive), HTTP 500 → empty response, empty `data.jobs` →
-  empty response. All 8 cases green in 10.733 s.
+  - 1-byte-shorter + does-NOT-end-with-trailing-space + case-
+    insensitively-equal-to-slug checks; first cohort observation
+    of D-09 application, and D-10 + D-11 omission locks — wire-
+    clean title and department pass-through for both listings),
+    `resultsWanted=1` cap, `searchTerm` filter on title (case-
+    insensitive), `searchTerm` filter on department (case-
+    insensitive), HTTP 500 → empty response, empty `data.jobs` →
+    empty response. All 8 cases green in 10.733 s.
 - **T05:** Updated `docs/SOURCE_ADOPTION_BACKLOG.md` (added
   Fivetran shipped row), `docs/index.md` (Spec 082 row appended),
   and `docs/log.md` (this entry).
@@ -7539,9 +7587,9 @@ to a **sixth fresh probe sweep**.
 
 **Scope:** Run #291 continues the user-owner-directed concrete-action
 deviation that runs #230–#290 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 080's run
+it's loop continuation without any changes etc."_ Per Spec 080's run
 #290 close-out note (which queued DataCamp as run #291's bite — the
 alphabetically-third live hit from the fifth-fresh-sweep candidate
 pool), this run takes **DataCamp**.
@@ -7567,7 +7615,7 @@ probe of `https://api.greenhouse.io/v1/boards/datacamp/jobs?content=true`.
 
 - **T01:** `Site.DATACAMP = 'datacamp'` already in
   `packages/models/src/enums/site.enum.ts` under the `// Phase 91:
-  Spec 081 — Source Company Plugin: DataCamp` header.
+Spec 081 — Source Company Plugin: DataCamp` header.
 - **T02:** `@ever-jobs/source-company-datacamp` package already
   scaffolded (five-file shape: `package.json`, `tsconfig.json`,
   `src/index.ts`, `src/datacamp.module.ts`,
@@ -7626,9 +7674,9 @@ pivot to a **sixth fresh probe sweep**.
 
 **Scope:** Run #290 continues the user-owner-directed concrete-action
 deviation that runs #230–#289 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 079's run
+it's loop continuation without any changes etc."_ Per Spec 079's run
 #289 close-out note (which queued Calendly as run #290's bite — the
 alphabetically-second live hit from the fifth-fresh-sweep candidate
 pool), this run takes **Calendly**.
@@ -7657,7 +7705,7 @@ its `absolute_url` on the canonical Greenhouse variant-2 shape
 
 - **T01:** `Site.CALENDLY = 'calendly'` already in
   `packages/models/src/enums/site.enum.ts` under the `// Phase 90:
-  Spec 080 — Source Company Plugin: Calendly` header (preserves
+Spec 080 — Source Company Plugin: Calendly` header (preserves
   the Spec 006 / 013 / 020..079 phase-ordering convention).
 - **T02:** `@ever-jobs/source-company-calendly` package already
   scaffolded (five-file shape: `package.json`, `tsconfig.json`,
@@ -7705,9 +7753,9 @@ fresh probe sweep**.
 
 **Scope:** Run #289 continues the user-owner-directed concrete-action
 deviation that runs #230–#288 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 078's run
+it's loop continuation without any changes etc."_ Per Spec 078's run
 #288 close-out note (which exhausted the fourth-fresh-sweep
 candidate pool and queued runs #289+ to pivot to a fifth fresh probe
 sweep), this run **launches the fifth fresh probe sweep** by probing
@@ -7760,7 +7808,7 @@ Class names are `BitwardenService` / `BitwardenModule`
 
 - **T01:** Added `Site.BITWARDEN = 'bitwarden'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 89:
-  Spec 079 — Source Company Plugin: Bitwarden` header (preserves
+Spec 079 — Source Company Plugin: Bitwarden` header (preserves
   the Spec 006 / 013 / 020..078 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-bitwarden` with
   the five-file shape (`package.json`, `tsconfig.json`,
@@ -7819,9 +7867,9 @@ probe sweep**.
 
 **Scope:** Run #288 continues the user-owner-directed concrete-action
 deviation that runs #230–#287 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 077's run
+it's loop continuation without any changes etc."_ Per Spec 077's run
 #287 close-out note (which queued Udemy as run #288's bite —
 the alphabetically-fourteenth and **last** live hit from the
 fourth-fresh-sweep candidate pool), this run takes **Udemy** and
@@ -7874,7 +7922,7 @@ is a no-op on the clean wire data. Class names are `UdemyService`
 
 - **T01:** Added `Site.UDEMY = 'udemy'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 88:
-  Spec 078 — Source Company Plugin: Udemy` header (preserves
+Spec 078 — Source Company Plugin: Udemy` header (preserves
   the Spec 006 / 013 / 020..077 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-udemy` with
   the five-file shape (`package.json`, `tsconfig.json`,
@@ -7929,9 +7977,9 @@ sweep** targeting yet-untested large-employer candidate slugs.
 
 **Scope:** Run #287 continues the user-owner-directed concrete-action
 deviation that runs #230–#286 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 076's run
+it's loop continuation without any changes etc."_ Per Spec 076's run
 #286 close-out note (which queued Stitch Fix as run #287's bite —
 the alphabetically-thirteenth live hit from the fourth-fresh-sweep
 candidate pool), this run takes **Stitch Fix**. The Greenhouse
@@ -7991,7 +8039,7 @@ names containing internal whitespace; D-06).
 
 - **T01:** Added `Site.STITCHFIX = 'stitchfix'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 87:
-  Spec 077 — Source Company Plugin: Stitch Fix` header (preserves
+Spec 077 — Source Company Plugin: Stitch Fix` header (preserves
   the Spec 006 / 013 / 020..076 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-stitchfix` with
   the five-file shape (`package.json`, `tsconfig.json`,
@@ -8013,9 +8061,9 @@ names containing internal whitespace; D-06).
   parameter exact-twice-occurrence lock, decode-then-strip
   pipeline cleanliness, internal-whitespace-asymmetric wire
   `companyName` byte-for-byte, D-10 application lock — `'Principal
-  Full-Stack Data Scientist - Recommendation Algorithms '` →
+Full-Stack Data Scientist - Recommendation Algorithms '` →
   `'Principal Full-Stack Data Scientist - Recommendation
-  Algorithms'` trim assertion with byte-distinct + 1-byte-shorter
+Algorithms'` trim assertion with byte-distinct + 1-byte-shorter
   checks, D-11 omission lock — wire-clean department pass-through
   for both listings, and the internal-whitespace asymmetry lock
   via byte-distinct + +1-byte-length + case-insensitively-with-
@@ -8048,9 +8096,9 @@ candidate slugs.
 
 **Scope:** Run #286 continues the user-owner-directed concrete-action
 deviation that runs #230–#285 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 075's run
+it's loop continuation without any changes etc."_ Per Spec 075's run
 #285 close-out note (which queued Maven Clinic as run #286's bite —
 the alphabetically-twelfth live hit from the fourth-fresh-sweep
 candidate pool), this run takes **Maven Clinic**. The Greenhouse
@@ -8108,7 +8156,7 @@ whitespace; D-06).
 
 - **T01:** Added `Site.MAVENCLINIC = 'mavenclinic'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 86:
-  Spec 076 — Source Company Plugin: Maven Clinic` header (preserves
+Spec 076 — Source Company Plugin: Maven Clinic` header (preserves
   the Spec 006 / 013 / 020..075 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-mavenclinic` with
   the five-file shape (`package.json`, `tsconfig.json`,
@@ -8128,7 +8176,7 @@ whitespace; D-06).
   for variant-2 URL pass-through, decode-then-strip pipeline
   cleanliness, internal-whitespace-asymmetric wire `companyName`
   byte-for-byte, D-10 application lock — `'Clinical Outcomes
-  Analyst '` → `'Clinical Outcomes Analyst'` trim assertion with
+Analyst '` → `'Clinical Outcomes Analyst'` trim assertion with
   byte-distinct + 1-byte-shorter checks, D-11 omission lock — wire-
   clean department pass-through for both listings, and the
   internal-whitespace asymmetry lock via byte-distinct + +1-byte-
@@ -8162,9 +8210,9 @@ candidate slugs.
 
 **Scope:** Run #285 continues the user-owner-directed concrete-action
 deviation that runs #230–#284 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 074's run
+it's loop continuation without any changes etc."_ Per Spec 074's run
 #284 close-out note (which queued MasterClass as run #285's bite —
 the alphabetically-eleventh live hit from the fourth-fresh-sweep
 candidate pool), this run takes **MasterClass**. The Greenhouse
@@ -8220,7 +8268,7 @@ across the cohort; D-06).
 
 - **T01:** Added `Site.MASTERCLASS = 'masterclass'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 85:
-  Spec 075 — Source Company Plugin: MasterClass` header (preserves
+Spec 075 — Source Company Plugin: MasterClass` header (preserves
   the Spec 006 / 013 / 020..074 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-masterclass` with
   the five-file shape (`package.json`, `tsconfig.json`,
@@ -8273,9 +8321,9 @@ sweep** targeting yet-untested large-employer candidate slugs.
 
 **Scope:** Run #284 continues the user-owner-directed concrete-action
 deviation that runs #230–#283 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 073's run
+it's loop continuation without any changes etc."_ Per Spec 073's run
 #283 close-out note (which queued Lattice as run #284's bite — the
 alphabetically-tenth live hit from the fourth-fresh-sweep candidate
 pool), this run takes **Lattice**. The Greenhouse public API was
@@ -8328,7 +8376,7 @@ plugin). Class names are `LatticeService` / `LatticeModule`
 
 - **T01:** Added `Site.LATTICE = 'lattice'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 84:
-  Spec 074 — Source Company Plugin: Lattice` header (preserves the
+Spec 074 — Source Company Plugin: Lattice` header (preserves the
   Spec 006 / 013 / 020..073 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-lattice` with the
   five-file shape (`package.json`, `tsconfig.json`, `src/index.ts`,
@@ -8379,9 +8427,9 @@ targeting yet-untested large-employer candidate slugs.
 
 **Scope:** Run #283 continues the user-owner-directed concrete-action
 deviation that runs #230–#282 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 072's run
+it's loop continuation without any changes etc."_ Per Spec 072's run
 #282 close-out note (which queued Honeycomb as run #283's bite — the
 alphabetically-ninth live hit from the fourth-fresh-sweep candidate
 pool), this run takes **Honeycomb**. The Greenhouse public API was
@@ -8445,7 +8493,7 @@ TypeScript class names cannot contain `.`; D-06).
 
 - **T01:** Added `Site.HONEYCOMB = 'honeycomb'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 83:
-  Spec 073 — Source Company Plugin: Honeycomb` header (preserves the
+Spec 073 — Source Company Plugin: Honeycomb` header (preserves the
   Spec 006 / 013 / 020..072 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-honeycomb` with the
   five-file shape (`package.json`, `tsconfig.json`, `src/index.ts`,
@@ -8469,7 +8517,7 @@ TypeScript class names cannot contain `.`; D-06).
   `?gh_jid=`), the **D-08 decode-then-strip pipeline cleanliness**
   (no `&lt;`, `&quot;`, `&amp;`, `<p>`, `<div>`, `<strong>`, `<em>`),
   the **D-09 TLD-suffix asymmetry lock** (`companyName ===
-  'Honeycomb.io'` byte-for-byte AND matches wire `company_name` AND
+'Honeycomb.io'` byte-for-byte AND matches wire `company_name` AND
   byte-distinct from slug `honeycomb` AND exactly 3 bytes longer
   than slug — locking the `.io` TLD-suffix asymmetry), and the
   **D-11 fully-clean pass-through locks** (`'Sales'` for first
@@ -8493,11 +8541,11 @@ TypeScript class names cannot contain `.`; D-06).
 - `npx jest packages/plugins/source-company-honeycomb --colors=false`
   → **8 passing in 9.453 s** (1 file, 0 failed).
 - `npx jest packages/common/__tests__/helpers.spec
-  packages/plugins/source-company-glossier
-  packages/plugins/source-company-carta
-  packages/plugins/source-company-flexport
-  packages/plugins/source-company-fubotv
-  packages/plugins/source-company-coursera --colors=false`
+packages/plugins/source-company-glossier
+packages/plugins/source-company-carta
+packages/plugins/source-company-flexport
+packages/plugins/source-company-fubotv
+packages/plugins/source-company-coursera --colors=false`
   → **117 passing in 13.771 s** (6 files, 0 failed) — confirms
   registration in `tsconfig.base.json` and `jest.config.js` did not
   perturb the parser regression suite or the closest-cousin cohort
@@ -8527,9 +8575,9 @@ continues.
 
 **Scope:** Run #282 continues the user-owner-directed concrete-action
 deviation that runs #230–#281 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 071's run
+it's loop continuation without any changes etc."_ Per Spec 071's run
 #281 close-out note (which queued Glossier as run #282's bite — the
 alphabetically-eighth live hit from the fourth-fresh-sweep candidate
 pool), this run takes **Glossier**. The Greenhouse public API was
@@ -8589,7 +8637,7 @@ slug-derived class names; D-06).
 
 - **T01:** Added `Site.GLOSSIER = 'glossier'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 82:
-  Spec 072 — Source Company Plugin: Glossier` header (preserves the
+Spec 072 — Source Company Plugin: Glossier` header (preserves the
   Spec 006 / 013 / 020..071 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-glossier` with the
   five-file shape (`package.json`, `tsconfig.json`, `src/index.ts`,
@@ -8608,7 +8656,7 @@ slug-derived class names; D-06).
   fixture with two listings → two `JobPostDto` rows mapped with
   expected fields including the **D-10 multi-byte trailing-pad lock**
   (emitted second-listing `title === '(Seasonal Sales Associate,
-  Part-Time) Editor, Boston'` AND byte-distinct from wire form AND
+Part-Time) Editor, Boston'` AND byte-distinct from wire form AND
   exactly **2 bytes shorter**), the **D-04 variant-10 lock**
   (`jobUrl` contains `boards.greenhouse.io/glossier/jobs/` AND
   `?gh_jid=` AND must NOT contain `job-boards.greenhouse.io`), the
@@ -8637,10 +8685,10 @@ slug-derived class names; D-06).
 - `npx jest packages/plugins/source-company-glossier --colors=false`
   → **8 passing in 9.305 s** (1 file, 0 failed).
 - `npx jest packages/common/__tests__/helpers.spec
-  packages/plugins/source-company-flexport
-  packages/plugins/source-company-fubotv
-  packages/plugins/source-company-coursera
-  packages/plugins/source-company-faire --colors=false`
+packages/plugins/source-company-flexport
+packages/plugins/source-company-fubotv
+packages/plugins/source-company-coursera
+packages/plugins/source-company-faire --colors=false`
   → **110 passing in 12.39 s** (5 files, 0 failed) — confirms
   registration in `tsconfig.base.json` and `jest.config.js` did not
   perturb the parser regression suite or the closest-cousin cohort
@@ -8671,9 +8719,9 @@ continues.
 
 **Scope:** Run #281 continues the user-owner-directed concrete-action
 deviation that runs #230–#280 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 070's run
+it's loop continuation without any changes etc."_ Per Spec 070's run
 #280 close-out note (which queued fuboTV as run #281's bite — the
 alphabetically-seventh live hit from the fourth-fresh-sweep candidate
 pool), this run takes **fuboTV**. The Greenhouse public API was
@@ -8747,7 +8795,7 @@ decompose along obvious word boundaries; D-06).
 
 - **T01:** Added `Site.FUBOTV = 'fubotv'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 81:
-  Spec 071 — Source Company Plugin: fuboTV` header (preserves the
+Spec 071 — Source Company Plugin: fuboTV` header (preserves the
   Spec 006 / 013 / 020..070 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-fubotv` with the
   ClassPass-shape (single-file `service.ts`, 4-line `module.ts`,
@@ -8762,27 +8810,28 @@ decompose along obvious word boundaries; D-06).
   conventions.
 - **T04:** Authored 8 unit tests under
   `packages/plugins/source-company-fubotv/__tests__/fubotv.service.spec.ts`
-  + 2-listing fixture (clean title `'Manager, Business
-  Development - Platform Partnerships'` / `'Business Development'`
-  department / wire-padded location `'New York, NY '` + wire-padded
-  title `'Senior Software Engineer, Backend '` / `'Technology'`
-  department / wire-padded location `'Denver, CO '`). Tests cover:
-  NestJS DI resolution, `Site.FUBOTV === 'fubotv'` literal pin,
-  happy-path 2-listing mapping (with regression guards for D-04
-  variant-14 shape, D-08 decode-then-strip pipeline, D-09
-  slug/wire-asymmetric `companyName === 'Fubo'`, D-10
-  application, D-11 byte-for-byte department pass-through, D-12
-  location-side `.trim()` application — emitted `location.city`
-  for both listings byte-distinct from wire-padded form AND
-  exactly 1 byte shorter), `resultsWanted=1` cap, `searchTerm`
-  filter on title (case-insensitive `'SOFTWARE ENGINEER'` → 1
-  match), `searchTerm` filter on department (`'technology'` → 1
-  match), HTTP 500 → empty, empty `data.jobs` → empty.
+  - 2-listing fixture (clean title `'Manager, Business
+Development - Platform Partnerships'` / `'Business Development'`
+    department / wire-padded location `'New York, NY '` + wire-padded
+    title `'Senior Software Engineer, Backend '` / `'Technology'`
+    department / wire-padded location `'Denver, CO '`). Tests cover:
+    NestJS DI resolution, `Site.FUBOTV === 'fubotv'` literal pin,
+    happy-path 2-listing mapping (with regression guards for D-04
+    variant-14 shape, D-08 decode-then-strip pipeline, D-09
+    slug/wire-asymmetric `companyName === 'Fubo'`, D-10
+    application, D-11 byte-for-byte department pass-through, D-12
+    location-side `.trim()` application — emitted `location.city`
+    for both listings byte-distinct from wire-padded form AND
+    exactly 1 byte shorter), `resultsWanted=1` cap, `searchTerm`
+    filter on title (case-insensitive `'SOFTWARE ENGINEER'` → 1
+    match), `searchTerm` filter on department (`'technology'` → 1
+    match), HTTP 500 → empty, empty `data.jobs` → empty.
 - **T05:** Updated `docs/SOURCE_ADOPTION_BACKLOG.md` (added
   fuboTV shipped row), `docs/index.md` (added Spec 071 row), and
   this `docs/log.md` entry.
 
 **Local test verification:**
+
 - `npx jest packages/plugins/source-company-fubotv --colors=false`
   → 8/8 green in 9.197 s.
 - `npx jest packages/plugins/source-company-flexport packages/plugins/source-company-classpass packages/plugins/source-company-coursera packages/plugins/source-company-epicgames packages/common/__tests__/helpers.spec --colors=false`
@@ -8850,9 +8899,9 @@ continues.
 
 **Scope:** Run #280 continues the user-owner-directed concrete-action
 deviation that runs #230–#279 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 069's run
+it's loop continuation without any changes etc."_ Per Spec 069's run
 #279 close-out note (which queued Flexport as run #280's bite — the
 alphabetically-sixth live hit from the fourth-fresh-sweep candidate
 pool), this run takes **Flexport**. The Greenhouse public API was
@@ -8909,7 +8958,7 @@ marketing case; D-06).
 
 - **T01:** Added `Site.FLEXPORT = 'flexport'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 80:
-  Spec 070 — Source Company Plugin: Flexport` header (preserves the
+Spec 070 — Source Company Plugin: Flexport` header (preserves the
   Spec 006 / 013 / 020..069 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-flexport` with the
   Faire-shape (single-file `service.ts`, 4-line `module.ts`,
@@ -8933,26 +8982,27 @@ marketing case; D-06).
   preserving the existing alphabetisation conventions.
 - **T04:** Authored 8 unit tests under
   `packages/plugins/source-company-flexport/__tests__/flexport.service.spec.ts`
-  + 2-listing fixture (clean title `'Account Executive, ENT'` /
-  `'Sales'` department + wire-padded title `'Country Manager,
-  Mexico '` (single trailing space) / `'Partnerships'` department).
-  Tests cover: NestJS DI resolution, `Site.FLEXPORT === 'flexport'`
-  literal pin, happy-path 2-listing mapping (with regression guards
-  for D-04 variant-10 shape, D-08 decode-then-strip pipeline, D-09
-  single-token bare-brand `companyName === 'Flexport'`, D-10
-  application — emitted `title` for second listing equals trimmed
-  form `'Country Manager, Mexico'` AND is byte-distinct from
-  wire-padded form AND is exactly 1 byte shorter, D-11 first-listing
-  department `'Sales'` byte-for-byte, D-11 second-listing department
-  `'Partnerships'` byte-for-byte), `resultsWanted=1` cap,
-  `searchTerm` filter on title (case-insensitive `'COUNTRY MANAGER'`
-  → 1 match), `searchTerm` filter on department (`'partnerships'`
-  substring → 1 match), HTTP 500 → empty, empty `data.jobs` → empty.
+  - 2-listing fixture (clean title `'Account Executive, ENT'` /
+    `'Sales'` department + wire-padded title `'Country Manager,
+Mexico '` (single trailing space) / `'Partnerships'` department).
+    Tests cover: NestJS DI resolution, `Site.FLEXPORT === 'flexport'`
+    literal pin, happy-path 2-listing mapping (with regression guards
+    for D-04 variant-10 shape, D-08 decode-then-strip pipeline, D-09
+    single-token bare-brand `companyName === 'Flexport'`, D-10
+    application — emitted `title` for second listing equals trimmed
+    form `'Country Manager, Mexico'` AND is byte-distinct from
+    wire-padded form AND is exactly 1 byte shorter, D-11 first-listing
+    department `'Sales'` byte-for-byte, D-11 second-listing department
+    `'Partnerships'` byte-for-byte), `resultsWanted=1` cap,
+    `searchTerm` filter on title (case-insensitive `'COUNTRY MANAGER'`
+    → 1 match), `searchTerm` filter on department (`'partnerships'`
+    substring → 1 match), HTTP 500 → empty, empty `data.jobs` → empty.
 - **T05:** Updated `docs/SOURCE_ADOPTION_BACKLOG.md` (added Flexport
   shipped row), `docs/index.md` (added Spec 070 row), and this
   `docs/log.md` entry.
 
 **Local test verification:**
+
 - `npx jest packages/plugins/source-company-flexport --colors=false`
   → 8/8 green in 9.451 s.
 - `npx jest packages/plugins/source-company-faire packages/plugins/source-company-chime packages/plugins/source-company-coursera packages/plugins/source-company-epicgames packages/common/__tests__/helpers.spec --colors=false`
@@ -9015,9 +9065,9 @@ window opens at run #300; Default C continues.
 
 **Scope:** Run #279 continues the user-owner-directed concrete-action
 deviation that runs #230–#278 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 068's run
+it's loop continuation without any changes etc."_ Per Spec 068's run
 #278 close-out note (which queued Epic Games as run #279's bite — the
 alphabetically-fifth live hit from the fourth-fresh-sweep candidate
 pool), this run takes **Epic Games**. The Greenhouse public API was
@@ -9088,7 +9138,7 @@ multi-token brand wire forms; D-06).
 
 - **T01:** Added `Site.EPICGAMES = 'epicgames'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 79:
-  Spec 069 — Source Company Plugin: Epic Games` header (preserves the
+Spec 069 — Source Company Plugin: Epic Games` header (preserves the
   Spec 006 / 013 / 020..068 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-epicgames` with the
   ClassPass-shape (single-file `service.ts`, 4-line `module.ts`,
@@ -9116,27 +9166,28 @@ multi-token brand wire forms; D-06).
   existing alphabetisation conventions.
 - **T04:** Authored 8 unit tests under
   `packages/plugins/source-company-epicgames/__tests__/epicgames.service.spec.ts`
-  + 2-listing fixture (clean title `'Concept Outsource Lead'` /
-  `'Art'` department + wire-padded title `'Partnerships Director -
-  Sports & Talent '` (single trailing space) / `'Partnerships'`
-  department). Tests cover: NestJS DI resolution, `Site.EPICGAMES
-  === 'epicgames'` literal pin, happy-path 2-listing mapping (with
-  regression guards for D-04 variant-13 shape, D-08
-  decode-then-strip pipeline, D-09 multi-token bare-brand
-  `companyName === 'Epic Games'`, D-10 application — emitted `title`
-  for second listing equals trimmed form `'Partnerships Director -
-  Sports & Talent'` AND is byte-distinct from wire-padded form AND
-  is exactly 1 byte shorter, D-11 first-listing department `'Art'`
-  byte-for-byte, D-11 second-listing department `'Partnerships'`
-  byte-for-byte), `resultsWanted=1` cap, `searchTerm` filter on
-  title (case-insensitive `'CONCEPT'` → 1 match), `searchTerm`
-  filter on department (`'partnerships'` substring → 1 match), HTTP
-  500 → empty, empty `data.jobs` → empty.
+  - 2-listing fixture (clean title `'Concept Outsource Lead'` /
+    `'Art'` department + wire-padded title `'Partnerships Director -
+Sports & Talent '` (single trailing space) / `'Partnerships'`
+    department). Tests cover: NestJS DI resolution, `Site.EPICGAMES
+=== 'epicgames'` literal pin, happy-path 2-listing mapping (with
+    regression guards for D-04 variant-13 shape, D-08
+    decode-then-strip pipeline, D-09 multi-token bare-brand
+    `companyName === 'Epic Games'`, D-10 application — emitted `title`
+    for second listing equals trimmed form `'Partnerships Director -
+Sports & Talent'` AND is byte-distinct from wire-padded form AND
+    is exactly 1 byte shorter, D-11 first-listing department `'Art'`
+    byte-for-byte, D-11 second-listing department `'Partnerships'`
+    byte-for-byte), `resultsWanted=1` cap, `searchTerm` filter on
+    title (case-insensitive `'CONCEPT'` → 1 match), `searchTerm`
+    filter on department (`'partnerships'` substring → 1 match), HTTP
+    500 → empty, empty `data.jobs` → empty.
 - **T05:** Updated `docs/SOURCE_ADOPTION_BACKLOG.md` (added Epic
   Games shipped row), `docs/index.md` (added Spec 069 row), and
   this `docs/log.md` entry.
 
 **Local test verification:**
+
 - `npx jest packages/plugins/source-company-epicgames --colors=false`
   → 8/8 green in 9.781 s.
 - `npx jest packages/plugins/source-company-coursera packages/plugins/source-company-classpass packages/plugins/source-company-carta packages/plugins/source-company-cameo packages/common/__tests__/helpers.spec --colors=false`
@@ -9219,9 +9270,9 @@ window opens at run #300; Default C continues.
 
 **Scope:** Run #278 continues the user-owner-directed concrete-action
 deviation that runs #230–#277 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 067's run
+it's loop continuation without any changes etc."_ Per Spec 067's run
 #277 close-out note (which queued Coursera as run #278's bite — the
 alphabetically-fourth live hit from the fourth-fresh-sweep candidate
 pool), this run takes **Coursera**. The Greenhouse public API was
@@ -9278,7 +9329,7 @@ brand's marketing case; D-06).
 
 - **T01:** Added `Site.COURSERA = 'coursera'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 78:
-  Spec 068 — Source Company Plugin: Coursera` header (preserves the
+Spec 068 — Source Company Plugin: Coursera` header (preserves the
   Spec 006 / 013 / 020..067 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-coursera` with the
   Chime-shape (single-file `service.ts`, 4-line `module.ts`,
@@ -9295,23 +9346,24 @@ brand's marketing case; D-06).
   preserving the existing alphabetisation conventions.
 - **T04:** Authored 8 unit tests under
   `packages/plugins/source-company-coursera/__tests__/coursera.service.spec.ts`
-  + 2-listing fixture (clean title `'Chief of Staff - CTO'` /
-  `'Chief of Staff'` department + wire title `'Content Ingestion &
-  Transformation Specialist'` / `'Industry Partnerships'` department).
-  Tests cover: NestJS DI resolution, `Site.COURSERA === 'coursera'`
-  literal pin, happy-path 2-listing mapping (with regression guards
-  for D-04 variant-2 shape, D-08 decode-then-strip pipeline, D-09
-  bare-brand `companyName === 'Coursera'`, D-10 omission — wire
-  title byte-for-byte, D-11 first-listing department `'Chief of
-  Staff'` byte-for-byte, D-11 second-listing department `'Industry
-  Partnerships'` byte-for-byte), `resultsWanted=1` cap, `searchTerm`
-  filter on title (case-insensitive), `searchTerm` filter on
-  department, HTTP 500 → empty, empty `data.jobs` → empty.
+  - 2-listing fixture (clean title `'Chief of Staff - CTO'` /
+    `'Chief of Staff'` department + wire title `'Content Ingestion &
+Transformation Specialist'` / `'Industry Partnerships'` department).
+    Tests cover: NestJS DI resolution, `Site.COURSERA === 'coursera'`
+    literal pin, happy-path 2-listing mapping (with regression guards
+    for D-04 variant-2 shape, D-08 decode-then-strip pipeline, D-09
+    bare-brand `companyName === 'Coursera'`, D-10 omission — wire
+    title byte-for-byte, D-11 first-listing department `'Chief of
+Staff'` byte-for-byte, D-11 second-listing department `'Industry
+Partnerships'` byte-for-byte), `resultsWanted=1` cap, `searchTerm`
+    filter on title (case-insensitive), `searchTerm` filter on
+    department, HTTP 500 → empty, empty `data.jobs` → empty.
 - **T05:** Updated `docs/SOURCE_ADOPTION_BACKLOG.md` (added
   Coursera shipped row), `docs/index.md` (added Spec 068 row), and
   this `docs/log.md` entry.
 
 **Local test verification:**
+
 - `npx jest packages/plugins/source-company-coursera --colors=false`
   → 8/8 green in 9.694 s.
 - `npx jest packages/plugins/source-company-classpass packages/plugins/source-company-carta packages/plugins/source-company-cameo packages/plugins/source-company-chime packages/common/__tests__/helpers.spec --colors=false`
@@ -9337,9 +9389,9 @@ candidate slugs.
 
 **Scope:** Run #277 continues the user-owner-directed concrete-action
 deviation that runs #230–#276 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 066's run
+it's loop continuation without any changes etc."_ Per Spec 066's run
 #276 close-out note (which queued ClassPass as run #277's bite — the
 alphabetically-third live hit from the fourth-fresh-sweep candidate
 pool), this run takes **ClassPass**. The Greenhouse public API was
@@ -9407,7 +9459,7 @@ PascalCase convention from Cameo, Carta, Faire, Mixpanel, etc.; D-06).
 
 - **T01:** Added `Site.CLASSPASS = 'classpass'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 77:
-  Spec 067 — Source Company Plugin: ClassPass` header (preserves the
+Spec 067 — Source Company Plugin: ClassPass` header (preserves the
   Spec 006 / 013 / 020..066 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-classpass` with the
   Carta-shape (single-file `service.ts`, 4-line `module.ts`,
@@ -9444,7 +9496,7 @@ PascalCase convention from Cameo, Carta, Faire, Mixpanel, etc.; D-06).
   bare-brand `companyName === 'ClassPass'` D-09 omission lock, the
   D-10 application lock — emitted `title` for the second listing
   equals the trimmed form `'Director, Product Management, ClassPass
-  Consumer'` AND is byte-distinct from the wire-padded form, the
+Consumer'` AND is byte-distinct from the wire-padded form, the
   D-11 first-listing clean department pass-through `'Sales'`, AND
   the D-11 second-listing clean department pass-through
   `'Marketing'`), `resultsWanted=1` cap, `searchTerm` title filter
@@ -9537,9 +9589,9 @@ window opens at run #300; Default C continues.
 
 **Scope:** Run #276 continues the user-owner-directed concrete-action
 deviation that runs #230–#275 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 065's run
+it's loop continuation without any changes etc."_ Per Spec 065's run
 #275 close-out note (which queued Carta as run #276's bite — the
 alphabetically-second live hit from the fourth-fresh-sweep
 candidate pool), this run takes **Carta**. The Greenhouse public API
@@ -9599,7 +9651,7 @@ D-06).
 
 - **T01:** Added `Site.CARTA = 'carta'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 76:
-  Spec 066 — Source Company Plugin: Carta` header (preserves the
+Spec 066 — Source Company Plugin: Carta` header (preserves the
   Spec 006 / 013 / 020..065 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-carta` with the
   Cameo-shape (single-file `service.ts`, 4-line `module.ts`,
@@ -9635,9 +9687,9 @@ D-06).
   token bare-brand `companyName === 'Carta'` D-09 omission lock,
   the D-10 application lock — emitted `title` for the second
   listing equals the trimmed form `'Business Development Manager,
-  Private Equity'` AND is byte-distinct from the wire-padded form,
+Private Equity'` AND is byte-distinct from the wire-padded form,
   the D-11 first-listing clean department pass-through `'Account
-  Executive'`, AND the D-11 second-listing clean department pass-
+Executive'`, AND the D-11 second-listing clean department pass-
   through `'Marketing'`), `resultsWanted=1` cap, `searchTerm` title
   filter (`'PRIVATE EQUITY'` → 1 match against the trimmed form),
   `searchTerm` department filter on `'marketing'` substring → 1
@@ -9722,9 +9774,9 @@ window opens at run #300; Default C continues.
 
 **Scope:** Run #275 continues the user-owner-directed concrete-action
 deviation that runs #230–#274 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 064's run
+it's loop continuation without any changes etc."_ Per Spec 064's run
 #274 close-out note (which exhausted the run-272 / run-273
 third-fresh-sweep live-board pool and queued runs #275+ to pivot to a
 fourth fresh probe sweep), this run probed the fourth-sweep candidate
@@ -9784,7 +9836,7 @@ bare-brand single-word name; D-06).
 
 - **T01:** Added `Site.CAMEO = 'cameo'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 75:
-  Spec 065 — Source Company Plugin: Cameo` header (preserves the
+Spec 065 — Source Company Plugin: Cameo` header (preserves the
   Spec 006 / 013 / 020..064 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-cameo` with the
   Scale AI-shape (single-file `service.ts`, 4-line `module.ts`,
@@ -9826,7 +9878,7 @@ bare-brand single-word name; D-06).
   pad byte preserved), `resultsWanted=1` cap, `searchTerm` title
   filter (`'AUTOMATION'` → 1 match), `searchTerm` department filter
   on padded multi-word `'business'` substring matching `'Cameo for
-  Business '` (D-11 padded multi-word search guard), `searchTerm`
+Business '` (D-11 padded multi-word search guard), `searchTerm`
   department filter on first-listing `'engineering'` substring,
   HTTP 500 → empty, and empty `data.jobs` → empty. All 9 cases green
   in 9.664 s.
@@ -9911,9 +9963,9 @@ window opens at run #300; Default C continues.
 
 **Scope:** Run #274 continues the user-owner-directed concrete-action
 deviation that runs #230–#273 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 063's run
+it's loop continuation without any changes etc."_ Per Spec 063's run
 #273 close-out note (which queued **Scale AI** as the alphabetically-
 second bite from the run-272 / run-273 third-fresh-sweep live-board
 pool), this run takes Scale AI directly: the Greenhouse public API
@@ -9970,7 +10022,7 @@ D-06).
 
 - **T01:** Added `Site.SCALEAI = 'scaleai'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 74:
-  Spec 064 — Source Company Plugin: Scale AI` header (preserves the
+Spec 064 — Source Company Plugin: Scale AI` header (preserves the
   Spec 006 / 013 / 020..063 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-scaleai` with the
   Mixpanel-shape (single-file `service.ts`, 4-line `module.ts`,
@@ -10056,7 +10108,7 @@ plugins).
 - **4** plugins applying a brand-name trim (D-09 string-literal pin
   over a wire-suffixed `company_name`): Affirm, Gusto, ZoomInfo,
   Chime — Scale AI does NOT contribute (wire `company_name === 'Scale
-  AI'` byte-for-byte; no legal-entity suffix; **first cohort plugin
+AI'` byte-for-byte; no legal-entity suffix; **first cohort plugin
   to omit D-09 against a multi-token bare-brand wire `company_name`**
   — the prior thirteen D-09-omission plugins all had single-word
   bare-brand wires).
@@ -10095,9 +10147,9 @@ window opens at run #300; Default C continues.
 
 **Scope:** Run #273 continues the user-owner-directed concrete-action
 deviation that runs #230–#272 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 062's run
+it's loop continuation without any changes etc."_ Per Spec 062's run
 #272 close-out note (which exhausted the run-268 fresh-sweep live-board
 pool and queued runs #273+ to pivot to a third fresh probe sweep), this
 run probes the third-sweep candidate pool and ships the alphabetically-
@@ -10148,7 +10200,7 @@ word name; D-06).
 
 - **T01:** Added `Site.FAIRE = 'faire'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 73:
-  Spec 063 — Source Company Plugin: Faire` header (preserves the
+Spec 063 — Source Company Plugin: Faire` header (preserves the
   Spec 006 / 013 / 020..062 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-faire` with the
   Chime-shape (single-file `service.ts`, 4-line `module.ts`, 2-line
@@ -10214,9 +10266,9 @@ which use Greenhouse as their primary public ATS).
 
 **Scope:** Run #272 continues the user-owner-directed concrete-action
 deviation that runs #230–#271 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 061's run
+it's loop continuation without any changes etc."_ Per Spec 061's run
 #271 close-out note (which queued **Mixpanel** as the alphabetically-
 final bite from the run-268 fresh-sweep live-board pool), this run
 takes Mixpanel directly: the Greenhouse public API was probed at
@@ -10270,7 +10322,7 @@ D-06).
 
 - **T01:** Added `Site.MIXPANEL = 'mixpanel'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 72:
-  Spec 062 — Source Company Plugin: Mixpanel` header (preserves the
+Spec 062 — Source Company Plugin: Mixpanel` header (preserves the
   Spec 006 / 013 / 020..061 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-mixpanel` with the
   Intercom-shape (single-file `service.ts`, 4-line `module.ts`, 2-line
@@ -10310,11 +10362,11 @@ D-06).
   `jobUrl` contains `job-boards.greenhouse.io` AND `/mixpanel/jobs/`
   AND must NOT contain `?gh_jid=`), (d) the wire-passthrough
   `companyName === 'Mixpanel'` byte-for-byte AND `companyName ===
-  fixture.jobs[0].company_name` (locking the D-09 omission
+fixture.jobs[0].company_name` (locking the D-09 omission
   observability), (e) the D-10 wire-title `.trim()` regression — wire
   title `'Account Manager '` carries trailing pad bytes pre-emit AND
   emitted `title === 'Account Manager'` (pad-free) AND emitted `title
-  !== fixture.jobs[0].title`, (f) the case-insensitive `'MANAGER'`
+!== fixture.jobs[0].title`, (f) the case-insensitive `'MANAGER'`
   `searchTerm` substring matches the trimmed `'Account Manager'`
   first listing (D-10 trim-then-match guard), (g) the case-insensitive
   `'engineering'` `searchTerm` substring matches the second listing's
@@ -10323,7 +10375,7 @@ D-06).
   substring matches the first listing's `'Sales'` flat single-token
   department (D-11 flat-form search guard, second instance). All 9
   cases green in **9.456 s** (`npx jest packages/plugins/source-
-  company-mixpanel --colors=false`).
+company-mixpanel --colors=false`).
 - **T05:** Updated `docs/SOURCE_ADOPTION_BACKLOG.md` (Mixpanel shipped
   row appended under Intercom), `docs/index.md` (Spec 062 row appended
   under Spec 061), and `docs/log.md` (this entry).
@@ -10361,7 +10413,7 @@ barrel / tsconfig path-alias / jest moduleNameMapper edits.
 - **4** plugins applying a brand-name trim (D-09 string-literal pin
   over a wire-suffixed `company_name`): Affirm, Gusto, ZoomInfo,
   Chime — Mixpanel does NOT contribute (wire `company_name ===
-  'Mixpanel'` byte-for-byte; no legal-entity suffix; twelfth cohort
+'Mixpanel'` byte-for-byte; no legal-entity suffix; twelfth cohort
   plugin to omit D-09 against a single-word bare-brand wire
   `company_name`).
 
@@ -10394,9 +10446,9 @@ window opens at run #300; Default C continues.
 
 **Scope:** Run #271 continues the user-owner-directed concrete-action
 deviation that runs #230–#270 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 060's run
+it's loop continuation without any changes etc."_ Per Spec 060's run
 #270 close-out note (which queued **Intercom** as the alphabetically-
 next bite from the run-268 fresh-sweep live-board pool), this run takes
 Intercom directly: the Greenhouse public API was probed at run-271 start
@@ -10457,7 +10509,7 @@ omitted). Class names are `IntercomService` / `IntercomModule`
 
 - **T01:** Added `Site.INTERCOM = 'intercom'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 71:
-  Spec 061 — Source Company Plugin: Intercom` header (preserves the
+Spec 061 — Source Company Plugin: Intercom` header (preserves the
   Spec 006 / 013 / 020..060 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-intercom` with the
   Attentive-shape (single-file `service.ts`, 4-line `module.ts`,
@@ -10496,14 +10548,14 @@ omitted). Class names are `IntercomService` / `IntercomModule`
   variant-2 shape against future refactors via assertions that `jobUrl`
   contains `job-boards.greenhouse.io` AND `/intercom/jobs/` AND must
   NOT contain `?gh_jid=`), (d) the wire-passthrough `companyName ===
-  'Intercom'` byte-for-byte AND `companyName === fixture.jobs[0].
-  company_name` (locking the D-09 omission observability), (e) the
+'Intercom'` byte-for-byte AND `companyName === fixture.jobs[0].
+company_name` (locking the D-09 omission observability), (e) the
   D-10 wire-title `.trim()` regression — wire title `'Account
-  Executive, Commercial '` carries trailing pad bytes pre-emit AND
+Executive, Commercial '` carries trailing pad bytes pre-emit AND
   emitted `title === 'Account Executive, Commercial'` (pad-free) AND
   emitted `title !== fixture.jobs[0].title`, (f) the case-insensitive
   `'COMMERCIAL'` `searchTerm` substring matches the trimmed `'Account
-  Executive, Commercial'` first listing (D-10 trim-then-match guard),
+Executive, Commercial'` first listing (D-10 trim-then-match guard),
   (g) the case-insensitive `'engineering'` `searchTerm` substring
   matches the second listing's `'Engineering'` flat single-token
   department (D-11 flat-form search guard), and (h) the case-
@@ -10552,7 +10604,7 @@ barrel / tsconfig path-alias / jest moduleNameMapper edits.
 - **4** plugins applying a brand-name trim (D-09 string-literal pin
   over a wire-suffixed `company_name`): Affirm, Gusto, ZoomInfo,
   Chime — Intercom does NOT contribute (wire `company_name ===
-  'Intercom'` byte-for-byte; no legal-entity suffix; eleventh cohort
+'Intercom'` byte-for-byte; no legal-entity suffix; eleventh cohort
   plugin to omit D-09 against a single-word bare-brand wire
   `company_name`).
 
@@ -10565,8 +10617,7 @@ window opens at run #300; Default C continues.
 
 1. Pick the **alphabetically-next** bite from the run-268 fresh-sweep
    live-board set: `mixpanel` — 51 open roles, Mixpanel Inc. — product
-   analytics platform. Plugin id `source-company-mixpanel`. Spec ID
-   062. Phase 72.
+   analytics platform. Plugin id `source-company-mixpanel`. Spec ID 062. Phase 72.
 2. Re-probe `hubspot` at the start of run #272 to check if the empty-
    board status has flipped (tenth consecutive re-probe).
 3. Once the run-268 fresh-sweep pool is exhausted (after Mixpanel in
@@ -10582,9 +10633,9 @@ window opens at run #300; Default C continues.
 
 **Scope:** Run #270 continues the user-owner-directed concrete-action
 deviation that runs #230–#269 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 059's run
+it's loop continuation without any changes etc."_ Per Spec 059's run
 #269 close-out note (which queued **Elastic** as the alphabetically-next
 bite from the run-268 fresh-sweep live-board pool), this run takes
 Elastic directly: the Greenhouse public API was probed at run-270 start
@@ -10621,22 +10672,20 @@ this the **sixteenth** plugin to use that pipeline. Like Brex,
 Buildkite, ZoomInfo, and Attentive, a subset of Elastic wire titles
 carry trailing ASCII-space padding (16 of 193 titles in the run-270
 probe — `'Account Executive '`, `'Consulting Architect, Public Sector
+
 - Netherlands '`, `'Customer Architect - EMEA Central '`, `'Enterprise
-Account Executive '`, etc.) that the plugin trims via `.trim()`
-before downstream filters and emit (D-10). Elastic's wire `company_name`
-is the literal string `'Elastic'` (the bare brand name; no legal-entity
-suffix — distinct from Chime's `'Chime Financial, Inc'`, ZoomInfo's
+  Account Executive '`, etc.) that the plugin trims via `.trim()`before downstream filters and emit (D-10). Elastic's wire`company_name`is the literal string`'Elastic'`(the bare brand name; no legal-entity
+suffix — distinct from Chime's`'Chime Financial, Inc'`, ZoomInfo's
 `'ZoomInfo Technologies LLC'`, Affirm's `'Affirm, Inc.'`, and Gusto's
-`'Gusto, Inc.'`), so the plugin reads `listing.company_name` directly
-without a string-literal pin (D-09 omitted). Class names are
-`ElasticService` / `ElasticModule` (PascalCase from the bare-brand
-single-word name; D-06).
+`'Gusto, Inc.'`), so the plugin reads `listing.company_name`directly
+without a string-literal pin (D-09 omitted). Class names are`ElasticService`/`ElasticModule` (PascalCase from the bare-brand
+  single-word name; D-06).
 
 **Spec 060 — Source Company Plugin: Elastic — closed end-to-end:**
 
 - **T01:** Added `Site.ELASTIC = 'elastic'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 70:
-  Spec 060 — Source Company Plugin: Elastic` header (preserves the
+Spec 060 — Source Company Plugin: Elastic` header (preserves the
   Spec 006 / 013 / 020..059 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-elastic` with the
   Attentive-shape (single-file `service.ts`, 4-line `module.ts`,
@@ -10665,7 +10714,7 @@ single-word name; D-06).
   (Spec 060 § 10 D-11) — first plugin in the cohort to ship a fixture
   with `' - '`-separated compound department names that scope region
   within line-of-business (`'Sales - EMEA - UKI'`, `'Sales - APJ -
-  India'`, etc.).
+India'`, etc.).
 - **T03:** Registered in the four wiring files —
   `packages/plugins/index.ts` (`ElasticModule` import + append to
   `ALL_SOURCE_MODULES` between `DuolingoModule` and `FigmaModule` per
@@ -10682,10 +10731,10 @@ single-word name; D-06).
   assertions that `jobUrl` contains `jobs.elastic.co` AND `gh_jid=`
   AND `gh_jid=7505982&gh_jid=7505982` AND must NOT contain
   `boards.greenhouse.io`), (d) the wire-passthrough `companyName ===
-  'Elastic'` byte-for-byte AND `companyName === fixture.jobs[0].
-  company_name` (locking the D-09 omission observability), (e) the
+'Elastic'` byte-for-byte AND `companyName === fixture.jobs[0].
+company_name` (locking the D-09 omission observability), (e) the
   D-10 wire-title `.trim()` regression — wire title `'Account
-  Executive '` carries trailing pad bytes pre-emit AND emitted
+Executive '` carries trailing pad bytes pre-emit AND emitted
   `title === 'Account Executive'` (pad-free) AND emitted
   `title !== fixture.jobs[0].title`, (f) the case-insensitive
   `'EXECUTIVE'` `searchTerm` substring matches the trimmed
@@ -10694,7 +10743,7 @@ single-word name; D-06).
   matches the first listing's `'Sales - EMEA - UKI'` compound-form
   department (D-11 compound-form search guard). All 8 cases green in
   **9.518 s** (`npx jest packages/plugins/source-company-elastic
-  --colors=false`).
+--colors=false`).
 - **T05:** Updated `docs/SOURCE_ADOPTION_BACKLOG.md` (Elastic shipped
   row appended under Chime), `docs/index.md` (Spec 060 row appended
   under Spec 059), and `docs/log.md` (this entry).
@@ -10766,9 +10815,9 @@ window opens at run #300; Default C continues.
 
 **Scope:** Run #269 continues the user-owner-directed concrete-action
 deviation that runs #230–#268 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 058's run
+it's loop continuation without any changes etc."_ Per Spec 058's run
 #268 close-out note (which queued **Chime** as the alphabetically-next
 bite from the run-268 fresh-sweep live-board pool), this run takes
 Chime directly: the Greenhouse public API was probed at run-269 start
@@ -10820,7 +10869,7 @@ single-word name; D-06).
 
 - **T01:** Added `Site.CHIME = 'chime'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 69:
-  Spec 059 — Source Company Plugin: Chime` header (preserves the
+Spec 059 — Source Company Plugin: Chime` header (preserves the
   Spec 006 / 013 / 020..058 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-chime` with the
   Attentive-shape (single-file `service.ts`, 4-line `module.ts`,
@@ -10834,11 +10883,11 @@ single-word name; D-06).
   10 fallback URL and D-09 brand-name trim string-literal pin. The
   fallback `jobUrl` shape mirrors the wire `absolute_url` byte-for-byte
   — `https://boards.greenhouse.io/chime/jobs/${listing.id}?gh_jid=
-  ${listing.id}` with the legacy hosted-board apex
+${listing.id}` with the legacy hosted-board apex
   `boards.greenhouse.io` (no `job-` prefix) and the duplicate-of-id-in-
   path `?gh_jid=<id>` query suffix (Spec 059 § 10 D-04). The
   description-cleanup pipeline `stripHtmlTags(decodeHtmlEntities(
-  content))` is identical to Attentive's because Chime's `content` is
+content))` is identical to Attentive's because Chime's `content` is
   also HTML-entity-encoded (Spec 059 § 10 D-08). The brand-name pin
   `'Chime'` differs from the wire `'Chime Financial, Inc'` (Spec 059
   § 10 D-09 — fourth-instance brand-name trim). Department pass-
@@ -10874,7 +10923,7 @@ single-word name; D-06).
   second listing's `'AI & App Experience Engineering'` department
   (D-11 ampersand-bearing search guard). All 8 cases green in
   **9.384 s** (`npx jest packages/plugins/source-company-chime
-  --colors=false`).
+--colors=false`).
 - **T05:** Updated `docs/SOURCE_ADOPTION_BACKLOG.md` (Chime shipped
   row appended under Attentive), `docs/index.md` (Spec 059 row
   appended under Spec 058), and `docs/log.md` (this entry).
@@ -10924,8 +10973,7 @@ window opens at run #300; Default C continues.
 1. Pick the **alphabetically-next** bite from the run-268 fresh-sweep
    live-board set: `elastic` (`ela` < `int` < `mix`) — 193 open
    roles, Elastic NV (the Elastic Stack / Elasticsearch / Kibana /
-   Logstash vendor). Plugin id `source-company-elastic`. Spec ID
-   060. Phase 70.
+   Logstash vendor). Plugin id `source-company-elastic`. Spec ID 060. Phase 70.
 2. Continue alphabetically: `intercom` (174 jobs, Intercom Inc. —
    customer-messaging platform) → `mixpanel` (51 jobs, Mixpanel Inc.
    — product analytics platform).
@@ -10944,9 +10992,9 @@ window opens at run #300; Default C continues.
 
 **Scope:** Run #268 continues the user-owner-directed concrete-action
 deviation that runs #230–#267 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 057's run
+it's loop continuation without any changes etc."_ Per Spec 057's run
 #267 close-out note (which observed the carry-over named-candidate
 pool from Spec 050's nine-200 sweep was fully exhausted with the
 ZoomInfo ship and queued runs #268+ for a **fresh probe sweep** of the
@@ -11010,7 +11058,7 @@ D-06).
 
 - **T01:** Added `Site.ATTENTIVE = 'attentive'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 68:
-  Spec 058 — Source Company Plugin: Attentive` header (preserves the
+Spec 058 — Source Company Plugin: Attentive` header (preserves the
   Spec 006 / 013 / 020..057 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-attentive` with the
   Webflow-shape (single-file `service.ts`, 4-line `module.ts`, 2-line
@@ -11050,13 +11098,13 @@ D-06).
   `company_name` (D-09 wire-shape regression guard against a future
   legal-entity-suffix flip), (e) the `.trim()` observability on the
   padded second-listing fixture title `'Director of Engineering,
-  Intelligent Messaging '` → emitted `'Director of Engineering,
-  Intelligent Messaging'` (D-10 lock — emitted has no trailing
+Intelligent Messaging '` → emitted `'Director of Engineering,
+Intelligent Messaging'` (D-10 lock — emitted has no trailing
   whitespace AND emitted !== fixture), and (f) the flat single-token
   department pass-through `'Finance'` / `'Engineering'` byte-for-byte
   (D-11 first- and second-instance pass-through guards). All 8 cases
   green in **9.631 s** (`npx jest packages/plugins/source-company-
-  attentive --colors=false`).
+attentive --colors=false`).
 - **T05:** Updated `docs/SOURCE_ADOPTION_BACKLOG.md` (Attentive shipped
   row appended under ZoomInfo), `docs/index.md` (Spec 058 row appended
   under Spec 057), and `docs/log.md` (this entry).
@@ -11068,26 +11116,26 @@ tsconfig path-alias / jest moduleNameMapper edits.
 
 **Probe-sweep raw counts (run-268 start, fresh-pivot batch):**
 
-| Slug | HTTP | `meta.total` | Status |
-| ---- | ---- | ------------ | ------ |
-| `snyk` | 404 | — | not on Greenhouse public boards |
-| `1password` | 404 | — | not on Greenhouse public boards |
-| `canva` | 404 | — | not on Greenhouse public boards |
-| `chime` | 200 | **72** | live — queued for runs #269+ |
-| `intercom` | 200 | **174** | live — queued for runs #269+ |
-| `mixpanel` | 200 | **51** | live — queued for runs #269+ |
-| `gong` | 404 | — | not on Greenhouse public boards |
-| `attentive` | 200 | **59** | **selected for Spec 058** |
-| `rippling` | 404 | — | not on Greenhouse public boards |
-| `hashicorp` | 404 | — | not on Greenhouse public boards |
-| `elastic` | 200 | **193** | live — queued for runs #269+ |
-| `snowflake` | 404 | — | not on Greenhouse public boards |
-| `huggingface` | 404 | — | not on Greenhouse public boards |
-| `replicate` | 404 | — | not on Greenhouse public boards |
-| `hubspot` | 200 | **0** | empty re-probe (seventh consecutive across runs #262–#268) — deferred |
-| `benchling` | 404 | — | not on Greenhouse public boards |
-| `segment` | 404 | — | not on Greenhouse public boards |
-| `automattic` | 404 | — | not on Greenhouse public boards |
+| Slug          | HTTP | `meta.total` | Status                                                                |
+| ------------- | ---- | ------------ | --------------------------------------------------------------------- |
+| `snyk`        | 404  | —            | not on Greenhouse public boards                                       |
+| `1password`   | 404  | —            | not on Greenhouse public boards                                       |
+| `canva`       | 404  | —            | not on Greenhouse public boards                                       |
+| `chime`       | 200  | **72**       | live — queued for runs #269+                                          |
+| `intercom`    | 200  | **174**      | live — queued for runs #269+                                          |
+| `mixpanel`    | 200  | **51**       | live — queued for runs #269+                                          |
+| `gong`        | 404  | —            | not on Greenhouse public boards                                       |
+| `attentive`   | 200  | **59**       | **selected for Spec 058**                                             |
+| `rippling`    | 404  | —            | not on Greenhouse public boards                                       |
+| `hashicorp`   | 404  | —            | not on Greenhouse public boards                                       |
+| `elastic`     | 200  | **193**      | live — queued for runs #269+                                          |
+| `snowflake`   | 404  | —            | not on Greenhouse public boards                                       |
+| `huggingface` | 404  | —            | not on Greenhouse public boards                                       |
+| `replicate`   | 404  | —            | not on Greenhouse public boards                                       |
+| `hubspot`     | 200  | **0**        | empty re-probe (seventh consecutive across runs #262–#268) — deferred |
+| `benchling`   | 404  | —            | not on Greenhouse public boards                                       |
+| `segment`     | 404  | —            | not on Greenhouse public boards                                       |
+| `automattic`  | 404  | —            | not on Greenhouse public boards                                       |
 
 **Cohort statistics after Spec 058:**
 
@@ -11123,8 +11171,7 @@ window opens at run #300; Default C continues.
 1. Pick the **alphabetically-next** bite from the run-268 fresh-sweep
    live-board set: `chime` (`chi` < `ela` < `hub` < `int` < `mix`) —
    72 open roles, Chime Financial Inc., the dominant US neobank /
-   challenger-bank brand. Plugin id `source-company-chime`. Spec ID
-   059. Phase 69. The wire-shape variant + description-pipeline +
+   challenger-bank brand. Plugin id `source-company-chime`. Spec ID 059. Phase 69. The wire-shape variant + description-pipeline +
    brand-name-trim status will be probed at run-269 start; default
    working hypothesis is variant 2 + entity-decode pipeline + brand-
    name byte-for-byte (the most common cohort signature).
@@ -11149,9 +11196,9 @@ window opens at run #300; Default C continues.
 
 **Scope:** Run #267 continues the user-owner-directed concrete-action
 deviation that runs #230–#266 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 056's run
+it's loop continuation without any changes etc."_ Per Spec 056's run
 #266 close-out note (which queued **ZoomInfo** as the alphabetically-
 next remaining live bite from the carry-over named-candidate pool,
 plus a HubSpot re-probe), this run takes ZoomInfo directly: the
@@ -11205,7 +11252,7 @@ camelCase brand name with capital `I`; D-06).
 
 - **T01:** Added `Site.ZOOMINFO = 'zoominfo'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 67:
-  Spec 057 — Source Company Plugin: ZoomInfo` header (preserves the
+Spec 057 — Source Company Plugin: ZoomInfo` header (preserves the
   Spec 006 / 013 / 020..056 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-zoominfo` with the
   Toast-shape (single-file `service.ts`, 4-line `module.ts`, 2-line
@@ -11238,7 +11285,7 @@ camelCase brand name with capital `I`; D-06).
   covering: NestJS DI resolution, enum-literal pin, happy-path
   fixture-to-DTO mapping (2 listings → 2 `JobPostDto` rows with `id`
   prefix `zoominfo-`, `site === Site.ZOOMINFO`, `companyName ===
-  'ZoomInfo'` byte-for-byte AND NOT matching the wire
+'ZoomInfo'` byte-for-byte AND NOT matching the wire
   `company_name` `'ZoomInfo Technologies LLC'` (D-09 brand-name trim
   guard), location, department `'801 Client Services - Support'`
   byte-for-byte (D-11 numeric-code-prefix pass-through guard),
@@ -11247,7 +11294,7 @@ camelCase brand name with capital `I`; D-06).
   mark U+2019, numeric entity (`&#39;`) decoded to apostrophe, and
   `<p>`/`<div>`/`<strong>`/`<em>` tags stripped after the decode
   pass), the second listing's wire title `'Account Manager,
-  Enterprise Growth '` (with trailing ASCII space) is observably
+Enterprise Growth '` (with trailing ASCII space) is observably
   trimmed to `'Account Manager, Enterprise Growth'` AND the trim
   observably fired (`emitted !== fixture` — D-10 lock),
   `resultsWanted=1` cap, `searchTerm` filter on title post-trim
@@ -11292,9 +11339,9 @@ next batch of large-employer candidates per the user-owner
 "continuously add more sources" directive in the scheduled-task
 brief.
 
-**Next-run queued bite:** Per the user-owner directive *"add more
+**Next-run queued bite:** Per the user-owner directive _"add more
 sources for jobs, e.g. search some more ATS to support or just
-search for some more large companies jobs feeds parsers etc"*, run
+search for some more large companies jobs feeds parsers etc"_, run
 #268 will probe a fresh batch of large-employer Greenhouse
 candidates: candidates to consider include `samsara`, `clari`,
 `outreach`, `gong`, `airtable`, `notion`, `canva`, `miro`, `figma2`
@@ -11309,9 +11356,9 @@ per the established convention.
 
 **Scope:** Run #266 continues the user-owner-directed concrete-action
 deviation that runs #230–#265 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 055's run
+it's loop continuation without any changes etc."_ Per Spec 055's run
 #265 close-out note (which queued **Webflow** as the alphabetically-next
 remaining live bite from the carry-over named-candidate pool, plus
 **ZoomInfo** and a HubSpot re-probe), this run takes Webflow directly:
@@ -11367,7 +11414,7 @@ single-word brand name; D-06).
 
 - **T01:** Added `Site.WEBFLOW = 'webflow'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 66:
-  Spec 056 — Source Company Plugin: Webflow` header (preserves the
+Spec 056 — Source Company Plugin: Webflow` header (preserves the
   Spec 006 / 013 / 020..055 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-webflow` with the
   Postman-shape (single-file `service.ts`, 4-line `module.ts`, 2-line
@@ -11399,7 +11446,7 @@ single-word brand name; D-06).
   covering: NestJS DI resolution, enum-literal pin, happy-path
   fixture-to-DTO mapping (2 listings → 2 `JobPostDto` rows with `id`
   prefix `webflow-`, `site === Site.WEBFLOW`, `companyName ===
-  'Webflow'`, location, department, isRemote, description with
+'Webflow'`, location, department, isRemote, description with
   numeric entity (`&#39;`) decoded to apostrophe, named entity
   (`&rsquo;`) decoded to right single quotation mark U+2019, and
   `<p>`/`<strong>`/`<em>` tags stripped after the decode pass),
@@ -11458,46 +11505,46 @@ single-word brand name; D-06).
   MongoDB, Datadog, Instacart, Dropbox, Roblox, Block, Vercel, Affirm,
   Klaviyo, Duolingo, Brex, Gusto, Mercury, Buildkite, CircleCI,
   Ramp Network, Netlify, Postman, Toast, **Webflow** + Stripe + Cursor
-  + Amazon + Apple + Google + IBM + Meta + OpenAI). 8 distinct
-  wire-shape variants in the cohort: legacy
-  `boards.greenhouse.io/<slug>/jobs/<id>` (31 plugins, Block-and-
-  earlier), new `job-boards.greenhouse.io/<slug>/jobs/<id>` (Vercel +
-  Affirm + Gusto + Mercury + Buildkite + Netlify + Postman + **Webflow**
-  — variant 2; **8 plugins**), apex marketing-site query-param-only
-  `www.<company>.com/careers/jobs?gh_jid=<id>` (Klaviyo — variant 3),
-  careers-subdomain marketing-site path-AND-query
-  `careers.<company>.com/jobs/<id>?gh_jid=<id>` (Duolingo — variant 4),
-  apex-www marketing-site path-AND-query
-  `www.<company>.com/careers/<id>?gh_jid=<id>` (Brex — variant 5),
-  EU-region permalink subdomain
-  `job-boards.eu.greenhouse.io/<slug>/jobs/<id>` (Ramp Network —
-  variant 6), apex-www marketing-site, HTTP-scheme, path-with-`jobs`-
-  segment-and-trailing-slash-and-query
-  `http://www.<company>.com/careers/jobs/<id>/?gh_jid=<id>` (CircleCI —
-  variant 7), and careers-subdomain on a sub-brand product domain,
-  query-param-only `https://careers.<sub-brand>.com/jobs?gh_jid=<id>`
-  (Toast — variant 8). 12 plugins use the entity-decode-then-tag-strip
-  description pipeline (Klaviyo, Duolingo, Brex, Gusto, Mercury,
-  Buildkite, CircleCI, Ramp Network, Netlify, Postman, Toast,
-  **Webflow**). 2 plugins apply a wire-title trim (Brex, Buildkite —
-  Webflow does **not**). 2 plugins apply a brand-name pin cleaning a
-  wire `company_name` legal-entity suffix (Affirm, Gusto); Mercury,
-  Buildkite, CircleCI, Ramp Network, Netlify, Postman, Toast, and
-  Webflow's brand-name pins match the wire byte-for-byte (no legal-
-  entity suffix to clean). 2 plugins use embedded-acronym PascalCase
-  preserving trademark casing in class names (`OpenAIService`,
-  `CircleCIService`); other initialism brands like IBM use sentence-
-  case (`IbmService` / `IbmModule`). 1 plugin pins a multi-word
-  brand-name string literal containing an inter-word ASCII space —
-  Ramp Network. 1 plugin ships a fixture with an ampersand-bearing
-  department name — Netlify (`R&D` / `G&A` no-space). 1 plugin ships
-  a fixture with a `<div class="content-intro">` recruiter-blurb
-  wrapper pass-through — Postman. 1 plugin ships a fixture with
-  colon-separated nested-path department names with spaced
-  ampersands — Toast. **1 plugin ships a fixture with semicolon-
-  separated multi-region location names with parenthesised
-  province/state restrictions — Webflow** (`'CA Remote (BC & ON only);
-  U.K. / Ireland Remote; U.S. Remote'`), the brand-new first-instance.
+  - Amazon + Apple + Google + IBM + Meta + OpenAI). 8 distinct
+    wire-shape variants in the cohort: legacy
+    `boards.greenhouse.io/<slug>/jobs/<id>` (31 plugins, Block-and-
+    earlier), new `job-boards.greenhouse.io/<slug>/jobs/<id>` (Vercel +
+    Affirm + Gusto + Mercury + Buildkite + Netlify + Postman + **Webflow**
+    — variant 2; **8 plugins**), apex marketing-site query-param-only
+    `www.<company>.com/careers/jobs?gh_jid=<id>` (Klaviyo — variant 3),
+    careers-subdomain marketing-site path-AND-query
+    `careers.<company>.com/jobs/<id>?gh_jid=<id>` (Duolingo — variant 4),
+    apex-www marketing-site path-AND-query
+    `www.<company>.com/careers/<id>?gh_jid=<id>` (Brex — variant 5),
+    EU-region permalink subdomain
+    `job-boards.eu.greenhouse.io/<slug>/jobs/<id>` (Ramp Network —
+    variant 6), apex-www marketing-site, HTTP-scheme, path-with-`jobs`-
+    segment-and-trailing-slash-and-query
+    `http://www.<company>.com/careers/jobs/<id>/?gh_jid=<id>` (CircleCI —
+    variant 7), and careers-subdomain on a sub-brand product domain,
+    query-param-only `https://careers.<sub-brand>.com/jobs?gh_jid=<id>`
+    (Toast — variant 8). 12 plugins use the entity-decode-then-tag-strip
+    description pipeline (Klaviyo, Duolingo, Brex, Gusto, Mercury,
+    Buildkite, CircleCI, Ramp Network, Netlify, Postman, Toast,
+    **Webflow**). 2 plugins apply a wire-title trim (Brex, Buildkite —
+    Webflow does **not**). 2 plugins apply a brand-name pin cleaning a
+    wire `company_name` legal-entity suffix (Affirm, Gusto); Mercury,
+    Buildkite, CircleCI, Ramp Network, Netlify, Postman, Toast, and
+    Webflow's brand-name pins match the wire byte-for-byte (no legal-
+    entity suffix to clean). 2 plugins use embedded-acronym PascalCase
+    preserving trademark casing in class names (`OpenAIService`,
+    `CircleCIService`); other initialism brands like IBM use sentence-
+    case (`IbmService` / `IbmModule`). 1 plugin pins a multi-word
+    brand-name string literal containing an inter-word ASCII space —
+    Ramp Network. 1 plugin ships a fixture with an ampersand-bearing
+    department name — Netlify (`R&D` / `G&A` no-space). 1 plugin ships
+    a fixture with a `<div class="content-intro">` recruiter-blurb
+    wrapper pass-through — Postman. 1 plugin ships a fixture with
+    colon-separated nested-path department names with spaced
+    ampersands — Toast. **1 plugin ships a fixture with semicolon-
+    separated multi-region location names with parenthesised
+    province/state restrictions — Webflow** (`'CA Remote (BC & ON only);
+U.K. / Ireland Remote; U.S. Remote'`), the brand-new first-instance.
 
 **Notes:**
 
@@ -11537,9 +11584,9 @@ single-word brand name; D-06).
 
 **Scope:** Run #265 continues the user-owner-directed concrete-action
 deviation that runs #230–#264 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 054's run
+it's loop continuation without any changes etc."_ Per Spec 054's run
 #264 close-out note (which queued **Toast** as the alphabetically-next
 remaining live bite from the carry-over named-candidate pool, plus
 **Webflow**, **ZoomInfo**, and a HubSpot re-probe), this run takes
@@ -11612,7 +11659,7 @@ single-word brand name; D-06).
 
 - **T01:** Added `Site.TOAST = 'toast'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 65:
-  Spec 055 — Source Company Plugin: Toast` header (preserves the
+Spec 055 — Source Company Plugin: Toast` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 / 029 / 030 / 031 / 032 / 033 / 034 / 035 / 036 / 037 / 038 /
   039 / 040 / 041 / 042 / 043 / 044 / 045 / 046 / 047 / 048 / 049 /
@@ -11653,7 +11700,7 @@ single-word brand name; D-06).
   `searchTerm` filter on department name (case-insensitive `'horizon'`
   matches the literal `'Horizon 2'` leaf segment in the first listing's
   colon-separated nested-path department `'Sales : International :
-  Horizon 2'` — D-11 case-insensitive nested-path-search regression
+Horizon 2'` — D-11 case-insensitive nested-path-search regression
   guard), HTTP 500 → empty response, and empty `data.jobs` → empty
   response. The happy-path test asserts the called URL string is
   exactly `https://api.greenhouse.io/v1/boards/toast/jobs?content=true`
@@ -11671,10 +11718,10 @@ single-word brand name; D-06).
   (e) the emitted `department` for the first listing is the
   colon-separated nested path `'Sales : International : Horizon 2'`
   byte-for-byte AND the wire `departments[0].name` is `'Sales :
-  International : Horizon 2'` byte-for-byte (D-11 first-instance
+International : Horizon 2'` byte-for-byte (D-11 first-instance
   guard for the colon-separated nested-path pass-through), and (f)
   the emitted `department` for the second listing is `'Sales : Sales
-  Acceleration'` byte-for-byte (different leaf, same Sales root,
+Acceleration'` byte-for-byte (different leaf, same Sales root,
   exercising the path diversity). Fixture
   `__tests__/fixtures/toast-jobs.json` is committed JSON exercising
   both an Account Executive role in Melbourne (touching Toast POS,
@@ -11705,45 +11752,45 @@ single-word brand name; D-06).
   MongoDB, Datadog, Instacart, Dropbox, Roblox, Block, Vercel, Affirm,
   Klaviyo, Duolingo, Brex, Gusto, Mercury, Buildkite, CircleCI,
   Ramp Network, Netlify, Postman, **Toast** + Stripe + Cursor + Amazon
-  + Apple + Google + IBM + Meta + OpenAI). 8 distinct wire-shape
-  variants in the cohort: legacy `boards.greenhouse.io/<slug>/jobs/<id>`
-  (31 plugins, Block-and-earlier), new
-  `job-boards.greenhouse.io/<slug>/jobs/<id>` (Vercel + Affirm + Gusto
-  + Mercury + Buildkite + Netlify + Postman — variant 2; **7 plugins**),
-  apex marketing-site query-param-only
-  `www.<company>.com/careers/jobs?gh_jid=<id>` (Klaviyo — variant 3),
-  careers-subdomain marketing-site path-AND-query
-  `careers.<company>.com/jobs/<id>?gh_jid=<id>` (Duolingo — variant 4),
-  apex-www marketing-site path-AND-query
-  `www.<company>.com/careers/<id>?gh_jid=<id>` (Brex — variant 5),
-  EU-region permalink subdomain
-  `job-boards.eu.greenhouse.io/<slug>/jobs/<id>` (Ramp Network —
-  variant 6), apex-www marketing-site, HTTP-scheme, path-with-`jobs`-
-  segment-and-trailing-slash-and-query
-  `http://www.<company>.com/careers/jobs/<id>/?gh_jid=<id>` (CircleCI —
-  variant 7), and **careers-subdomain on a sub-brand product domain,
-  query-param-only** `https://careers.<sub-brand>.com/jobs?gh_jid=<id>`
-  (**Toast** — variant 8). 11 plugins use the entity-decode-then-tag-
-  strip description pipeline (Klaviyo, Duolingo, Brex, Gusto, Mercury,
-  Buildkite, CircleCI, Ramp Network, Netlify, Postman, **Toast**). 2
-  plugins apply a wire-title trim (Brex, Buildkite — Toast does **not**).
-  2 plugins apply a brand-name pin cleaning a wire `company_name`
-  legal-entity suffix (Affirm, Gusto); Mercury, Buildkite, CircleCI,
-  Ramp Network, Netlify, Postman, and Toast's brand-name pins match
-  the wire byte-for-byte (no legal-entity suffix to clean). 2 plugins
-  use embedded-acronym PascalCase preserving trademark casing in
-  class names (`OpenAIService`, `CircleCIService`); other initialism
-  brands like IBM use sentence-case (`IbmService` / `IbmModule`). 1
-  plugin pins a multi-word brand-name string literal containing an
-  inter-word ASCII space — Ramp Network. 1 plugin ships a fixture
-  with an ampersand-bearing department name — Netlify (`R&D` / `G&A`
-  no-space). **1 plugin ships a fixture with a `<div class="content-
-  intro">` recruiter-blurb wrapper pass-through — Postman**. **1
-  plugin ships a fixture with colon-separated nested-path department
-  names with spaced ampersands — Toast** (`'Sales : International :
-  Horizon 2'`, `'Sales : Sales Acceleration'`), the brand-new
-  first-instance and the **first plugin in the cohort to use a
-  sub-brand product domain** (`toasttab.com` not `toast.com`).
+  - Apple + Google + IBM + Meta + OpenAI). 8 distinct wire-shape
+    variants in the cohort: legacy `boards.greenhouse.io/<slug>/jobs/<id>`
+    (31 plugins, Block-and-earlier), new
+    `job-boards.greenhouse.io/<slug>/jobs/<id>` (Vercel + Affirm + Gusto
+  - Mercury + Buildkite + Netlify + Postman — variant 2; **7 plugins**),
+    apex marketing-site query-param-only
+    `www.<company>.com/careers/jobs?gh_jid=<id>` (Klaviyo — variant 3),
+    careers-subdomain marketing-site path-AND-query
+    `careers.<company>.com/jobs/<id>?gh_jid=<id>` (Duolingo — variant 4),
+    apex-www marketing-site path-AND-query
+    `www.<company>.com/careers/<id>?gh_jid=<id>` (Brex — variant 5),
+    EU-region permalink subdomain
+    `job-boards.eu.greenhouse.io/<slug>/jobs/<id>` (Ramp Network —
+    variant 6), apex-www marketing-site, HTTP-scheme, path-with-`jobs`-
+    segment-and-trailing-slash-and-query
+    `http://www.<company>.com/careers/jobs/<id>/?gh_jid=<id>` (CircleCI —
+    variant 7), and **careers-subdomain on a sub-brand product domain,
+    query-param-only** `https://careers.<sub-brand>.com/jobs?gh_jid=<id>`
+    (**Toast** — variant 8). 11 plugins use the entity-decode-then-tag-
+    strip description pipeline (Klaviyo, Duolingo, Brex, Gusto, Mercury,
+    Buildkite, CircleCI, Ramp Network, Netlify, Postman, **Toast**). 2
+    plugins apply a wire-title trim (Brex, Buildkite — Toast does **not**).
+    2 plugins apply a brand-name pin cleaning a wire `company_name`
+    legal-entity suffix (Affirm, Gusto); Mercury, Buildkite, CircleCI,
+    Ramp Network, Netlify, Postman, and Toast's brand-name pins match
+    the wire byte-for-byte (no legal-entity suffix to clean). 2 plugins
+    use embedded-acronym PascalCase preserving trademark casing in
+    class names (`OpenAIService`, `CircleCIService`); other initialism
+    brands like IBM use sentence-case (`IbmService` / `IbmModule`). 1
+    plugin pins a multi-word brand-name string literal containing an
+    inter-word ASCII space — Ramp Network. 1 plugin ships a fixture
+    with an ampersand-bearing department name — Netlify (`R&D` / `G&A`
+    no-space). **1 plugin ships a fixture with a `<div class="content-
+intro">` recruiter-blurb wrapper pass-through — Postman**. **1
+    plugin ships a fixture with colon-separated nested-path department
+    names with spaced ampersands — Toast** (`'Sales : International :
+Horizon 2'`, `'Sales : Sales Acceleration'`), the brand-new
+    first-instance and the **first plugin in the cohort to use a
+    sub-brand product domain** (`toasttab.com` not `toast.com`).
 
 **Notes:**
 
@@ -11775,7 +11822,7 @@ single-word brand name; D-06).
   bracketed department-suffix forms. The plugin emits the wire path
   byte-for-byte rather than splitting on `' : '` — a future spec could
   introduce a generic colon-path leaf extractor as a `@ever-jobs/
-  common` helper if needed across multiple tenants, but that's a
+common` helper if needed across multiple tenants, but that's a
   helpers concern, not a plugin-level concern.
 - Toast is the **first plugin in the cohort to use a sub-brand product
   domain** (`toasttab.com`, the operating product domain pre-dating
@@ -11793,9 +11840,9 @@ single-word brand name; D-06).
 
 **Scope:** Run #264 continues the user-owner-directed concrete-action
 deviation that runs #230–#263 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 053's run
+it's loop continuation without any changes etc."_ Per Spec 053's run
 #263 close-out note (which queued **Postman** as the alphabetically-next
 remaining live bite from the carry-over named-candidate pool, plus
 **Toast**, **Webflow**, **ZoomInfo**, and a HubSpot re-probe), this
@@ -11857,7 +11904,7 @@ splitting on the single-word brand name; D-06).
 
 - **T01:** Added `Site.POSTMAN = 'postman'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 64:
-  Spec 054 — Source Company Plugin: Postman` header (preserves the
+Spec 054 — Source Company Plugin: Postman` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 / 029 / 030 / 031 / 032 / 033 / 034 / 035 / 036 / 037 / 038 /
   039 / 040 / 041 / 042 / 043 / 044 / 045 / 046 / 047 / 048 / 049 /
@@ -11891,7 +11938,7 @@ splitting on the single-word brand name; D-06).
   covering: NestJS DI resolution, enum-literal pin, happy-path
   fixture-to-DTO mapping (2 listings → 2 `JobPostDto` rows with `id`
   prefix `postman-`, `site === Site.POSTMAN`, `companyName ===
-  'Postman'`, location, department, isRemote, description with
+'Postman'`, location, department, isRemote, description with
   numeric entity (`&#39;`) decoded to apostrophe, named entity
   (`&quot;`) decoded, double-encoded ampersand entity (`&amp;amp;`)
   partial-decoded, and `<p>`/`<strong>`/`<div>` tags stripped after
@@ -11917,7 +11964,7 @@ splitting on the single-word brand name; D-06).
   description contains substrings from BOTH the content-intro
   section (`'Who Are We?'`, `"world's leading API platform"`) AND
   the role-specific body (`'The Opportunity'`, `'Account Development
-  Representative'`, `'pipeline for the sales organization'`) so
+Representative'`, `'pipeline for the sales organization'`) so
   the decode-then-strip-pass-through is a complete-document
   operation (D-11 first-instance content-intro pass-through guard),
   and (f) the second listing's description contains the role-
@@ -11958,35 +12005,35 @@ splitting on the single-word brand name; D-06).
   in the cohort: legacy `boards.greenhouse.io/<slug>/jobs/<id>` (31
   plugins, Block-and-earlier), new
   `job-boards.greenhouse.io/<slug>/jobs/<id>` (Vercel + Affirm + Gusto
-  + Mercury + Buildkite + Netlify + **Postman** — variant 2; **7
-  plugins**), apex marketing-site query-param-only
-  `www.<company>.com/careers/jobs?gh_jid=<id>` (Klaviyo — variant 3),
-  careers-subdomain marketing-site path-AND-query
-  `careers.<company>.com/jobs/<id>?gh_jid=<id>` (Duolingo — variant 4),
-  apex-www marketing-site path-AND-query
-  `www.<company>.com/careers/<id>?gh_jid=<id>` (Brex — variant 5),
-  EU-region permalink subdomain
-  `job-boards.eu.greenhouse.io/<slug>/jobs/<id>` (Ramp Network —
-  variant 6), and apex-www marketing-site, HTTP-scheme, path-with-
-  `jobs`-segment-and-trailing-slash-and-query
-  `http://www.<company>.com/careers/jobs/<id>/?gh_jid=<id>` (CircleCI
-  — variant 7). 10 plugins use the entity-decode-then-tag-strip
-  description pipeline (Klaviyo, Duolingo, Brex, Gusto, Mercury,
-  Buildkite, CircleCI, Ramp Network, Netlify, **Postman**). 2 plugins
-  apply a wire-title trim (Brex, Buildkite — Postman does **not**).
-  2 plugins apply a brand-name pin cleaning a wire `company_name`
-  legal-entity suffix (Affirm, Gusto); Mercury, Buildkite, CircleCI,
-  Ramp Network, Netlify, and Postman's brand-name pins match the
-  wire byte-for-byte (no legal-entity suffix to clean). 2 plugins
-  use embedded-acronym PascalCase preserving trademark casing in
-  class names (`OpenAIService`, `CircleCIService`); other initialism
-  brands like IBM use sentence-case (`IbmService` / `IbmModule`). 1
-  plugin pins a multi-word brand-name string literal containing an
-  inter-word ASCII space — Ramp Network. 1 plugin ships a fixture
-  with an ampersand-bearing department name — Netlify. **1 plugin
-  ships a fixture exercising the `<div class="content-intro">`
-  recruiter-blurb wrapper pass-through — Postman**, the brand-new
-  first-instance.
+  - Mercury + Buildkite + Netlify + **Postman** — variant 2; **7
+    plugins**), apex marketing-site query-param-only
+    `www.<company>.com/careers/jobs?gh_jid=<id>` (Klaviyo — variant 3),
+    careers-subdomain marketing-site path-AND-query
+    `careers.<company>.com/jobs/<id>?gh_jid=<id>` (Duolingo — variant 4),
+    apex-www marketing-site path-AND-query
+    `www.<company>.com/careers/<id>?gh_jid=<id>` (Brex — variant 5),
+    EU-region permalink subdomain
+    `job-boards.eu.greenhouse.io/<slug>/jobs/<id>` (Ramp Network —
+    variant 6), and apex-www marketing-site, HTTP-scheme, path-with-
+    `jobs`-segment-and-trailing-slash-and-query
+    `http://www.<company>.com/careers/jobs/<id>/?gh_jid=<id>` (CircleCI
+    — variant 7). 10 plugins use the entity-decode-then-tag-strip
+    description pipeline (Klaviyo, Duolingo, Brex, Gusto, Mercury,
+    Buildkite, CircleCI, Ramp Network, Netlify, **Postman**). 2 plugins
+    apply a wire-title trim (Brex, Buildkite — Postman does **not**).
+    2 plugins apply a brand-name pin cleaning a wire `company_name`
+    legal-entity suffix (Affirm, Gusto); Mercury, Buildkite, CircleCI,
+    Ramp Network, Netlify, and Postman's brand-name pins match the
+    wire byte-for-byte (no legal-entity suffix to clean). 2 plugins
+    use embedded-acronym PascalCase preserving trademark casing in
+    class names (`OpenAIService`, `CircleCIService`); other initialism
+    brands like IBM use sentence-case (`IbmService` / `IbmModule`). 1
+    plugin pins a multi-word brand-name string literal containing an
+    inter-word ASCII space — Ramp Network. 1 plugin ships a fixture
+    with an ampersand-bearing department name — Netlify. **1 plugin
+    ships a fixture exercising the `<div class="content-intro">`
+    recruiter-blurb wrapper pass-through — Postman**, the brand-new
+    first-instance.
 
 **Notes:**
 
@@ -12015,7 +12062,7 @@ splitting on the single-word brand name; D-06).
   semantically part of the listing's natural job-description body.
   A future spec could introduce a generic Greenhouse content-intro
   stripper across multiple tenants, but that would be a `@ever-jobs/
-  common` helpers concern, not a plugin-level concern.
+common` helpers concern, not a plugin-level concern.
 
 ---
 
@@ -12023,9 +12070,9 @@ splitting on the single-word brand name; D-06).
 
 **Scope:** Run #263 continues the user-owner-directed concrete-action
 deviation that runs #230–#262 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 052's run
+it's loop continuation without any changes etc."_ Per Spec 052's run
 #262 close-out note (which queued **Netlify** as the alphabetically-next
 remaining live bite from the carry-over named-candidate pool, plus
 **Postman**, **Toast**, **Webflow**, **ZoomInfo**, and a HubSpot
@@ -12076,7 +12123,7 @@ name** (D-11). Class names are `NetlifyService` / `NetlifyModule`
 
 - **T01:** Added `Site.NETLIFY = 'netlify'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 63:
-  Spec 053 — Source Company Plugin: Netlify` header (preserves the
+Spec 053 — Source Company Plugin: Netlify` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 / 029 / 030 / 031 / 032 / 033 / 034 / 035 / 036 / 037 / 038 /
   039 / 040 / 041 / 042 / 043 / 044 / 045 / 046 / 047 / 048 / 049 /
@@ -12113,7 +12160,7 @@ name** (D-11). Class names are `NetlifyService` / `NetlifyModule`
   covering: NestJS DI resolution, enum-literal pin, happy-path
   fixture-to-DTO mapping (2 listings → 2 `JobPostDto` rows with `id`
   prefix `netlify-`, `site === Site.NETLIFY`, `companyName ===
-  'Netlify'`, location, department, isRemote, description with
+'Netlify'`, location, department, isRemote, description with
   numeric entity (`&#39;` → `'`), named entity (`&amp;rsquo;` →
   `&rsquo;` → `'` U+2019), and non-breaking-space named entity
   (`&amp;nbsp;` → `&nbsp;` → ` ` regular space) all decoded AND
@@ -12179,32 +12226,32 @@ name** (D-11). Class names are `NetlifyService` / `NetlifyModule`
   the cohort: legacy `boards.greenhouse.io/<slug>/jobs/<id>` (31
   plugins, Block-and-earlier), new
   `job-boards.greenhouse.io/<slug>/jobs/<id>` (Vercel + Affirm + Gusto
-  + Mercury + Buildkite + **Netlify** — variant 2; **6 plugins**),
-  apex marketing-site query-param-only `www.<company>.com/careers/jobs?gh_jid=<id>`
-  (Klaviyo — variant 3), careers-subdomain marketing-site path-AND-
-  query `careers.<company>.com/jobs/<id>?gh_jid=<id>` (Duolingo —
-  variant 4), apex-www marketing-site path-AND-query
-  `www.<company>.com/careers/<id>?gh_jid=<id>` (Brex — variant 5),
-  EU-region permalink subdomain `job-boards.eu.greenhouse.io/<slug>/jobs/<id>`
-  (Ramp Network — variant 6), and apex-www marketing-site, HTTP-
-  scheme, path-with-`jobs`-segment-and-trailing-slash-and-query
-  `http://www.<company>.com/careers/jobs/<id>/?gh_jid=<id>` (CircleCI
-  — variant 7). 9 plugins use the entity-decode-then-tag-strip
-  description pipeline (Klaviyo, Duolingo, Brex, Gusto, Mercury,
-  Buildkite, CircleCI, Ramp Network, **Netlify**). 2 plugins apply a
-  wire-title trim (Brex, Buildkite — Netlify does **not**). 2
-  plugins apply a brand-name pin cleaning a wire `company_name`
-  legal-entity suffix (Affirm: `'Affirm Holdings, Inc.'` →
-  `'Affirm'`; Gusto: `'Gusto, Inc.'` → `'Gusto'`); Mercury, Buildkite,
-  CircleCI, Ramp Network, and Netlify's brand-name pins match the
-  wire byte-for-byte (no legal-entity suffix to clean). 2 plugins
-  use embedded-acronym PascalCase preserving trademark casing in
-  class names (`OpenAIService`, `CircleCIService`); other initialism
-  brands like IBM use sentence-case (`IbmService` / `IbmModule`). 1
-  plugin pins a multi-word brand-name string literal containing an
-  inter-word ASCII space — Ramp Network. **1 plugin ships a fixture
-  with an ampersand-bearing department name — Netlify**, the
-  brand-new first-instance.
+  - Mercury + Buildkite + **Netlify** — variant 2; **6 plugins**),
+    apex marketing-site query-param-only `www.<company>.com/careers/jobs?gh_jid=<id>`
+    (Klaviyo — variant 3), careers-subdomain marketing-site path-AND-
+    query `careers.<company>.com/jobs/<id>?gh_jid=<id>` (Duolingo —
+    variant 4), apex-www marketing-site path-AND-query
+    `www.<company>.com/careers/<id>?gh_jid=<id>` (Brex — variant 5),
+    EU-region permalink subdomain `job-boards.eu.greenhouse.io/<slug>/jobs/<id>`
+    (Ramp Network — variant 6), and apex-www marketing-site, HTTP-
+    scheme, path-with-`jobs`-segment-and-trailing-slash-and-query
+    `http://www.<company>.com/careers/jobs/<id>/?gh_jid=<id>` (CircleCI
+    — variant 7). 9 plugins use the entity-decode-then-tag-strip
+    description pipeline (Klaviyo, Duolingo, Brex, Gusto, Mercury,
+    Buildkite, CircleCI, Ramp Network, **Netlify**). 2 plugins apply a
+    wire-title trim (Brex, Buildkite — Netlify does **not**). 2
+    plugins apply a brand-name pin cleaning a wire `company_name`
+    legal-entity suffix (Affirm: `'Affirm Holdings, Inc.'` →
+    `'Affirm'`; Gusto: `'Gusto, Inc.'` → `'Gusto'`); Mercury, Buildkite,
+    CircleCI, Ramp Network, and Netlify's brand-name pins match the
+    wire byte-for-byte (no legal-entity suffix to clean). 2 plugins
+    use embedded-acronym PascalCase preserving trademark casing in
+    class names (`OpenAIService`, `CircleCIService`); other initialism
+    brands like IBM use sentence-case (`IbmService` / `IbmModule`). 1
+    plugin pins a multi-word brand-name string literal containing an
+    inter-word ASCII space — Ramp Network. **1 plugin ships a fixture
+    with an ampersand-bearing department name — Netlify**, the
+    brand-new first-instance.
 
 **Notes:**
 
@@ -12238,9 +12285,9 @@ name** (D-11). Class names are `NetlifyService` / `NetlifyModule`
 
 **Scope:** Run #262 continues the user-owner-directed concrete-action
 deviation that runs #230–#261 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 051's run
+it's loop continuation without any changes etc."_ Per Spec 051's run
 #261 close-out note (which queued **HubSpot** as the alphabetically-next
 remaining bite, plus **Netlify**, **Postman**, **Ramp Network** (sixth-
 variant EU-region carry-over from Spec 049), **Toast**, **Webflow**, and
@@ -12299,7 +12346,7 @@ name; D-06).
 
 - **T01:** Added `Site.RAMPNETWORK = 'rampnetwork'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 62:
-  Spec 052 — Source Company Plugin: Ramp Network` header (preserves
+Spec 052 — Source Company Plugin: Ramp Network` header (preserves
   the Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 / 029 / 030 / 031 / 032 / 033 / 034 / 035 / 036 / 037 / 038 /
   039 / 040 / 041 / 042 / 043 / 044 / 045 / 046 / 047 / 048 / 049 /
@@ -12389,31 +12436,31 @@ name; D-06).
   `boards.greenhouse.io/<slug>/jobs/<id>` (31 plugins,
   Block-and-earlier), new
   `job-boards.greenhouse.io/<slug>/jobs/<id>` (Vercel + Affirm + Gusto
-  + Mercury + Buildkite — variant 2; 5 plugins), apex marketing-site
-  query-param-only `www.<company>.com/careers/jobs?gh_jid=<id>`
-  (Klaviyo — variant 3), careers-subdomain marketing-site path-AND-
-  query `careers.<company>.com/jobs/<id>?gh_jid=<id>` (Duolingo —
-  variant 4), apex-www marketing-site path-AND-query
-  `www.<company>.com/careers/<id>?gh_jid=<id>` (Brex — variant 5),
-  **EU-region permalink subdomain `job-boards.eu.greenhouse.io/<slug>/jobs/<id>`
-  (Ramp Network — variant 6; FIRST IN COHORT)**, and
-  apex-www marketing-site, HTTP-scheme, path-with-`jobs`-segment-and-
-  trailing-slash-and-query
-  `http://www.<company>.com/careers/jobs/<id>/?gh_jid=<id>` (CircleCI
-  — variant 7). 8 plugins use the entity-decode-then-tag-strip
-  description pipeline (Klaviyo, Duolingo, Brex, Gusto, Mercury,
-  Buildkite, CircleCI, **Ramp Network**). 2 plugins apply a
-  wire-title trim (Brex, Buildkite — Ramp Network does **not**). 2
-  plugins apply a brand-name pin cleaning a wire `company_name`
-  legal-entity suffix (Affirm: `'Affirm Holdings, Inc.'` →
-  `'Affirm'`; Gusto: `'Gusto, Inc.'` → `'Gusto'`); Mercury, Buildkite,
-  CircleCI, and Ramp Network's brand-name pins match the wire
-  byte-for-byte (no legal-entity suffix to clean). 2 plugins use
-  embedded-acronym PascalCase preserving trademark casing in class
-  names (`OpenAIService`, `CircleCIService`); other initialism brands
-  like IBM use sentence-case (`IbmService` / `IbmModule`). **1 plugin
-  pins a multi-word brand-name string literal containing an inter-word
-  ASCII space — Ramp Network**, the brand-new first-instance.
+  - Mercury + Buildkite — variant 2; 5 plugins), apex marketing-site
+    query-param-only `www.<company>.com/careers/jobs?gh_jid=<id>`
+    (Klaviyo — variant 3), careers-subdomain marketing-site path-AND-
+    query `careers.<company>.com/jobs/<id>?gh_jid=<id>` (Duolingo —
+    variant 4), apex-www marketing-site path-AND-query
+    `www.<company>.com/careers/<id>?gh_jid=<id>` (Brex — variant 5),
+    **EU-region permalink subdomain `job-boards.eu.greenhouse.io/<slug>/jobs/<id>`
+    (Ramp Network — variant 6; FIRST IN COHORT)**, and
+    apex-www marketing-site, HTTP-scheme, path-with-`jobs`-segment-and-
+    trailing-slash-and-query
+    `http://www.<company>.com/careers/jobs/<id>/?gh_jid=<id>` (CircleCI
+    — variant 7). 8 plugins use the entity-decode-then-tag-strip
+    description pipeline (Klaviyo, Duolingo, Brex, Gusto, Mercury,
+    Buildkite, CircleCI, **Ramp Network**). 2 plugins apply a
+    wire-title trim (Brex, Buildkite — Ramp Network does **not**). 2
+    plugins apply a brand-name pin cleaning a wire `company_name`
+    legal-entity suffix (Affirm: `'Affirm Holdings, Inc.'` →
+    `'Affirm'`; Gusto: `'Gusto, Inc.'` → `'Gusto'`); Mercury, Buildkite,
+    CircleCI, and Ramp Network's brand-name pins match the wire
+    byte-for-byte (no legal-entity suffix to clean). 2 plugins use
+    embedded-acronym PascalCase preserving trademark casing in class
+    names (`OpenAIService`, `CircleCIService`); other initialism brands
+    like IBM use sentence-case (`IbmService` / `IbmModule`). **1 plugin
+    pins a multi-word brand-name string literal containing an inter-word
+    ASCII space — Ramp Network**, the brand-new first-instance.
 
 **Notes:**
 
@@ -12463,9 +12510,9 @@ name; D-06).
 
 **Scope:** Run #261 continues the user-owner-directed concrete-action
 deviation that runs #230–#260 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 050's run
+it's loop continuation without any changes etc."_ Per Spec 050's run
 #260 close-out note (which queued **circleci**, **hubspot**, **netlify**,
 **postman**, **rampnetwork** (sixth-variant EU-region carry-over from
 Spec 049), **toast**, **webflow**, and **zoominfo** as eight pre-probed
@@ -12514,7 +12561,7 @@ Pascal-case-style — preserving the trademark `CI` initialism (D-06).
 
 - **T01:** Added `Site.CIRCLECI = 'circleci'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 61:
-  Spec 051 — Source Company Plugin: CircleCI` header (preserves the
+Spec 051 — Source Company Plugin: CircleCI` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 / 029 / 030 / 031 / 032 / 033 / 034 / 035 / 036 / 037 / 038 /
   039 / 040 / 041 / 042 / 043 / 044 / 045 / 046 / 047 / 048 / 049 /
@@ -12537,7 +12584,7 @@ Pascal-case-style — preserving the trademark `CI` initialism (D-06).
   is identical to Buildkite's because CircleCI's `content` is also
   HTML-entity-encoded — confirmed via the live probe, where the first
   job's `content` starts with `&lt;h3 data-start=&quot;545&quot;
-  data-end=&quot;563&quot;&gt;About the Role&lt;/h3&gt;` (Spec 051 §
+data-end=&quot;563&quot;&gt;About the Role&lt;/h3&gt;` (Spec 051 §
   10 D-08). The brand-name pin `'CircleCI'` matches the wire
   `company_name` byte-for-byte — same as Buildkite and Mercury (Spec
   051 § 10 D-09). Class names are `CircleCIService` / `CircleCIModule`
@@ -12605,30 +12652,30 @@ Pascal-case-style — preserving the trademark `CI` initialism (D-06).
   `boards.greenhouse.io/<slug>/jobs/<id>` (31 plugins,
   Block-and-earlier), new
   `job-boards.greenhouse.io/<slug>/jobs/<id>` (Vercel + Affirm + Gusto
-  + Mercury + Buildkite — variant 2; 5 plugins), apex marketing-site
-  query-param-only `www.<company>.com/careers/jobs?gh_jid=<id>`
-  (Klaviyo — variant 3), careers-subdomain marketing-site path-AND-
-  query `careers.<company>.com/jobs/<id>?gh_jid=<id>` (Duolingo —
-  variant 4), apex-www marketing-site path-AND-query
-  `www.<company>.com/careers/<id>?gh_jid=<id>` (Brex — variant 5),
-  EU-region permalink subdomain
-  `job-boards.eu.greenhouse.io/<slug>/jobs/<id>` (rampnetwork
-  pre-probed, not yet shipped — variant 6), and the **brand-new**
-  apex-www marketing-site, HTTP-scheme, path-with-`jobs`-segment-and-
-  trailing-slash-and-query
-  `http://www.<company>.com/careers/jobs/<id>/?gh_jid=<id>` (CircleCI
-  — variant 7). 7 plugins use the entity-decode-then-tag-strip
-  description pipeline (Klaviyo, Duolingo, Brex, Gusto, Mercury,
-  Buildkite, **CircleCI**). 2 plugins apply a wire-title trim (Brex,
-  Buildkite — CircleCI does **not**). 2 plugins apply a brand-name
-  pin cleaning a wire `company_name` legal-entity suffix (Affirm:
-  `'Affirm Holdings, Inc.'` → `'Affirm'`; Gusto: `'Gusto, Inc.'` →
-  `'Gusto'`); Mercury, Buildkite, and CircleCI's brand-name pins
-  match the wire byte-for-byte (no legal-entity suffix to clean).
-  2 plugins use embedded-acronym PascalCase preserving trademark
-  casing in class names (`OpenAIService` and the brand-new
-  `CircleCIService`); other initialism brands like IBM use
-  sentence-case (`IbmService` / `IbmModule`).
+  - Mercury + Buildkite — variant 2; 5 plugins), apex marketing-site
+    query-param-only `www.<company>.com/careers/jobs?gh_jid=<id>`
+    (Klaviyo — variant 3), careers-subdomain marketing-site path-AND-
+    query `careers.<company>.com/jobs/<id>?gh_jid=<id>` (Duolingo —
+    variant 4), apex-www marketing-site path-AND-query
+    `www.<company>.com/careers/<id>?gh_jid=<id>` (Brex — variant 5),
+    EU-region permalink subdomain
+    `job-boards.eu.greenhouse.io/<slug>/jobs/<id>` (rampnetwork
+    pre-probed, not yet shipped — variant 6), and the **brand-new**
+    apex-www marketing-site, HTTP-scheme, path-with-`jobs`-segment-and-
+    trailing-slash-and-query
+    `http://www.<company>.com/careers/jobs/<id>/?gh_jid=<id>` (CircleCI
+    — variant 7). 7 plugins use the entity-decode-then-tag-strip
+    description pipeline (Klaviyo, Duolingo, Brex, Gusto, Mercury,
+    Buildkite, **CircleCI**). 2 plugins apply a wire-title trim (Brex,
+    Buildkite — CircleCI does **not**). 2 plugins apply a brand-name
+    pin cleaning a wire `company_name` legal-entity suffix (Affirm:
+    `'Affirm Holdings, Inc.'` → `'Affirm'`; Gusto: `'Gusto, Inc.'` →
+    `'Gusto'`); Mercury, Buildkite, and CircleCI's brand-name pins
+    match the wire byte-for-byte (no legal-entity suffix to clean).
+    2 plugins use embedded-acronym PascalCase preserving trademark
+    casing in class names (`OpenAIService` and the brand-new
+    `CircleCIService`); other initialism brands like IBM use
+    sentence-case (`IbmService` / `IbmModule`).
 
 **Notes:**
 
@@ -12672,9 +12719,9 @@ Pascal-case-style — preserving the trademark `CI` initialism (D-06).
 
 **Scope:** Run #260 continues the user-owner-directed concrete-action
 deviation that runs #230–#259 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 049's run
+it's loop continuation without any changes etc."_ Per Spec 049's run
 #259 close-out note (which queued **rampnetwork** with a sixth
 wire-shape variant — `job-boards.eu.greenhouse.io` EU-region permalink
 subdomain — for a future run, and called out a fresh probe sweep
@@ -12751,7 +12798,7 @@ wire-title trim (after Brex).
 
 - **T01:** Added `Site.BUILDKITE = 'buildkite'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 60:
-  Spec 050 — Source Company Plugin: Buildkite` header (preserves the
+Spec 050 — Source Company Plugin: Buildkite` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 / 029 / 030 / 031 / 032 / 033 / 034 / 035 / 036 / 037 / 038 /
   039 / 040 / 041 / 042 / 043 / 044 / 045 / 046 / 047 / 048 / 049
@@ -12775,7 +12822,7 @@ wire-title trim (after Brex).
   Mercury's because Buildkite's `content` is also HTML-entity-encoded —
   confirmed via the live probe, where the first job's `content` starts
   with `&lt;p&gt;At Buildkite, our mission is to unblock every developer
-  on the planet…` (Spec 050 § 10 D-08). Class names are
+on the planet…` (Spec 050 § 10 D-08). Class names are
   `BuildkiteService` / `BuildkiteModule` (PascalCase with the standard
   initial cap, no embedded acronym requiring special casing — see
   Spec 050 § 10 D-06).
@@ -12829,24 +12876,24 @@ wire-title trim (after Brex).
   Lyft, Plaid, Asana, Figma, Gitlab, Twitch, Twilio, Cloudflare,
   MongoDB, Datadog, Instacart, Dropbox, Roblox, Block, Vercel,
   Affirm, Klaviyo, Duolingo, Brex, Gusto, Mercury, Buildkite + Stripe
-  + Cursor + Amazon + Apple + Google + IBM + Meta + OpenAI). 5 distinct
-  wire-shape variants in the cohort: legacy
-  `boards.greenhouse.io/<slug>/jobs/<id>` (31 plugins,
-  Block-and-earlier), new
-  `job-boards.greenhouse.io/<slug>/jobs/<id>` (Vercel + Affirm + Gusto
-  + Mercury + **Buildkite**), apex marketing-site query-param-only
-  `www.<company>.com/careers/jobs?gh_jid=<id>` (Klaviyo),
-  careers-subdomain marketing-site path-AND-query
-  `careers.<company>.com/jobs/<id>?gh_jid=<id>` (Duolingo), apex-www
-  marketing-site path-AND-query
-  `www.<company>.com/careers/<id>?gh_jid=<id>` (Brex). 6 plugins use
-  the entity-decode-then-tag-strip description pipeline (Klaviyo,
-  Duolingo, Brex, Gusto, Mercury, **Buildkite**). 2 plugins apply a
-  wire-title trim (Brex, **Buildkite**). 2 plugins apply a brand-name
-  pin cleaning a wire `company_name` legal-entity suffix (Affirm:
-  `'Affirm Holdings, Inc.'` → `'Affirm'`; Gusto: `'Gusto, Inc.'` →
-  `'Gusto'`); Mercury and Buildkite's brand-name pins match the wire
-  byte-for-byte (no legal-entity suffix to clean).
+  - Cursor + Amazon + Apple + Google + IBM + Meta + OpenAI). 5 distinct
+    wire-shape variants in the cohort: legacy
+    `boards.greenhouse.io/<slug>/jobs/<id>` (31 plugins,
+    Block-and-earlier), new
+    `job-boards.greenhouse.io/<slug>/jobs/<id>` (Vercel + Affirm + Gusto
+  - Mercury + **Buildkite**), apex marketing-site query-param-only
+    `www.<company>.com/careers/jobs?gh_jid=<id>` (Klaviyo),
+    careers-subdomain marketing-site path-AND-query
+    `careers.<company>.com/jobs/<id>?gh_jid=<id>` (Duolingo), apex-www
+    marketing-site path-AND-query
+    `www.<company>.com/careers/<id>?gh_jid=<id>` (Brex). 6 plugins use
+    the entity-decode-then-tag-strip description pipeline (Klaviyo,
+    Duolingo, Brex, Gusto, Mercury, **Buildkite**). 2 plugins apply a
+    wire-title trim (Brex, **Buildkite**). 2 plugins apply a brand-name
+    pin cleaning a wire `company_name` legal-entity suffix (Affirm:
+    `'Affirm Holdings, Inc.'` → `'Affirm'`; Gusto: `'Gusto, Inc.'` →
+    `'Gusto'`); Mercury and Buildkite's brand-name pins match the wire
+    byte-for-byte (no legal-entity suffix to clean).
 
 **Notes:**
 
@@ -12875,15 +12922,15 @@ wire-title trim (after Brex).
 
 **Scope:** Run #259 continues the user-owner-directed concrete-action
 deviation that runs #230–#258 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 048's run
+it's loop continuation without any changes etc."_ Per Spec 048's run
 #258 close-out note (which observed that the named-candidate well from
 Spec 044 / run #254 was empty after Gusto shipped, and called out a
-fresh probe sweep against Stripe-adjacent fintechs / vertical SaaS / 
+fresh probe sweep against Stripe-adjacent fintechs / vertical SaaS /
 e-commerce platforms as the next direction), this run executed the
 fresh probe sweep and pivoted to **Mercury** as the alphabetically-first
-HTTP-200 result. Mercury — the **SMB / startup business-banking + 
+HTTP-200 result. Mercury — the **SMB / startup business-banking +
 spend-management** vendor (Mercury Technologies, Inc.; founded by Immad
 Akhund, Max Tagher, and Jason Zhang in 2017 as a Y-Combinator-backed
 banking-for-startups play targeting the segment ignored by JPMorgan,
@@ -12932,7 +12979,7 @@ mapping matches the wire byte-for-byte.
 
 - **T01:** Added `Site.MERCURY = 'mercury'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 59:
-  Spec 049 — Source Company Plugin: Mercury` header (preserves the
+Spec 049 — Source Company Plugin: Mercury` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 / 029 / 030 / 031 / 032 / 033 / 034 / 035 / 036 / 037 / 038 /
   039 / 040 / 041 / 042 / 043 / 044 / 045 / 046 / 047 / 048
@@ -13009,12 +13056,12 @@ mapping matches the wire byte-for-byte.
   Amazon + Apple + Google + IBM + Meta + OpenAI). 5 distinct wire-shape
   variants in the cohort: legacy `boards.greenhouse.io/<slug>/jobs/<id>`
   (31 plugins, Block-and-earlier), new `job-boards.greenhouse.io/<slug>
-  /jobs/<id>` (Vercel + Affirm + Gusto + **Mercury**), apex marketing-site
+/jobs/<id>` (Vercel + Affirm + Gusto + **Mercury**), apex marketing-site
   query-param-only `www.<company>.com/careers/jobs?gh_jid=<id>`
   (Klaviyo), careers-subdomain marketing-site path-AND-query
   `careers.<company>.com/jobs/<id>?gh_jid=<id>` (Duolingo), apex-www
   marketing-site path-AND-query `www.<company>.com/careers/<id>?
-  gh_jid=<id>` (Brex). 5 plugins use the entity-decode-then-tag-strip
+gh_jid=<id>` (Brex). 5 plugins use the entity-decode-then-tag-strip
   description pipeline (Klaviyo, Duolingo, Brex, Gusto, **Mercury**). 1
   plugin applies a wire-title trim (Brex). 2 plugins apply a brand-name
   pin cleaning a wire `company_name` legal-entity suffix (Affirm:
@@ -13051,9 +13098,9 @@ mapping matches the wire byte-for-byte.
 
 **Scope:** Run #258 continues the user-owner-directed concrete-action
 deviation that runs #230–#257 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 047's run
+it's loop continuation without any changes etc."_ Per Spec 047's run
 #257 close-out note (which carried over **Gusto** as the last remaining
 ergonomic bite under the same company-direct pattern after Brex
 shipped), this run pivoted to **Gusto** as the alphabetically-only
@@ -13095,7 +13142,7 @@ their respective marketing-site shape variants 3 / 4 / 5.
 
 - **T01:** Added `Site.GUSTO = 'gusto'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 58:
-  Spec 048 — Source Company Plugin: Gusto` header (preserves the
+Spec 048 — Source Company Plugin: Gusto` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 / 029 / 030 / 031 / 032 / 033 / 034 / 035 / 036 / 037 / 038 /
   039 / 040 / 041 / 042 / 043 / 044 / 045 / 046 / 047 phase-ordering
@@ -13114,7 +13161,7 @@ their respective marketing-site shape variants 3 / 4 / 5.
   `stripHtmlTags(content)` form Affirm uses, because Gusto's `content`
   is HTML-entity-encoded — confirmed via the live probe, where the
   first job's `content` starts with `&lt;div class=&quot;
-  content-intro&quot;&gt;…` (Spec 048 § 10 D-08). **(2) Brand-name
+content-intro&quot;&gt;…` (Spec 048 § 10 D-08). **(2) Brand-name
   pin** — emit `companyName === 'Gusto'` (string literal) rather than
   the wire `company_name` value `'Gusto, Inc.'`; same approach Affirm
   uses for its `'Affirm Holdings, Inc.'` wire `company_name` (Spec 048
@@ -13178,12 +13225,12 @@ their respective marketing-site shape variants 3 / 4 / 5.
   Apple + Google + IBM + Meta + OpenAI). 5 distinct wire-shape variants
   in the cohort: legacy `boards.greenhouse.io/<slug>/jobs/<id>` (31
   plugins, Block-and-earlier), new `job-boards.greenhouse.io/<slug>
-  /jobs/<id>` (Vercel + Affirm + **Gusto**), apex marketing-site
+/jobs/<id>` (Vercel + Affirm + **Gusto**), apex marketing-site
   query-param-only `www.<company>.com/careers/jobs?gh_jid=<id>`
   (Klaviyo), careers-subdomain marketing-site path-AND-query
   `careers.<company>.com/jobs/<id>?gh_jid=<id>` (Duolingo), apex-www
   marketing-site path-AND-query `www.<company>.com/careers/<id>?
-  gh_jid=<id>` (Brex). 4 plugins use the entity-decode-then-tag-strip
+gh_jid=<id>` (Brex). 4 plugins use the entity-decode-then-tag-strip
   description pipeline (Klaviyo, Duolingo, Brex, **Gusto**). 1 plugin
   applies a wire-title trim (Brex). 2 plugins apply a brand-name pin
   cleaning a wire `company_name` legal-entity suffix (Affirm:
@@ -13215,9 +13262,9 @@ their respective marketing-site shape variants 3 / 4 / 5.
 
 **Scope:** Run #257 continues the user-owner-directed concrete-action
 deviation that runs #230–#256 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 046's run
+it's loop continuation without any changes etc."_ Per Spec 046's run
 #256 close-out note (which carried over **Brex** and **Gusto** as the
 two remaining ergonomic bites under the same company-direct pattern
 after Duolingo shipped), this run pivoted to **Brex** as the
@@ -13245,7 +13292,7 @@ Klaviyo's apex-domain query-param-only shape
 query-param-only) and from both Greenhouse permalink subdomains
 (`boards.greenhouse.io` legacy and `job-boards.greenhouse.io` new).
 Additionally, Brex's tenant pads some titles with surrounding ASCII
-spaces (` Account Executive, E-Commerce ` was the wire shape on the
+spaces (`Account Executive, E-Commerce` was the wire shape on the
 first listing observed during the run #257 probe), making this the
 **first** company-direct plugin in the cohort to apply a `String.
 prototype.trim()` pass on the wire `title` before mapping to
@@ -13263,7 +13310,7 @@ prototype.trim()` pass on the wire `title` before mapping to
 
 - **T01:** Added `Site.BREX = 'brex'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 57:
-  Spec 047 — Source Company Plugin: Brex` header (preserves the
+Spec 047 — Source Company Plugin: Brex` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 / 029 / 030 / 031 / 032 / 033 / 034 / 035 / 036 / 037 / 038 /
   039 / 040 / 041 / 042 / 043 / 044 / 045 / 046 phase-ordering
@@ -13288,7 +13335,7 @@ prototype.trim()` pass on the wire `title` before mapping to
   is identical to Duolingo's because Brex's `content` is also HTML-
   entity-encoded (`&lt;p&gt;...`) — confirmed via the live probe,
   where the first job's `content` starts `&lt;div class=&quot;
-  content-intro&quot;&gt;&lt;p&gt;&lt;strong&gt;Why join us…`
+content-intro&quot;&gt;&lt;p&gt;&lt;strong&gt;Why join us…`
   (Spec 047 § 10 D-08). Class names are `BrexService` / `BrexModule`
   (PascalCase with the standard initial cap, no embedded acronym
   requiring special casing — see Spec 047 § 10 D-06).
@@ -13314,7 +13361,7 @@ prototype.trim()` pass on the wire `title` before mapping to
   through to `jobUrl` byte-for-byte (D-04), (b) the cleaned description
   does NOT contain literal `&lt;` (decode-pass ran), (c) the cleaned
   description does NOT contain `<p>` (strip-pass ran after the decode),
-  and (d) the wire-padded title (` Account Executive, E-Commerce `) is
+  and (d) the wire-padded title (`Account Executive, E-Commerce`) is
   emitted as the trimmed value `Account Executive, E-Commerce` and
   is NOT equal to the padded wire string (D-09). Fixture
   `__tests__/fixtures/brex-jobs.json` is committed JSON exercising
@@ -13344,18 +13391,18 @@ prototype.trim()` pass on the wire `title` before mapping to
   Lyft, Plaid, Asana, Figma, Gitlab, Twitch, Twilio, Cloudflare,
   MongoDB, Datadog, Instacart, Dropbox, Roblox, Block, Vercel,
   Affirm, Klaviyo, Duolingo, Brex + Stripe + Cursor + Amazon + Apple
-  + Google + IBM + Meta + OpenAI). 5 distinct wire-shape variants in
-  the cohort: legacy `boards.greenhouse.io/<slug>/jobs/<id>` (31
-  plugins, Block-and-earlier), new `job-boards.greenhouse.io/<slug>
-  /jobs/<id>` (Vercel + Affirm), apex marketing-site query-param-only
-  `www.<company>.com/careers/jobs?gh_jid=<id>` (Klaviyo), careers-
-  subdomain marketing-site path-AND-query
-  `careers.<company>.com/jobs/<id>?gh_jid=<id>` (Duolingo), apex-www
-  marketing-site path-AND-query
-  `www.<company>.com/careers/<id>?gh_jid=<id>` (Brex). 3 plugins use
-  the entity-decode-then-tag-strip description pipeline (Klaviyo,
-  Duolingo, Brex). 1 plugin applies a wire-title trim (Brex, first
-  cohort member).
+  - Google + IBM + Meta + OpenAI). 5 distinct wire-shape variants in
+    the cohort: legacy `boards.greenhouse.io/<slug>/jobs/<id>` (31
+    plugins, Block-and-earlier), new `job-boards.greenhouse.io/<slug>
+/jobs/<id>` (Vercel + Affirm), apex marketing-site query-param-only
+    `www.<company>.com/careers/jobs?gh_jid=<id>` (Klaviyo), careers-
+    subdomain marketing-site path-AND-query
+    `careers.<company>.com/jobs/<id>?gh_jid=<id>` (Duolingo), apex-www
+    marketing-site path-AND-query
+    `www.<company>.com/careers/<id>?gh_jid=<id>` (Brex). 3 plugins use
+    the entity-decode-then-tag-strip description pipeline (Klaviyo,
+    Duolingo, Brex). 1 plugin applies a wire-title trim (Brex, first
+    cohort member).
 
 **Notes:**
 
@@ -13378,9 +13425,9 @@ prototype.trim()` pass on the wire `title` before mapping to
 
 **Scope:** Run #256 continues the user-owner-directed concrete-action
 deviation that runs #230–#255 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 045's run
+it's loop continuation without any changes etc."_ Per Spec 045's run
 #255 close-out note (which named **Duolingo**, **Brex**, and **Gusto**
 as the three remaining ergonomic bites under the same company-direct
 pattern), this run pivoted to **Duolingo** as the alphabetically-next
@@ -13418,7 +13465,7 @@ and `job-boards.greenhouse.io` new).
 
 - **T01:** Added `Site.DUOLINGO = 'duolingo'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 56:
-  Spec 046 — Source Company Plugin: Duolingo` header (preserves the
+Spec 046 — Source Company Plugin: Duolingo` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 / 029 / 030 / 031 / 032 / 033 / 034 / 035 / 036 / 037 / 038 /
   039 / 040 / 041 / 042 / 043 / 044 / 045 phase-ordering convention).
@@ -13440,7 +13487,7 @@ and `job-boards.greenhouse.io` new).
   Klaviyo's because Duolingo's `content` is also HTML-entity-encoded
   (`&lt;p&gt;...`) — confirmed via the live probe, where the first
   job's `content` starts `&lt;p&gt;Our mission at Duolingo is to
-  develop the best education in the world…` (Spec 046 § 10 D-08).
+develop the best education in the world…` (Spec 046 § 10 D-08).
   Class names are `DuolingoService` / `DuolingoModule` (PascalCase
   with the standard initial cap, no embedded acronym requiring
   special casing — see Spec 046 § 10 D-06).
@@ -13495,7 +13542,7 @@ and `job-boards.greenhouse.io` new).
 **Files changed:**
 
 - `packages/models/src/enums/site.enum.ts` — `+2 lines` (`// Phase 56
-  …` comment + `DUOLINGO = 'duolingo'` enum entry).
+…` comment + `DUOLINGO = 'duolingo'` enum entry).
 - `packages/plugins/index.ts` — `+2 lines` (import + module-list entry,
   placed **between** `DropboxModule` and `FigmaModule`).
 - `tsconfig.base.json` — `+1 line` (path-alias entry).
@@ -13527,9 +13574,9 @@ SaaS (Notion, Linear, Loom, Front).
 
 **Scope:** Run #255 continues the user-owner-directed concrete-action
 deviation that runs #230–#254 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 044's run
+it's loop continuation without any changes etc."_ Per Spec 044's run
 #254 close-out note (which named **Klaviyo**, **Duolingo**, **Brex**,
 and **Gusto** as the four remaining ergonomic bites under the same
 company-direct pattern), this run pivoted to **Klaviyo** as the
@@ -13565,7 +13612,7 @@ subdomain used by Vercel and Affirm).
 
 - **T01:** Added `Site.KLAVIYO = 'klaviyo'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 55:
-  Spec 045 — Source Company Plugin: Klaviyo` header (preserves the
+Spec 045 — Source Company Plugin: Klaviyo` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 / 029 / 030 / 031 / 032 / 033 / 034 / 035 / 036 / 037 / 038 /
   039 / 040 / 041 / 042 / 043 / 044 phase-ordering convention).
@@ -13589,7 +13636,7 @@ subdomain used by Vercel and Affirm).
   (`&lt;p&gt;...`) rather than raw HTML tags — confirmed via the live
   probe, where the first job's `content` starts
   `&lt;div class=&quot;content-intro&quot;&gt;&lt;p&gt;&lt;em&gt;At
-  Klaviyo, we val…`. Decoding entities first (turning `&lt;p&gt;`
+Klaviyo, we val…`. Decoding entities first (turning `&lt;p&gt;`
   into `<p>`) then stripping tags (turning `<p>real text</p>` into
   `real text`) yields clean readable text (Spec 045 § 10 D-08).
   Class names are `KlaviyoService` / `KlaviyoModule` (PascalCase with
@@ -13644,7 +13691,7 @@ subdomain used by Vercel and Affirm).
 **Files changed:**
 
 - `packages/models/src/enums/site.enum.ts` — `+2 lines` (`// Phase 55
-  …` comment + `KLAVIYO = 'klaviyo'` enum entry).
+…` comment + `KLAVIYO = 'klaviyo'` enum entry).
 - `packages/plugins/index.ts` — `+2 lines` (import + module-list entry,
   placed **between** `InstacartModule` and `LyftModule`).
 - `tsconfig.base.json` — `+1 line` (path-alias entry).
@@ -13677,9 +13724,9 @@ Linear, Loom, Front).
 
 **Scope:** Run #254 continues the user-owner-directed concrete-action
 deviation that runs #230–#253 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 043's run
+it's loop continuation without any changes etc."_ Per Spec 043's run
 #253 close-out note (which named **Klaviyo**, **Affirm**, **Niantic**,
 **Snap**, **Duolingo**, **Brex**, and **Gusto** as the next ergonomic
 bites under the same company-direct pattern, with "re-confirm the slug
@@ -13722,7 +13769,7 @@ legacy `boards.greenhouse.io` form.
 
 - **T01:** Added `Site.AFFIRM = 'affirm'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 54:
-  Spec 044 — Source Company Plugin: Affirm` header (preserves the
+Spec 044 — Source Company Plugin: Affirm` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 / 029 / 030 / 031 / 032 / 033 / 034 / 035 / 036 / 037 / 038 /
   039 / 040 / 041 / 042 / 043 phase-ordering convention).
@@ -13747,7 +13794,7 @@ legacy `boards.greenhouse.io` form.
   positioned **before** `AirbnbModule` since `Aff` < `Air` lexically;
   this is the first company-direct cohort plugin to land at the
   alphabetical head of the cohort import block since `source-company-
-  airbnb` ceded the position when Spec 044 added Affirm),
+airbnb` ceded the position when Spec 044 added Affirm),
   `tsconfig.base.json` paths, and `jest.config.js` `moduleNameMapper`.
 - **T04:** Authored `__tests__/affirm.service.spec.ts` with 8 cases
   covering: NestJS DI resolution, enum-literal pin, happy-path
@@ -13786,12 +13833,12 @@ legacy `boards.greenhouse.io` form.
   registration touch-points did not perturb the parser regression
   suite).
 - `npm run lint:docs` → **exit 0** (`✓ Doc-lint passed — no
-  issues.`).
+issues.`).
 
 **Files changed:**
 
 - `packages/models/src/enums/site.enum.ts` — `+2 lines` (`// Phase 54
-  …` comment + `AFFIRM = 'affirm'` enum entry).
+…` comment + `AFFIRM = 'affirm'` enum entry).
 - `packages/plugins/index.ts` — `+2 lines` (import + module-list entry,
   placed **before** `AirbnbModule`).
 - `tsconfig.base.json` — `+1 line` (path-alias entry).
@@ -13824,9 +13871,9 @@ fintechs (Modern Treasury, Mercury, Ramp), e-commerce platforms
 
 **Scope:** Run #253 continues the user-owner-directed concrete-action
 deviation that runs #230–#252 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 042's run
+it's loop continuation without any changes etc."_ Per Spec 042's run
 #252 close-out note, this run pivoted to **Vercel** as the next
 ergonomic bite under the same company-direct pattern, with
 "re-confirm the slug via a public-API probe before committing"
@@ -13850,7 +13897,7 @@ legacy `boards.greenhouse.io` form.
 
 - **T01:** Added `Site.VERCEL = 'vercel'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 53:
-  Spec 043 — Source Company Plugin: Vercel` header (preserves the
+Spec 043 — Source Company Plugin: Vercel` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 / 029 / 030 / 031 / 032 / 033 / 034 / 035 / 036 / 037 / 038 /
   039 / 040 / 041 / 042 phase-ordering convention).
@@ -13913,7 +13960,7 @@ legacy `boards.greenhouse.io` form.
 **Files changed:**
 
 - `packages/models/src/enums/site.enum.ts` — `+2 lines` (`// Phase 53
-  …` comment + `VERCEL = 'vercel'` enum entry).
+…` comment + `VERCEL = 'vercel'` enum entry).
 - `packages/plugins/index.ts` — `+2 lines` (import + module-list entry).
 - `tsconfig.base.json` — `+1 line` (path-alias entry).
 - `jest.config.js` — `+1 line` (`moduleNameMapper` entry).
@@ -13944,9 +13991,9 @@ agent doesn't repeat the failed probe — same convention Spec 042 §
 
 **Scope:** Run #252 continues the user-owner-directed concrete-action
 deviation that runs #230–#251 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 041's run
+it's loop continuation without any changes etc."_ Per Spec 041's run
 #251 close-out note (which named **Snowflake** or **Block** as the
 next ergonomic bites under the same company-direct pattern, with
 "re-confirm the slug via a public-API probe before committing" called
@@ -13982,7 +14029,7 @@ probe.
 
 - **T01:** Added `Site.BLOCK = 'block'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 52:
-  Spec 042 — Source Company Plugin: Block` header (preserves the
+Spec 042 — Source Company Plugin: Block` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 / 029 / 030 / 031 / 032 / 033 / 034 / 035 / 036 / 037 / 038 /
   039 / 040 / 041 phase-ordering convention).
@@ -13998,7 +14045,7 @@ probe.
   the public Block careers permalink template
   `https://block.xyz/careers/jobs/<id>?gh_jid=<id>` — note the
   scheme: this is the **first** spec in the company-direct cohort
-  where the fallback is *not* a byte-exact match for the wire
+  where the fallback is _not_ a byte-exact match for the wire
   `absolute_url` Greenhouse returns. Greenhouse stores Block's
   pre-HSTS canonical URL as `http://block.xyz/...` (verified live in
   run #252); `block.xyz` enforces HTTPS via HSTS-style upgrade and
@@ -14067,7 +14114,7 @@ probe.
 **Files changed:**
 
 - `packages/models/src/enums/site.enum.ts` — `+2 lines` (`// Phase 52
-  …` comment + `BLOCK = 'block'` enum entry).
+…` comment + `BLOCK = 'block'` enum entry).
 - `packages/plugins/index.ts` — `+2 lines` (import + module-list entry).
 - `tsconfig.base.json` — `+1 line` (path-alias entry).
 - `jest.config.js` — `+1 line` (`moduleNameMapper` entry).
@@ -14105,12 +14152,12 @@ probe.
   hosted). Run #253's spec-drafting agent should pick one and
   re-confirm the slug via a public-API probe before committing.
 - Competitor watch: `OTHERS/Ats-scrapers @ 3bacd6e`, `OTHERS/JobSpy
-  @ fda080a`, `OTHERS/Jobspy-api @ 26bb6f4` — 0 new commits since
+@ fda080a`, `OTHERS/Jobspy-api @ 26bb6f4` — 0 new commits since
   run #251. Tracked in `competitor-watch.md` (parent dir, outside
   this repo).
 
 **Post-CI fix (commit `878b0ef`):** Run #252's first push (commit
-`8642866`) had all six CI jobs green *except* **Docker Build**, which
+`8642866`) had all six CI jobs green _except_ **Docker Build**, which
 failed in 35 s during `npm ci` because `node-gyp` couldn't find
 `python3` to compile `better-sqlite3`. The previous run #251 / commit
 `7437166` had built Docker green in 1 m 37 s an hour earlier with
@@ -14131,9 +14178,9 @@ Scrapers 6 m 30 s.
 
 **Scope:** Run #251 continues the user-owner-directed concrete-action
 deviation that runs #230–#250 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 040's run
+it's loop continuation without any changes etc."_ Per Spec 040's run
 #250 close-out note (which named Roblox as the next ergonomic bite
 under the same company-direct pattern, confirmed HTTP 200 in run
 #250's probe), this run extends the catalogue with the dominant
@@ -14149,7 +14196,7 @@ Greenhouse returns for this tenant uses the
 
 - **T01:** Added `Site.ROBLOX = 'roblox'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 51:
-  Spec 041 — Source Company Plugin: Roblox` header (preserves the
+Spec 041 — Source Company Plugin: Roblox` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 / 029 / 030 / 031 / 032 / 033 / 034 / 035 / 036 / 037 / 038 /
   039 / 040 phase-ordering convention).
@@ -14176,7 +14223,7 @@ Greenhouse returns for this tenant uses the
   slug-vs-display-name asymmetry. Spec 041 § 10 D-06 records the
   deliberate decision to ship Roblox as a single `Site.ROBLOX`
   plugin covering first-party Roblox Corporation roles only — the
-  Roblox Talent Hub developer-hiring board is *third-party* (a
+  Roblox Talent Hub developer-hiring board is _third-party_ (a
   marketplace for experience-creator hiring) and is intentionally
   out of scope for this spec; if Roblox ever surfaces first-party
   roles through Talent Hub, a follow-up spec can add a separate
@@ -14223,7 +14270,7 @@ Greenhouse returns for this tenant uses the
 **Files changed:**
 
 - `packages/models/src/enums/site.enum.ts` — `+2 lines` (`// Phase 51
-  …` comment + `ROBLOX = 'roblox'` enum entry).
+…` comment + `ROBLOX = 'roblox'` enum entry).
 - `packages/plugins/index.ts` — `+2 lines` (import + module-list entry).
 - `tsconfig.base.json` — `+1 line` (path-alias entry).
 - `jest.config.js` — `+1 line` (`moduleNameMapper` entry).
@@ -14252,7 +14299,7 @@ Greenhouse returns for this tenant uses the
   should pick one and re-confirm the slug via a public-API probe
   before committing.
 - Competitor watch: `OTHERS/Ats-scrapers @ 3bacd6e`, `OTHERS/JobSpy
-  @ fda080a`, `OTHERS/Jobspy-api @ 26bb6f4` — 0 new commits since
+@ fda080a`, `OTHERS/Jobspy-api @ 26bb6f4` — 0 new commits since
   run #250. Tracked in `competitor-watch.md` (parent dir, outside
   this repo).
 
@@ -14262,9 +14309,9 @@ Greenhouse returns for this tenant uses the
 
 **Scope:** Run #250 continues the user-owner-directed concrete-action
 deviation that runs #230–#249 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 039's run
+it's loop continuation without any changes etc."_ Per Spec 039's run
 #249 close-out note (which named Dropbox and Roblox as the next
 ergonomic bites under the same company-direct pattern, both confirmed
 HTTP 200 in run #249's probe), this run extends the catalogue with the
@@ -14281,7 +14328,7 @@ template).
 
 - **T01:** Added `Site.DROPBOX = 'dropbox'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 50:
-  Spec 040 — Source Company Plugin: Dropbox` header (preserves the
+Spec 040 — Source Company Plugin: Dropbox` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 / 029 / 030 / 031 / 032 / 033 / 034 / 035 / 036 / 037 / 038 /
   039 phase-ordering convention).
@@ -14350,7 +14397,7 @@ template).
 **Files changed:**
 
 - `packages/models/src/enums/site.enum.ts` — `+2 lines` (`// Phase 50
-  …` comment + `DROPBOX = 'dropbox'` enum entry).
+…` comment + `DROPBOX = 'dropbox'` enum entry).
 - `packages/plugins/index.ts` — `+2 lines` (import + module-list entry).
 - `tsconfig.base.json` — `+1 line` (path-alias entry).
 - `jest.config.js` — `+1 line` (`moduleNameMapper` entry).
@@ -14378,7 +14425,7 @@ template).
   spec-drafting agent should re-confirm the slug via a public-API
   probe before committing.
 - Competitor watch: `OTHERS/Ats-scrapers @ 3bacd6e`, `OTHERS/JobSpy
-  @ fda080a`, `OTHERS/Jobspy-api @ 26bb6f4` — 0 new commits since
+@ fda080a`, `OTHERS/Jobspy-api @ 26bb6f4` — 0 new commits since
   run #249. Tracked in `competitor-watch.md` (parent dir, outside
   this repo).
 
@@ -14388,9 +14435,9 @@ template).
 
 **Scope:** Run #249 continues the user-owner-directed concrete-action
 deviation that runs #230–#248 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 038's run
+it's loop continuation without any changes etc."_ Per Spec 038's run
 #248 close-out note (which named Instacart, Dropbox, and Roblox as the
 next ergonomic bites under the same company-direct pattern, all three
 confirmed HTTP 200 in run #248's probe), this run extends the catalogue
@@ -14407,7 +14454,7 @@ runs can pick up under the same pattern.
 
 - **T01:** Added `Site.INSTACART = 'instacart'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 49:
-  Spec 039 — Source Company Plugin: Instacart` header (preserves the
+Spec 039 — Source Company Plugin: Instacart` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 / 029 / 030 / 031 / 032 / 033 / 034 / 035 / 036 / 037 / 038
   phase-ordering convention).
@@ -14479,7 +14526,7 @@ runs can pick up under the same pattern.
 **Files changed:**
 
 - `packages/models/src/enums/site.enum.ts` — `+2 lines` (`// Phase 49
-  …` comment + `INSTACART = 'instacart'` enum entry).
+…` comment + `INSTACART = 'instacart'` enum entry).
 - `packages/plugins/index.ts` — `+2 lines` (import + module-list entry).
 - `tsconfig.base.json` — `+1 line` (path-alias entry).
 - `jest.config.js` — `+1 line` (`moduleNameMapper` entry).
@@ -14510,7 +14557,7 @@ runs can pick up under the same pattern.
   **Dropbox** or **Roblox**. Both are confirmed Greenhouse-hosted
   and remain on the proposed-row backlog as the ergonomic next steps.
 - Competitor watch: `OTHERS/Ats-scrapers @ 3bacd6e`, `OTHERS/JobSpy
-  @ fda080a`, `OTHERS/Jobspy-api @ 26bb6f4` — 0 new commits since
+@ fda080a`, `OTHERS/Jobspy-api @ 26bb6f4` — 0 new commits since
   run #248. Tracked in `competitor-watch.md` (parent dir, outside
   this repo).
 
@@ -14520,9 +14567,9 @@ runs can pick up under the same pattern.
 
 **Scope:** Run #248 continues the user-owner-directed concrete-action
 deviation that runs #230–#247 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 037's run
+it's loop continuation without any changes etc."_ Per Spec 037's run
 #247 close-out note (which named Datadog, Instacart, Dropbox, and
 Roblox as the next ergonomic bites under the same company-direct
 pattern, all four confirmed HTTP 200 in run #247's probe), this run
@@ -14539,7 +14586,7 @@ pattern.
 
 - **T01:** Added `Site.DATADOG = 'datadog'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 48:
-  Spec 038 — Source Company Plugin: Datadog` header (preserves the
+Spec 038 — Source Company Plugin: Datadog` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 / 029 / 030 / 031 / 032 / 033 / 034 / 035 / 036 / 037
   phase-ordering convention).
@@ -14606,7 +14653,7 @@ pattern.
 **Files changed:**
 
 - `packages/models/src/enums/site.enum.ts` — `+2 lines` (`// Phase 48
-  …` comment + `DATADOG = 'datadog'` enum entry).
+…` comment + `DATADOG = 'datadog'` enum entry).
 - `packages/plugins/index.ts` — `+2 lines` (import + module-list entry).
 - `tsconfig.base.json` — `+1 line` (path-alias entry).
 - `jest.config.js` — `+1 line` (`moduleNameMapper` entry).
@@ -14641,9 +14688,9 @@ pattern.
 
 **Scope:** Run #247 continues the user-owner-directed concrete-action
 deviation that runs #230–#246 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 036's run
+it's loop continuation without any changes etc."_ Per Spec 036's run
 #246 close-out note (which named Snowflake, MongoDB, Datadog, and
 similar Greenhouse-only employers as the next ergonomic bites under
 the same company-direct pattern), this run extends the catalogue with
@@ -14660,7 +14707,7 @@ different ATS that will need its own spec and adapter).
 
 - **T01:** Added `Site.MONGODB = 'mongodb'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 47:
-  Spec 037 — Source Company Plugin: MongoDB` header (preserves the
+Spec 037 — Source Company Plugin: MongoDB` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 / 029 / 030 / 031 / 032 / 033 / 034 / 035 / 036 phase-ordering
   convention).
@@ -14726,7 +14773,7 @@ different ATS that will need its own spec and adapter).
 **Files changed:**
 
 - `packages/models/src/enums/site.enum.ts` — `+2 lines` (`// Phase 47
-  …` comment + `MONGODB = 'mongodb'` enum entry).
+…` comment + `MONGODB = 'mongodb'` enum entry).
 - `packages/plugins/index.ts` — `+2 lines` (import + module-list entry).
 - `tsconfig.base.json` — `+1 line` (path-alias entry).
 - `jest.config.js` — `+1 line` (`moduleNameMapper` entry).
@@ -14763,9 +14810,9 @@ different ATS that will need its own spec and adapter).
 
 **Scope:** Run #246 continues the user-owner-directed concrete-action
 deviation that runs #230–#245 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 035's run
+it's loop continuation without any changes etc."_ Per Spec 035's run
 #245 close-out note (which named Snowflake, MongoDB, Datadog, and
 similar Greenhouse-only employers as the next ergonomic bites under
 the same company-direct pattern), this run extends the catalogue with
@@ -14778,7 +14825,7 @@ of `https://api.greenhouse.io/v1/boards/cloudflare/jobs?content=true`.
 
 - **T01:** Added `Site.CLOUDFLARE = 'cloudflare'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 46:
-  Spec 036 — Source Company Plugin: Cloudflare` header (preserves the
+Spec 036 — Source Company Plugin: Cloudflare` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 / 029 / 030 / 031 / 032 / 033 / 034 / 035 phase-ordering
   convention).
@@ -14841,7 +14888,7 @@ of `https://api.greenhouse.io/v1/boards/cloudflare/jobs?content=true`.
 **Files changed:**
 
 - `packages/models/src/enums/site.enum.ts` — `+2 lines` (`// Phase 46
-  …` comment + `CLOUDFLARE = 'cloudflare'` enum entry).
+…` comment + `CLOUDFLARE = 'cloudflare'` enum entry).
 - `packages/plugins/index.ts` — `+2 lines` (import + module-list entry).
 - `tsconfig.base.json` — `+1 line` (path-alias entry).
 - `jest.config.js` — `+1 line` (`moduleNameMapper` entry).
@@ -14880,9 +14927,9 @@ of `https://api.greenhouse.io/v1/boards/cloudflare/jobs?content=true`.
 
 **Scope:** Run #245 continues the user-owner-directed concrete-action
 deviation that runs #230–#244 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 034's run
+it's loop continuation without any changes etc."_ Per Spec 034's run
 #244 close-out note ("Likely next bite under the same Greenhouse
 company-direct pattern: **Twilio** (`source-company-twilio` —
 Greenhouse slug `twilio`)"), the next ergonomic bite is the
@@ -14892,7 +14939,7 @@ Greenhouse slug `twilio`)"), the next ergonomic bite is the
 
 - **T01:** Added `Site.TWILIO = 'twilio'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 45:
-  Spec 035 — Source Company Plugin: Twilio` header (preserves the
+Spec 035 — Source Company Plugin: Twilio` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 / 029 / 030 / 031 / 032 / 033 / 034 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-twilio` with the
@@ -14993,9 +15040,9 @@ Greenhouse-hosted.
 
 **Scope:** Run #244 continues the user-owner-directed concrete-action
 deviation that runs #230–#243 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 033's run
+it's loop continuation without any changes etc."_ Per Spec 033's run
 #243 close-out note ("Likely next bite under the same Greenhouse
 company-direct pattern: **Twitch** (`source-company-twitch` —
 Greenhouse slug `twitch`)"), the next ergonomic bite is the
@@ -15005,7 +15052,7 @@ Greenhouse slug `twitch`)"), the next ergonomic bite is the
 
 - **T01:** Added `Site.TWITCH = 'twitch'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 44:
-  Spec 034 — Source Company Plugin: Twitch` header (preserves the
+Spec 034 — Source Company Plugin: Twitch` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 / 029 / 030 / 031 / 032 / 033 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-twitch` with the
@@ -15104,9 +15151,9 @@ Greenhouse-hosted.
 
 **Scope:** Run #243 continues the user-owner-directed concrete-action
 deviation that runs #230–#242 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 032's run
+it's loop continuation without any changes etc."_ Per Spec 032's run
 #242 close-out note ("Likely next bite under the same Greenhouse
 company-direct pattern: **Gitlab** (`source-company-gitlab` —
 Greenhouse slug `gitlab`)"), the next ergonomic bite is the
@@ -15116,7 +15163,7 @@ Greenhouse slug `gitlab`)"), the next ergonomic bite is the
 
 - **T01:** Added `Site.GITLAB = 'gitlab'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 43:
-  Spec 033 — Source Company Plugin: Gitlab` header (preserves the
+Spec 033 — Source Company Plugin: Gitlab` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 / 029 / 030 / 031 / 032 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-gitlab` with the
@@ -15212,9 +15259,9 @@ Greenhouse-hosted.
 
 **Scope:** Run #242 continues the user-owner-directed concrete-action
 deviation that runs #230–#241 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 031's run
+it's loop continuation without any changes etc."_ Per Spec 031's run
 #241 close-out note ("Likely next bite under the same Greenhouse
 company-direct pattern: **Figma** (`source-company-figma` —
 Greenhouse slug `figma`)"), the next ergonomic bite is the
@@ -15224,7 +15271,7 @@ Greenhouse slug `figma`)"), the next ergonomic bite is the
 
 - **T01:** Added `Site.FIGMA = 'figma'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 42:
-  Spec 032 — Source Company Plugin: Figma` header (preserves the
+Spec 032 — Source Company Plugin: Figma` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 / 029 / 030 / 031 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-figma` with the
@@ -15320,9 +15367,9 @@ Greenhouse-hosted.
 
 **Scope:** Run #241 continues the user-owner-directed concrete-action
 deviation that runs #230–#240 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 030's run
+it's loop continuation without any changes etc."_ Per Spec 030's run
 #240 close-out note ("Likely next bite under the same Greenhouse
 company-direct pattern: **Asana** (`source-company-asana` —
 Greenhouse slug `asana`)"), the next ergonomic bite is the
@@ -15332,7 +15379,7 @@ Greenhouse slug `asana`)"), the next ergonomic bite is the
 
 - **T01:** Added `Site.ASANA = 'asana'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 41:
-  Spec 031 — Source Company Plugin: Asana` header (preserves the
+Spec 031 — Source Company Plugin: Asana` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 / 029 / 030 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-asana` with the
@@ -15426,9 +15473,9 @@ Greenhouse-hosted.
 
 **Scope:** Run #240 continues the user-owner-directed concrete-action
 deviation that runs #230–#239 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 029's run
+it's loop continuation without any changes etc."_ Per Spec 029's run
 #239 close-out note ("Likely next bite under the same Greenhouse
 company-direct pattern: **Plaid** (`source-company-plaid` —
 Greenhouse slug `plaid`)"), the next ergonomic bite is the
@@ -15438,7 +15485,7 @@ Greenhouse slug `plaid`)"), the next ergonomic bite is the
 
 - **T01:** Added `Site.PLAID = 'plaid'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 40:
-  Spec 030 — Source Company Plugin: Plaid` header (preserves the
+Spec 030 — Source Company Plugin: Plaid` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 / 029 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-plaid` with the
@@ -15532,9 +15579,9 @@ Greenhouse-hosted.
 
 **Scope:** Run #239 continues the user-owner-directed concrete-action
 deviation that runs #230–#238 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 028's run
+it's loop continuation without any changes etc."_ Per Spec 028's run
 #238 close-out note ("Likely next bite under the same Greenhouse
 company-direct pattern: **Lyft** (`source-company-lyft` — Greenhouse
 slug `lyft`)"), the next ergonomic bite is the
@@ -15544,7 +15591,7 @@ slug `lyft`)"), the next ergonomic bite is the
 
 - **T01:** Added `Site.LYFT = 'lyft'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 39:
-  Spec 029 — Source Company Plugin: Lyft` header (preserves the
+Spec 029 — Source Company Plugin: Lyft` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027 /
   028 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-lyft` with the
@@ -15641,9 +15688,9 @@ Greenhouse-hosted.
 
 **Scope:** Run #238 continues the user-owner-directed concrete-action
 deviation that runs #230–#237 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 027's run
+it's loop continuation without any changes etc."_ Per Spec 027's run
 #237 close-out note ("Likely next bite under the same Greenhouse
 company-direct pattern: **Pinterest** (`source-company-pinterest` —
 Greenhouse slug `pinterest`)"), the next ergonomic bite is the
@@ -15653,7 +15700,7 @@ Greenhouse slug `pinterest`)"), the next ergonomic bite is the
 
 - **T01:** Added `Site.PINTEREST = 'pinterest'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 38:
-  Spec 028 — Source Company Plugin: Pinterest` header (preserves the
+Spec 028 — Source Company Plugin: Pinterest` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026 / 027
   phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-pinterest` with the
@@ -15748,9 +15795,9 @@ Greenhouse-hosted.
 
 **Scope:** Run #237 continues the user-owner-directed concrete-action
 deviation that runs #230–#236 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 026's run
+it's loop continuation without any changes etc."_ Per Spec 026's run
 #236 close-out note ("Likely next bite under the same Greenhouse
 company-direct pattern: **Reddit** (`source-company-reddit` —
 Greenhouse slug `reddit`)"), the next ergonomic bite is the
@@ -15760,7 +15807,7 @@ Greenhouse slug `reddit`)"), the next ergonomic bite is the
 
 - **T01:** Added `Site.REDDIT = 'reddit'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 37:
-  Spec 027 — Source Company Plugin: Reddit` header (preserves the
+Spec 027 — Source Company Plugin: Reddit` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 / 026
   phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-reddit` with the
@@ -15855,9 +15902,9 @@ confirmed Greenhouse-hosted.
 
 **Scope:** Run #236 continues the user-owner-directed concrete-action
 deviation that runs #230–#235 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 025's run
+it's loop continuation without any changes etc."_ Per Spec 025's run
 #235 close-out note ("Likely next bite under the same Greenhouse
 company-direct pattern: **Robinhood** (`source-company-robinhood` —
 Greenhouse slug `robinhoodjobs`)"), the next ergonomic bite is the
@@ -15867,7 +15914,7 @@ Greenhouse slug `robinhoodjobs`)"), the next ergonomic bite is the
 
 - **T01:** Added `Site.ROBINHOOD = 'robinhood'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 36:
-  Spec 026 — Source Company Plugin: Robinhood` header (preserves the
+Spec 026 — Source Company Plugin: Robinhood` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 / 025 phase-ordering
   convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-robinhood` with the
@@ -15963,9 +16010,9 @@ continues with Pinterest, Lyft, Plaid, Asana, Figma, Gitlab, Twitch
 
 **Scope:** Run #235 continues the user-owner-directed concrete-action
 deviation that runs #230–#234 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 024's run
+it's loop continuation without any changes etc."_ Per Spec 024's run
 #234 user-story note ("Robinhood, Airbnb, Reddit, …"), the next
 ergonomic bite is the `source-company-airbnb` plugin, which this run
 ships end-to-end.
@@ -15974,7 +16021,7 @@ ships end-to-end.
 
 - **T01:** Added `Site.AIRBNB = 'airbnb'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 35:
-  Spec 025 — Source Company Plugin: Airbnb` header (preserves the
+Spec 025 — Source Company Plugin: Airbnb` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 / 024 phase-ordering
   convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-airbnb` with the
@@ -16063,9 +16110,9 @@ PR per the user-story budget set in Spec 024 § 4.
 
 **Scope:** Run #234 continues the user-owner-directed concrete-action
 deviation that runs #230–#233 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 023's run
+it's loop continuation without any changes etc."_ Per Spec 023's run
 #233 close-out note ("Likely next bite under the same Greenhouse
 company-direct pattern: **DoorDash** (`source-company-doordash` —
 Greenhouse slug `doordash`)"), the next ergonomic bite is the
@@ -16075,7 +16122,7 @@ Greenhouse slug `doordash`)"), the next ergonomic bite is the
 
 - **T01:** Added `Site.DOORDASH = 'doordash'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 34:
-  Spec 024 — Source Company Plugin: DoorDash` header (preserves the
+Spec 024 — Source Company Plugin: DoorDash` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 / 023 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-doordash` with the
   Coinbase-shape (single-file `service.ts`, 3-line `module.ts`,
@@ -16170,9 +16217,9 @@ at run #250 — 16 runs out.
 
 **Scope:** Run #233 continues the user-owner-directed concrete-action
 deviation that runs #230–#232 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 022's run
+it's loop continuation without any changes etc."_ Per Spec 022's run
 #232 close-out note ("Likely next bite under the same Greenhouse
 company-direct pattern: **Coinbase** (`source-company-coinbase` —
 Greenhouse slug `coinbase`)"), the next ergonomic bite is the
@@ -16182,7 +16229,7 @@ Greenhouse slug `coinbase`)"), the next ergonomic bite is the
 
 - **T01:** Added `Site.COINBASE = 'coinbase'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 33:
-  Spec 023 — Source Company Plugin: Coinbase` header (preserves the
+Spec 023 — Source Company Plugin: Coinbase` header (preserves the
   Spec 006 / 013 / 020 / 021 / 022 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-coinbase` with the
   Discord-shape (single-file `service.ts`, 3-line `module.ts`,
@@ -16277,9 +16324,9 @@ at run #250 — 17 runs out.
 
 **Scope:** Run #232 continues the user-owner-directed concrete-action
 deviation that runs #230–#231 carried under the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 021's run
+it's loop continuation without any changes etc."_ Per Spec 021's run
 #231 close-out note ("Likely next bite under the same Greenhouse
 company-direct pattern: **Discord** (`source-company-discord` —
 Greenhouse slug `discord`)"), the next ergonomic bite is the
@@ -16289,7 +16336,7 @@ Greenhouse slug `discord`)"), the next ergonomic bite is the
 
 - **T01:** Added `Site.DISCORD = 'discord'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 32:
-  Spec 022 — Source Company Plugin: Discord` header (preserves the
+Spec 022 — Source Company Plugin: Discord` header (preserves the
   Spec 006 / 013 / 020 / 021 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-discord` with the
   Databricks-shape (single-file `service.ts`, 3-line `module.ts`,
@@ -16384,9 +16431,9 @@ trigger surfaces. Next user-owner reminder window opens at run #250
 
 **Scope:** Run #231 continues the user-owner-directed concrete-action
 deviation that run #230 inaugurated, motivated by the explicit
-scheduled-task-brief instruction: *"Make sure every run you do
+scheduled-task-brief instruction: _"Make sure every run you do
 something useful for the project, not just report that all is done and
-it's loop continuation without any changes etc."* Per Spec 020's run
+it's loop continuation without any changes etc."_ Per Spec 020's run
 #230 close-out note ("Default for run #231: return to the Q-042
 default-C maintenance loop unless a concrete observable trigger
 surfaces"), the user-owner directive is itself the standing observable
@@ -16399,7 +16446,7 @@ this run ships end-to-end.
 
 - **T01:** Added `Site.DATABRICKS = 'databricks'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 31:
-  Spec 021 — Source Company Plugin: Databricks` header (preserves the
+Spec 021 — Source Company Plugin: Databricks` header (preserves the
   Spec 006 / 013 / 020 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-databricks` with the
   Anthropic-shape (single-file `service.ts`, 3-line `module.ts`,
@@ -16495,9 +16542,9 @@ trigger surfaces. Next user-owner reminder window opens at run #250
 **Scope:** Run #230 promotes Q-042 from default C ("indefinite
 maintenance loop pending external churn") to a one-off concrete-action
 deviation, motivated by the explicit user-owner directive embedded in
-the scheduled-task brief: *"Make sure every run you do something useful
+the scheduled-task brief: _"Make sure every run you do something useful
 for the project, not just report that all is done and it's loop
-continuation without any changes etc."* This is **not** a Q-042
+continuation without any changes etc."_ This is **not** a Q-042
 resolution — the long-running maintenance default still applies for
 runs without a concrete observable trigger. Run #230 simply takes the
 spec backlog's most ergonomic next-bite (`source-company-anthropic`
@@ -16508,7 +16555,7 @@ end-to-end so the project gains forward motion.
 
 - **T01:** Added `Site.ANTHROPIC = 'anthropic'` to
   `packages/models/src/enums/site.enum.ts` under a new `// Phase 30:
-  Spec 020 — Source Company Plugin: Anthropic` header (preserves the
+Spec 020 — Source Company Plugin: Anthropic` header (preserves the
   Spec 006 / 013 phase-ordering convention).
 - **T02:** Scaffolded `@ever-jobs/source-company-anthropic` with the
   Stripe-shape (single-file `service.ts`, 3-line `module.ts`, 2-line
@@ -17801,7 +17848,7 @@ unchanged since run #21. **166th consecutive zero-churn run**.
 - `helpers.bench` → **2/2 passed in 6.038 s**; overall p95 = **0.0142 ms**
   (delta from run #185 0.0155 ms = **-0.0013 ms** — favourable downward
   correction; delta from Spec 016 baseline 0.0174 ms = **-0.0032 ms** —
-  *under* the baseline; well inside the +0.1 ms NFR-1 budget). Per-currency
+  _under_ the baseline; well inside the +0.1 ms NFR-1 budget). Per-currency
   p95 (USD 0.0122, EUR 0.0124, GBP 0.0137, CHF 0.0104, SEK 0.0167, NOK 0.0123,
   DKK 0.0132, PLN 0.0135 ms) all under the 0.5 ms NFR-1 target and the
   2.0 ms CI ceiling. `p95_under_nfr1: true`, `p95_under_ci_ceiling: true`,
@@ -17894,7 +17941,7 @@ unchanged since run #21. **163rd consecutive zero-churn run**.
 - `helpers.spec` → **77/77 passed in 6.025 s**.
 - `helpers.bench` → **2/2 passed in 5.991 s**; overall p95 = **0.0140 ms**
   (delta from run #182 = **-0.0117 ms** — favourable downward swing; delta from
-  Spec 016 baseline 0.0174 ms = **-0.0034 ms** — *under* the baseline; well within
+  Spec 016 baseline 0.0174 ms = **-0.0034 ms** — _under_ the baseline; well within
   +0.1 ms NFR-1 budget). Per-currency p95 (USD 0.0111, EUR 0.0118, GBP 0.0115,
   CHF 0.0098, SEK 0.0154, NOK 0.0096, DKK 0.0121, PLN 0.0207 ms) all under the
   0.5 ms NFR-1 target and the 2.0 ms CI ceiling. Headroom **99.3 %** (Node
@@ -18792,7 +18839,7 @@ JobSpy `fda080a`, Jobspy-api `26bb6f4`) — **134th consecutive zero-churn run**
 - `npx jest packages/common/__tests__/helpers.bench --colors=false` → **2/2 passed in 6.084 s**.
   Overall **p95 = 0.0222 ms** (delta from run #153 = -0.0021 ms; delta from Spec 016 baseline
   0.0174 ms = +0.0048 ms; well within +0.1 ms NFR-1 budget). No GC-pause spike (`max =
-  0.3222 ms` — unusually low).
+0.3222 ms` — unusually low).
 - `npm run lint:docs` exits 0.
 
 **External-snapshot tag set:** `Already up to date.` for all three watched repos. SHAs
@@ -18951,8 +18998,8 @@ JobSpy `fda080a`, Jobspy-api `26bb6f4`) — **129th consecutive zero-churn run**
 **This is the last run before the documented run #150 second-reminder threshold** (per
 the run #100 reminder convention pinned at the top of this file). If run #150 fires with
 Q-042 still `_pending review_`, the agent at run #150 prepends a fresh second-reminder
-entry: *"Run #150 reminder — Q-042 has been pending review for ~66 runs since run #84.
-Default C continues; user owner please review at convenience."* The next reminder window
+entry: _"Run #150 reminder — Q-042 has been pending review for ~66 runs since run #84.
+Default C continues; user owner please review at convenience."_ The next reminder window
 after run #150 opens at run #200.
 
 **Health-check evidence:**
@@ -18978,7 +19025,7 @@ JobSpy `fda080a`, Jobspy-api `26bb6f4`) — **128th consecutive zero-churn run**
 **Forward-pointers:**
 
 - **Default for run #150 = second reminder threshold.** If Q-042 is still `_pending
-  review_` at run #150 pickup, prepend a fresh second-reminder entry to `docs/log.md`
+review_` at run #150 pickup, prepend a fresh second-reminder entry to `docs/log.md`
   in the same format as the run #100 reminder. The reminder is informational only;
   Q-042 stays open with its current default and the maintenance pass continues. After
   run #150 fires the reminder, the next reminder window opens at run #200 (50 runs
@@ -20462,6 +20509,7 @@ subsequent run.
 
 **External-snapshot tag set:** all three watched repos return `Already up to
 date.` SHAs unchanged since run #21:
+
 - Ats-scrapers `3bacd6e` (0 new commits since run #99).
 - JobSpy `fda080a` (0 new commits since run #99).
 - Jobspy-api `26bb6f4` (0 new commits since run #99).
@@ -20535,10 +20583,10 @@ JobSpy `fda080a`, Jobspy-api `26bb6f4`) — **78th consecutive zero-churn run**.
 **Forward-pointers:**
 
 - **Default for run #100 = re-prompt convention triggers.** If Q-042 is still `_pending
-  review_` at run #100 pickup (no human-owner resolution flip), prepend a one-line
-  reminder entry to `docs/log.md`: *"Run #100 reminder — Q-042 has been pending review
+review_` at run #100 pickup (no human-owner resolution flip), prepend a one-line
+  reminder entry to `docs/log.md`: _"Run #100 reminder — Q-042 has been pending review
   since run #84 (~16 runs / ~16 hours of agent wall-clock). Default C continues; user
-  owner please review at convenience."* The reminder is informational only — Q-042
+  owner please review at convenience."_ The reminder is informational only — Q-042
   itself stays open with its current default. Continue the maintenance-loop pass as
   normal (helpers + bench + lint:docs + zero-churn confirm). Re-prompt at run #100 ONLY
   (not every subsequent run); next reminder window opens at run #150 if state persists.
@@ -20944,11 +20992,11 @@ forward-pointer.
 `git pull --ff-only` on all three watched repos returns `Already up to date.` SHAs unchanged
 since run #21:
 
-| Repo            | Tip SHA       |
-| --------------- | ------------- |
-| Ats-scrapers    | `3bacd6e`     |
-| JobSpy          | `fda080a`     |
-| Jobspy-api      | `26bb6f4`     |
+| Repo         | Tip SHA   |
+| ------------ | --------- |
+| Ats-scrapers | `3bacd6e` |
+| JobSpy       | `fda080a` |
+| Jobspy-api   | `26bb6f4` |
 
 **67th consecutive zero-churn run** in the external-snapshot tag set (since run #21). No
 trigger surfaced at run #88 — Q-042 default C remains the operating policy. No `AC-NN` row
@@ -20968,7 +21016,7 @@ opened in `competitor-watch.md` § C.
 - No `.specify/specs/*/spec.md` / `tasks.md` flips at run #88.
 - No `docs/index.md` § 7 row update — last edit at run #81.
 - No `docs/questions.md` change — Q-042 stays `_pending review._`; Q-041 stays `_open —
-  agent default = A_`.
+agent default = A_`.
 - No `package.json` / `package-lock.json` change.
 
 **Forward-pointers / default for run #89:**
@@ -21014,11 +21062,11 @@ forward-pointer.
 `git pull --ff-only` on all three watched repos returns `Already up to date.` SHAs unchanged
 since run #21:
 
-| Repo            | Tip SHA       |
-| --------------- | ------------- |
-| Ats-scrapers    | `3bacd6e`     |
-| JobSpy          | `fda080a`     |
-| Jobspy-api      | `26bb6f4`     |
+| Repo         | Tip SHA   |
+| ------------ | --------- |
+| Ats-scrapers | `3bacd6e` |
+| JobSpy       | `fda080a` |
+| Jobspy-api   | `26bb6f4` |
 
 **66th consecutive zero-churn run** in the external-snapshot tag set (since run #21). No
 trigger surfaced at run #87 — Q-042 default C remains the operating policy. No `AC-NN` row
@@ -21038,7 +21086,7 @@ opened in `competitor-watch.md` § C.
 - No `.specify/specs/*/spec.md` / `tasks.md` flips at run #87.
 - No `docs/index.md` § 7 row update — last edit at run #81.
 - No `docs/questions.md` change — Q-042 stays `_pending review._`; Q-041 stays `_open —
-  agent default = A`.
+agent default = A`.
 - No `package.json` / `package-lock.json` change.
 
 **Forward-pointers / default for run #88:**
@@ -21075,11 +21123,11 @@ authorised at run #85's forward-pointer continues here.
 `git pull --ff-only` on all three watched repos returns `Already up to date.` SHAs unchanged
 since run #21:
 
-| Repo            | Tip SHA       |
-| --------------- | ------------- |
-| Ats-scrapers    | `3bacd6e`     |
-| JobSpy          | `fda080a`     |
-| Jobspy-api      | `26bb6f4`     |
+| Repo         | Tip SHA   |
+| ------------ | --------- |
+| Ats-scrapers | `3bacd6e` |
+| JobSpy       | `fda080a` |
+| Jobspy-api   | `26bb6f4` |
 
 **65th consecutive zero-churn run** in the external-snapshot tag set (since run #21).
 
@@ -21147,11 +21195,11 @@ health-check evidence block may be condensed").
 `git pull --ff-only` on all three watched repos returns `Already up to date.` SHAs unchanged
 since run #21:
 
-| Repo            | Tip SHA       |
-| --------------- | ------------- |
-| Ats-scrapers    | `3bacd6e`     |
-| JobSpy          | `fda080a`     |
-| Jobspy-api      | `26bb6f4`     |
+| Repo         | Tip SHA   |
+| ------------ | --------- |
+| Ats-scrapers | `3bacd6e` |
+| JobSpy       | `fda080a` |
+| Jobspy-api   | `26bb6f4` |
 
 **64th consecutive zero-churn run** in the external-snapshot tag set (since run #21).
 
@@ -21232,11 +21280,11 @@ repos have held identical SHAs for the 63rd consecutive run.
 `git pull --ff-only` on all three watched repos returns `Already up to date.` SHAs verified
 post-pull and unchanged since run #21:
 
-| Repo            | Tip SHA       |
-| --------------- | ------------- |
-| Ats-scrapers    | `3bacd6e`     |
-| JobSpy          | `fda080a`     |
-| Jobspy-api      | `26bb6f4`     |
+| Repo         | Tip SHA   |
+| ------------ | --------- |
+| Ats-scrapers | `3bacd6e` |
+| JobSpy       | `fda080a` |
+| Jobspy-api   | `26bb6f4` |
 
 **63rd consecutive zero-churn run** in the external-snapshot tag set (since run #21).
 
@@ -21342,11 +21390,11 @@ no fresh external snapshot has materialised in the three watched repos through r
 `git pull --ff-only` on all three watched repos returns `Already up to date.` SHAs verified
 post-pull and unchanged since run #21:
 
-| Repo            | Tip SHA       | Last commit subject                                                  |
-| --------------- | ------------- | -------------------------------------------------------------------- |
-| Ats-scrapers    | `3bacd6e`     | (last commit subject recorded in the parallel out-of-repo ledger).   |
-| JobSpy          | `fda080a`     | (last commit subject recorded in the parallel out-of-repo ledger).   |
-| Jobspy-api      | `26bb6f4`     | (last commit subject recorded in the parallel out-of-repo ledger).   |
+| Repo         | Tip SHA   | Last commit subject                                                |
+| ------------ | --------- | ------------------------------------------------------------------ |
+| Ats-scrapers | `3bacd6e` | (last commit subject recorded in the parallel out-of-repo ledger). |
+| JobSpy       | `fda080a` | (last commit subject recorded in the parallel out-of-repo ledger). |
+| Jobspy-api   | `26bb6f4` | (last commit subject recorded in the parallel out-of-repo ledger). |
 
 **62nd consecutive zero-churn run** in the external-snapshot tag set (since run #21). No
 `AC-NN` row added to the parallel out-of-repo upstream-watch ledger; this docs/log.md run #83
@@ -21445,11 +21493,11 @@ snapshot has materialised in the three watched repos through run #82.
 `git pull --ff-only` on all three watched repos in `OTHERS/` returns `Already up to date.` SHAs
 verified post-pull and unchanged since run #21:
 
-| Repo            | Tip SHA       | Last commit subject                                                  |
-| --------------- | ------------- | -------------------------------------------------------------------- |
-| Ats-scrapers    | `3bacd6e`     | `fast-forward` (out-of-repo upstream-watch ledger has full context). |
-| JobSpy          | `fda080a`     | `fix(linkedin): add fallback for date parsing on new job listings`.  |
-| Jobspy-api      | `26bb6f4`     | `Update README.md`.                                                  |
+| Repo         | Tip SHA   | Last commit subject                                                  |
+| ------------ | --------- | -------------------------------------------------------------------- |
+| Ats-scrapers | `3bacd6e` | `fast-forward` (out-of-repo upstream-watch ledger has full context). |
+| JobSpy       | `fda080a` | `fix(linkedin): add fallback for date parsing on new job listings`.  |
+| Jobspy-api   | `26bb6f4` | `Update README.md`.                                                  |
 
 **61st consecutive zero-churn run** in `OTHERS/` (since run #21). No `AC-NN` row added to § C of
 the parallel out-of-repo upstream-watch ledger; this docs/log.md run #82 entry plus the
@@ -21538,9 +21586,9 @@ pre-check" rewritten to reflect Spec 019 closure. Three threshold-reference call
 consistency:
 
 1. The (e) guard description: `minSalary < lowerLimit / 12 (≈ 83 …)` → `minSalary < lowerLimit (=
-   1000 …)`. Heading line gains `; threshold retuned in Spec 019 / T01 / FR-1` attribution.
+1000 …)`. Heading line gains `; threshold retuned in Spec 019 / T01 / FR-1` attribution.
 2. The K-suffix bypass example: `5K = 5000 ≥ lowerLimit / 12 ≈ 83` → `5K = 5000 ≥ lowerLimit ≈
-   1000`. Behavioural claim unchanged (5000 still passes both old and new thresholds).
+1000`. Behavioural claim unchanged (5000 still passes both old and new thresholds).
 3. The FR-8 paragraph itself, retitled `Spec 015 / FR-8 closure (Spec 019 / runs #78..#81):`. Now
    documents that `"100 - 150" + country=GERMANY` is **rejected** (was: still emits as hourly EUR
    100..150). Recommends prefix-anchored EUR symbol (`"€100 - €150"`) and suffix-anchored EUR ISO
@@ -21571,12 +21619,12 @@ resolution flip is human-driven, not agent-driven).
 
 **Spec 019 final-state summary:**
 
-| Phase | Run    | Task                                 | Diff scope                                                                                                                |
-| ----- | ------ | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| 0     | #78    | T00 (scaffolding)                    | 3 new spec-folder files + 4 ledger surfaces (docs-only).                                                                  |
-| 1     | #79    | T01 (source-side threshold bump)     | `helpers.ts:803` single-token edit + lead-in comment refresh; 74/74 jest green; bench p95 = 0.0176 ms (Spec 016 + 0.0002). |
-| 2     | #80    | T02 (test pins)                      | `helpers.spec.ts` +95 LOC (3 new `it(...)` blocks); 77/77 jest green; bench p95 = 0.0248 ms.                                |
-| 3     | #81    | T03 (closeout)                       | `docs/PERFORMANCE_TUNING.md` FR-8 paragraph rewrite + threshold call-site updates + 4 ledger surfaces (docs-only).        |
+| Phase | Run | Task                             | Diff scope                                                                                                                 |
+| ----- | --- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 0     | #78 | T00 (scaffolding)                | 3 new spec-folder files + 4 ledger surfaces (docs-only).                                                                   |
+| 1     | #79 | T01 (source-side threshold bump) | `helpers.ts:803` single-token edit + lead-in comment refresh; 74/74 jest green; bench p95 = 0.0176 ms (Spec 016 + 0.0002). |
+| 2     | #80 | T02 (test pins)                  | `helpers.spec.ts` +95 LOC (3 new `it(...)` blocks); 77/77 jest green; bench p95 = 0.0248 ms.                               |
+| 3     | #81 | T03 (closeout)                   | `docs/PERFORMANCE_TUNING.md` FR-8 paragraph rewrite + threshold call-site updates + 4 ledger surfaces (docs-only).         |
 
 **Acceptance:**
 
@@ -21658,12 +21706,12 @@ verbatim against spec § 7.2 case literals:
 
 - `packages/common/__tests__/helpers.spec.ts` — appended
   ~95 lines (1 new `describe(...)` block + 3 `it(...)` blocks
-  + 1 lead-in JSDoc-style comment). No removal, no edit to
-  pre-existing cases (FR-3 / FR-6 / FR-7 / NFR-6 honoured —
-  the 74 pre-T02 cases remain byte-for-byte green).
+  - 1 lead-in JSDoc-style comment). No removal, no edit to
+    pre-existing cases (FR-3 / FR-6 / FR-7 / NFR-6 honoured —
+    the 74 pre-T02 cases remain byte-for-byte green).
 - `.specify/specs/019-salary-parser-residuals-batch-2/spec.md` —
   Status field flipped from `T01 landed (run #79); T02 + T03
-  pending` to `T01 + T02 landed (runs #79..#80); T03 pending`;
+pending` to `T01 + T02 landed (runs #79..#80); T03 pending`;
   Last updated bumped to `2026-04-28 (run #80)`; § 10
   Decisions log gains D-02 (~50 new lines documenting T02
   acceptance evidence + forward-pointer to T03 doc-drift
@@ -21689,7 +21737,7 @@ verbatim against spec § 7.2 case literals:
   is now rejected; recommended escape hatches are
   prefix-anchored EUR symbol or suffix-anchored EUR ISO).
   Status flips from `T01 + T02 landed (runs #79..#80); T03
-  pending` to `All phases done (T03 run #81); spec complete`.
+pending` to `All phases done (T03 run #81); spec complete`.
   T03 acceptance recipe enumerated in 11 numbered steps in
   Spec 019 / tasks.md "Notes for the next run".
 - The 73→76 / 74→77 doc-drift reconciliation surfaced at
@@ -21765,7 +21813,7 @@ strict reading of FR-5 idempotence.
 **Acceptance evidence (D-01 in spec § 10):**
 
 - Regression sweep: `npx jest
-  packages/common/__tests__/helpers.spec` → **74/74 passed**
+packages/common/__tests__/helpers.spec` → **74/74 passed**
   in 7.153 s. _Spec § 7.2 / NFR-5 / tasks.md / T02 cited 73 as
   the pre-Spec-019 baseline; reality is 74 (off-by-one doc
   drift). The +3 test-count delta itself is unchanged; the
@@ -21785,7 +21833,7 @@ strict reading of FR-5 idempotence.
   ms). The bench acceptance gate restored by Spec 016 / T01
   (run #69) holds.
 - FR-5 idempotence: `grep -c 'lowerLimit / 12'
-  packages/common/src/utils/helpers.ts` → **0** post-edit
+packages/common/src/utils/helpers.ts` → **0** post-edit
   (was **1** pre-edit). Re-running T01 produces a no-op diff.
 - Diff scope: exactly one source file changed
   (`packages/common/src/utils/helpers.ts`) — inequality
@@ -21802,9 +21850,9 @@ strict reading of FR-5 idempotence.
   text; no remaining literal of the pre-edit token).
 - `.specify/specs/019-salary-parser-residuals-batch-2/spec.md`
   — header `Status` flipped from `draft (Phase 0 scaffolded
-  run #78); Phase 1..3 pending` to `T01 landed (run #79);
-  T02 + T03 pending`; `Last updated` bumped to `2026-04-28
-  (run #79)`; § 10 gains Decision D-01 (~50 lines)
+run #78); Phase 1..3 pending` to `T01 landed (run #79);
+T02 + T03 pending`; `Last updated` bumped to `2026-04-28
+(run #79)`; § 10 gains Decision D-01 (~50 lines)
   documenting the T01 acceptance evidence (regression sweep
   74/74, bench p95 0.0176 ms, FR-5 idempotence 1→0,
   diff-scope check) + the 73→74 baseline-doc-drift forward-
@@ -21818,7 +21866,7 @@ strict reading of FR-5 idempotence.
   pointer.
 - `docs/log.md` — this entry.
 - `CLAUDE.md` — run-tag bumped from `2026-04-28 (scheduled
-  run #78)` to `2026-04-28 (scheduled run #79)`.
+run #78)` to `2026-04-28 (scheduled run #79)`.
 
 **No-change list (verified out-of-scope):** `helpers.ts`
 function signatures (`extractSalary`, `parseSalaryNumber`,
@@ -21937,8 +21985,8 @@ human owner reviews; agent proceeds with default.
   new file (~280 lines): full spec body (problem statement,
   goals, non-goals, user stories, FR-1..FR-10, NFR-1..NFR-7,
   contracts § 7.1 source-edit text + § 7.2 test-case literals
-  + § 7.3 coverage matrix, test plan, open questions reference
-  to Q-041, decisions log empty at scaffold pass).
+  - § 7.3 coverage matrix, test plan, open questions reference
+    to Q-041, decisions log empty at scaffold pass).
 - `.specify/specs/019-salary-parser-residuals-batch-2/plan.md` —
   new file (~210 lines): phasing overview, packages-touched
   table, risks (substitute-case regression / operator-facing
@@ -22058,14 +22106,14 @@ Python-script-level concern rooted in the
 CLI flag plus the `hours_elapsed` 12-hour cooldown. None of
 those concerns map onto our `WorkableService` contract:
 
-| Upstream concern                                           | Ever Jobs layer that owns it                                                             |
-| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `should_scrape_company` 12-hour cooldown                   | BullMQ queue scheduling (cron / aggregator level, not per-scraper).                      |
-| `last_scraped` JSON cache (`companies/<slug>.json`)        | `persistence-postgres` plugin (Spec 004 boundary; opt-in via `EVER_JOBS_STORE`).         |
-| `force=True` re-scrape flag                                | API caller invokes `.scrape()` again with the same `ScraperInputDto`; no cache to bypass. |
-| Diagnostic `print()` of skip / scrape reason               | NestJS `Logger` from `@nestjs/common` — already wired in `WorkableService` constructor.   |
-| Bulk-loop iteration over CSV slug → name mapping           | `JobsAggregator` fan-out + `Promise.allSettled` across registered sources.                |
-| Per-iteration `random.uniform()` jitter                    | `p-limit` bounded concurrency at the aggregator layer (orchestration concern).            |
+| Upstream concern                                    | Ever Jobs layer that owns it                                                              |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `should_scrape_company` 12-hour cooldown            | BullMQ queue scheduling (cron / aggregator level, not per-scraper).                       |
+| `last_scraped` JSON cache (`companies/<slug>.json`) | `persistence-postgres` plugin (Spec 004 boundary; opt-in via `EVER_JOBS_STORE`).          |
+| `force=True` re-scrape flag                         | API caller invokes `.scrape()` again with the same `ScraperInputDto`; no cache to bypass. |
+| Diagnostic `print()` of skip / scrape reason        | NestJS `Logger` from `@nestjs/common` — already wired in `WorkableService` constructor.   |
+| Bulk-loop iteration over CSV slug → name mapping    | `JobsAggregator` fan-out + `Promise.allSettled` across registered sources.                |
+| Per-iteration `random.uniform()` jitter             | `p-limit` bounded concurrency at the aggregator layer (orchestration concern).            |
 
 The `IScraper` contract from `@ever-jobs/models`
 (`packages/models/src/interfaces/scraper.interface.ts`) is
@@ -22091,16 +22139,17 @@ parity (`mirrored` — `WORKABLE_API_URL` in
 (`mirrored-elsewhere` — `createHttpClient` exposes
 `retryDelay` / `retryBackoff` / `retryMaxDelay` knobs);
 bulk-loop scheduling (`mirrored-elsewhere` — `JobsAggregator`
-+ `p-limit`); slug-from-URL extraction
-(`out-of-scope-for-plugin` — caller-side concern);
-`last_scraped` checkpoint (`out-of-scope-for-plugin` —
-`persistence-postgres` plugin); `--force` flag
-(`out-of-scope-for-plugin` — callers re-invoke `.scrape()`).
-The `gap-acknowledged` § 7.3 row 5
-(`aiohttp.TCPConnector(ssl=False)`) **stays unpromoted** as a
-follow-on spec candidate — the divergence is a security
-upgrade in Ever Jobs's favour (TLS verification on by default),
-not a regression.
+
+- `p-limit`); slug-from-URL extraction
+  (`out-of-scope-for-plugin` — caller-side concern);
+  `last_scraped` checkpoint (`out-of-scope-for-plugin` —
+  `persistence-postgres` plugin); `--force` flag
+  (`out-of-scope-for-plugin` — callers re-invoke `.scrape()`).
+  The `gap-acknowledged` § 7.3 row 5
+  (`aiohttp.TCPConnector(ssl=False)`) **stays unpromoted** as a
+  follow-on spec candidate — the divergence is a security
+  upgrade in Ever Jobs's favour (TLS verification on by default),
+  not a regression.
 
 **Files touched (run #77):**
 
@@ -22207,14 +22256,14 @@ subsystem, which has **no analog in `WorkableService`**. Our
 `IScraper` contract from `@ever-jobs/models` is stateless by
 design; the upstream's checkpoint concerns map to:
 
-| Upstream concern                                | Ever Jobs layer                                                  |
-| ----------------------------------------------- | ---------------------------------------------------------------- |
-| `should_scrape_company` 12-h cooldown           | BullMQ queue scheduling (cron / aggregator level).               |
-| `last_scraped` JSON cache (`companies/<slug>.json`) | `persistence-postgres` plugin (Spec 004 boundary).            |
-| `force=True` re-scrape flag                     | API caller invokes `.scrape()` again; no plugin-side cache.       |
-| Diagnostic `print()` of skip / scrape reason    | NestJS `Logger` from `@nestjs/common` — already wired.            |
-| Bulk-loop iteration over CSV slug → name mapping | `JobsAggregator` fan-out + `Promise.allSettled`.                  |
-| Per-iteration `random.uniform()` jitter         | `p-limit` bounded concurrency (orchestration layer).              |
+| Upstream concern                                    | Ever Jobs layer                                             |
+| --------------------------------------------------- | ----------------------------------------------------------- |
+| `should_scrape_company` 12-h cooldown               | BullMQ queue scheduling (cron / aggregator level).          |
+| `last_scraped` JSON cache (`companies/<slug>.json`) | `persistence-postgres` plugin (Spec 004 boundary).          |
+| `force=True` re-scrape flag                         | API caller invokes `.scrape()` again; no plugin-side cache. |
+| Diagnostic `print()` of skip / scrape reason        | NestJS `Logger` from `@nestjs/common` — already wired.      |
+| Bulk-loop iteration over CSV slug → name mapping    | `JobsAggregator` fan-out + `Promise.allSettled`.            |
+| Per-iteration `random.uniform()` jitter             | `p-limit` bounded concurrency (orchestration layer).        |
 
 Verdict: **documented no-op absorption** at the
 `source-ats-workable` plugin level. Absorbing the upstream
@@ -22272,7 +22321,7 @@ pattern) was rejected because:
   commits since run #75. **55th consecutive zero-churn run.**
 - All four ledger surfaces reference Spec 018 by name + run #76.
 - The Spec 018 row in `docs/index.md` § 7 reads `draft
-  (scaffolded run #76); Phase 0 only — Phase 1 (T01) pending`.
+(scaffolded run #76); Phase 0 only — Phase 1 (T01) pending`.
 - No `.ts` file modified across this run (FR-6 / NFR-3 of Spec 018).
 - AC-9 row in `competitor-watch.md` § C **unchanged** at this
   scaffold pass (T01 owns the flip at run #77).
@@ -22326,10 +22375,10 @@ four high-volume Western-tier ATS slug tables since the Spec
 
 - Status `proposed` → `shipped`.
 - Description: `Refresh COMPANY_SLUG_DIRECTORY.md from latest
-  public seed lists (Greenhouse ≥ 5 K, Lever ≥ 3.7 K, Workable
-  ≥ 7.5 K, SmartRecruiters ≥ 0.8 K).` → `≥ 25 sampled per
-  vendor (Greenhouse 53 / Lever 30 / Workable 27 /
-  SmartRecruiters 29 — refreshed Spec 017 runs #71..#74).`
+public seed lists (Greenhouse ≥ 5 K, Lever ≥ 3.7 K, Workable
+≥ 7.5 K, SmartRecruiters ≥ 0.8 K).` → `≥ 25 sampled per
+vendor (Greenhouse 53 / Lever 30 / Workable 27 /
+SmartRecruiters 29 — refreshed Spec 017 runs #71..#74).`
 - File footer "Last revised" bumped from `2026-04-26` to
   `2026-04-28 (run #75)`.
 
@@ -22348,14 +22397,14 @@ spec complete`. File footer "Last revised" bumped to
 
 **Spec 017 final-state summary:**
 
-| Phase | Run    | Vendor          | Pre-existing rows | Appended | Final |
-| ----- | ------ | --------------- | ----------------- | -------- | ----- |
-| 0     | #70    | (scaffolding)   | —                 | —        | —     |
-| 1     | #71    | Greenhouse      | 28                | 25       | 53    |
-| 2     | #72    | Lever           | 5                 | 25       | 30    |
-| 3     | #73    | Workable        | 2                 | 25       | 27    |
-| 4     | #74    | SmartRecruiters | 4                 | 25       | 29    |
-| 5     | #75    | (closeout)      | —                 | —        | —     |
+| Phase | Run | Vendor          | Pre-existing rows | Appended | Final |
+| ----- | --- | --------------- | ----------------- | -------- | ----- |
+| 0     | #70 | (scaffolding)   | —                 | —        | —     |
+| 1     | #71 | Greenhouse      | 28                | 25       | 53    |
+| 2     | #72 | Lever           | 5                 | 25       | 30    |
+| 3     | #73 | Workable        | 2                 | 25       | 27    |
+| 4     | #74 | SmartRecruiters | 4                 | 25       | 29    |
+| 5     | #75 | (closeout)      | —                 | —        | —     |
 
 **Acceptance:**
 
@@ -22364,10 +22413,10 @@ spec complete`. File footer "Last revised" bumped to
   `agent ✅` marker with the run-number range.
 - `docs/SOURCE_ADOPTION_BACKLOG.md` `(seed lists)` row reads
   `≥ 25 sampled per vendor (Greenhouse 53 / Lever 30 /
-  Workable 27 / SmartRecruiters 29 — refreshed Spec 017 runs
-  #71..#74)`.
+Workable 27 / SmartRecruiters 29 — refreshed Spec 017 runs
+#71..#74)`.
 - Spec 017 spec.md Status reads `All phases done (T01..T05
-  runs #71..#75); spec complete`.
+runs #71..#75); spec complete`.
 - `docs/index.md` Spec 017 row Status matches spec.md
   Status.
 - T05 row `[ ]` → `[x]` in tasks.md.
@@ -22375,7 +22424,7 @@ spec complete`. File footer "Last revised" bumped to
   honoured end-to-end across all five Spec 017 phases).
 - Q-038 / Q-039 / Q-040 resolution lines flipped from
   `_pending review_` to `**resolved** in Spec 017 (runs
-  #70..#75)`.
+#70..#75)`.
 
 **Default for run #76:** next backlog candidate. Spec 017 is
 complete with this run. The most natural next pickup is
@@ -22456,7 +22505,8 @@ the tenant). These pass the D-02 pure-numeric filter (the
 prefix) and are included in the sample.
 
 **SmartRecruiters table row count after T04:** 29 (4 preserved
-+ 25 appended; verified via `awk '/^## SmartRecruiters$/,/^##
+
+- 25 appended; verified via `awk '/^## SmartRecruiters$/,/^##
 SuccessFactors$/' docs/COMPANY_SLUG_DIRECTORY.md | grep -c
 '^|'` reporting 31 = 29 data rows + 2 header rows).
 
@@ -22756,17 +22806,18 @@ high-volume Western-tier ATS slug-directory sections
 `docs/COMPANY_SLUG_DIRECTORY.md` from upstream CSV corpora in
 `OTHERS/Ats-scrapers/<vendor>/`. Run #70 lands the
 scaffolding pass only — `spec.md` / `plan.md` / `tasks.md`
-+ Q-038 / Q-039 / Q-040 in the questions ledger + index /
-log / run-tag bumps. The first vendor refresh (T01 —
-Greenhouse) is deferred to run #71. The lifecycle is sized
-at 6 runs total (Phase 0 scaffolding + 4 vendor phases +
-closeout) — comparable to Spec 014's 5-run cadence and
-shorter than Spec 013's 15-run multi-plugin cadence. The
-choice of AC-8 over AC-9 (Workable behavioural diff —
-heavier scaffolding) honors the Spec 016 / tasks.md / run #69
-default-pin: "**Recommended pick: AC-8** as the smaller of
-the two multi-run efforts; AC-9 as the slot after AC-8
-closes."
+
+- Q-038 / Q-039 / Q-040 in the questions ledger + index /
+  log / run-tag bumps. The first vendor refresh (T01 —
+  Greenhouse) is deferred to run #71. The lifecycle is sized
+  at 6 runs total (Phase 0 scaffolding + 4 vendor phases +
+  closeout) — comparable to Spec 014's 5-run cadence and
+  shorter than Spec 013's 15-run multi-plugin cadence. The
+  choice of AC-8 over AC-9 (Workable behavioural diff —
+  heavier scaffolding) honors the Spec 016 / tasks.md / run #69
+  default-pin: "**Recommended pick: AC-8** as the smaller of
+  the two multi-run efforts; AC-9 as the slot after AC-8
+  closes."
 
 **No competitor-watch upstream churn this run** — Ats-scrapers
 @ `3bacd6e`, JobSpy @ `fda080a`, Jobspy-api @ `26bb6f4` (all
@@ -22791,9 +22842,9 @@ run #70 via `wc -l` after subtracting the header row):
 | Vendor          | Existing directory rows | Upstream CSV rows | Coverage ratio | Post-Spec-017 directory rows | Post-Spec-017 ratio |
 | --------------- | ----------------------- | ----------------- | -------------- | ---------------------------- | ------------------- |
 | Greenhouse      | 28                      | 2 805             | ~1.0 %         | 53                           | ~1.9 %              |
-| Lever           |  5                      | 1 912             | ~0.3 %         | 30                           | ~1.6 %              |
-| Workable        |  2                      | 4 028             | ~0.05 %        | 27                           | ~0.7 %              |
-| SmartRecruiters |  4                      |   812             | ~0.5 %         | 29                           | ~3.6 %              |
+| Lever           | 5                       | 1 912             | ~0.3 %         | 30                           | ~1.6 %              |
+| Workable        | 2                       | 4 028             | ~0.05 %        | 27                           | ~0.7 %              |
+| SmartRecruiters | 4                       | 812               | ~0.5 %         | 29                           | ~3.6 %              |
 | **Totals**      | **39**                  | **9 557**         | ~0.4 %         | **139**                      | ~1.5 %              |
 
 The post-Spec-017 ratios are still under 4 % per vendor — the
@@ -22975,14 +23026,14 @@ log):** the post-fix bench acceptance gate produced the
 following overall reading on the scheduled-task agent's
 Windows host:
 
-| Stat   | Value (ms) | NFR-1 budget (0.5 ms) | CI ceiling (2.0 ms) |
-| ------ | ---------- | --------------------- | ------------------- |
-| min    | 0.0071     | OK                    | OK                  |
-| median | 0.0095     | OK                    | OK                  |
-| mean   | 0.0139     | OK                    | OK                  |
-| **p95** | **0.0174** | **~3 % of NFR-1**     | **~0.9 % of CI ceiling** |
-| p99    | 0.0425     | OK                    | OK                  |
-| max    | 14.8187    | (cold-start outlier — p99 is the last meaningful percentile) | OK |
+| Stat    | Value (ms) | NFR-1 budget (0.5 ms)                                        | CI ceiling (2.0 ms)      |
+| ------- | ---------- | ------------------------------------------------------------ | ------------------------ |
+| min     | 0.0071     | OK                                                           | OK                       |
+| median  | 0.0095     | OK                                                           | OK                       |
+| mean    | 0.0139     | OK                                                           | OK                       |
+| **p95** | **0.0174** | **~3 % of NFR-1**                                            | **~0.9 % of CI ceiling** |
+| p99     | 0.0425     | OK                                                           | OK                       |
+| max     | 14.8187    | (cold-start outlier — p99 is the last meaningful percentile) | OK                       |
 
 Per-currency p95s sit between 0.0123 ms (CHF) and 0.0212 ms
 (SEK); USD = 0.0165 ms, EUR = 0.0137 ms, GBP = 0.0192 ms,
@@ -23059,12 +23110,12 @@ is sufficient to restore the gate.
 **Verification (local, against this commit):**
 
 - `npx jest --testPathPatterns
-  'packages/common/__tests__/helpers.bench'` — **2 passed,
+'packages/common/__tests__/helpers.bench'` — **2 passed,
   2 total** (was: `Tests: 0 total` pre-fix, due to
   TS1127). Overall p95 = 0.0174 ms ≪ NFR-1 0.5 ms ≪ CI
   ceiling 2.0 ms.
 - `npx jest --testPathPatterns
-  'packages/common/__tests__/helpers.spec'` — **74 passed,
+'packages/common/__tests__/helpers.spec'` — **74 passed,
   74 total** (FR-6 byte-identity preserved on the
   dispatcher surface).
 - `npm run lint:docs` — clean.
@@ -23082,12 +23133,12 @@ is sufficient to restore the gate.
   - **AC-9** — Workable diff (competitor-watch backlog
     row). New ATS scraper plugin scaffold. Estimated
     1.5..2 days; would consume multiple runs.
-  Recommended pick: **AC-8** as the smaller of the two
-  multi-run efforts; AC-9 as the slot after AC-8 closes.
-  The scheduled-task agent at run #70 should cross-check
-  `competitor-watch.md` for any upstream churn that
-  overtakes the backlog ordering before committing to
-  AC-8.
+    Recommended pick: **AC-8** as the smaller of the two
+    multi-run efforts; AC-9 as the slot after AC-8 closes.
+    The scheduled-task agent at run #70 should cross-check
+    `competitor-watch.md` for any upstream churn that
+    overtakes the backlog ordering before committing to
+    AC-8.
 - **Out-of-scope reminders for run #70:** Stay strictly
   within the AC-8 scope once Spec 017 is scaffolded. Do
   NOT touch `helpers.ts` or any salary-parser surface
@@ -23114,7 +23165,7 @@ closeout pass. Eight files touched (zero source-code edits):
    canonical case `"$100,000 - $150,000" + country=GERMANY`
    → USD / 100000 / 150000 / yearly via the new tier; and
    the prose-immunity case `"5 - 7 years experience" +
-   country=GERMANY` → all-`null` via the threshold guard)
+country=GERMANY` → all-`null` via the threshold guard)
    plus the FR-8 documented limitation
    (`"100 - 150" + country=GERMANY` still emits because
    `100 ≥ lowerLimit / 12 ≈ 83`). The pre-existing
@@ -23170,6 +23221,7 @@ not upstream-driven coverage gaps).
 
 **No new questions opened this run.** The active backlog
 after Spec 015 closes:
+
 - **Q-037** (helpers.bench.spec.ts TS1127 fix) — Spec 016
   candidate; one-character source edit; recommended pick
   for run #69 as a single-run warm-up.
@@ -23236,11 +23288,11 @@ shapes like `"100 - 150"`.
 - **Out-of-scope reminders for run #69:** the Spec 016
   scaffolding pass should follow the standard three-phase
   structure (T01 source-side fix, T02 test pin, T03 closeout
-  + docs bump). For Q-037 specifically, the test pin at T02
-  is "running `npx jest packages/common/__tests__/helpers.bench`
-  produces non-zero `Tests: N total` output and writes
-  `dist/bench/helpers-salary.json`" — exercising the gate
-  that's been advisory-only since Spec 012 / T04.
+  - docs bump). For Q-037 specifically, the test pin at T02
+    is "running `npx jest packages/common/__tests__/helpers.bench`
+    produces non-zero `Tests: N total` output and writes
+    `dist/bench/helpers-salary.json`" — exercising the gate
+    that's been advisory-only since Spec 012 / T04.
 - **Active backlog after Spec 015 closes:** Q-037 (Spec 016
   candidate) ≫ AC-8 (seed-companies) ≫ AC-9 (Workable
   diff). Order is by scope-ascending; the agent should
@@ -23258,10 +23310,11 @@ shapes like `"100 - 150"`.
 **Scope:** land Spec 015 / Phase 2 / T02 — pure tests-only
 pass adding the three deferred Spec 014 / T04 cases that
 T01's source-side fixes (Q-035 anglo-only locale short-circuit
-+ Q-036 bare-path raw-value pre-check) unblocked. One file
-edit (`packages/common/__tests__/helpers.spec.ts`): new
-`describe('extractSalary — Spec 015 / T02 …')` block appended
-at the bottom containing three cases:
+
+- Q-036 bare-path raw-value pre-check) unblocked. One file
+  edit (`packages/common/__tests__/helpers.spec.ts`): new
+  `describe('extractSalary — Spec 015 / T02 …')` block appended
+  at the bottom containing three cases:
 
 1. **Case 1 (FR-3):** `"$100,000 - $150,000" + country=GERMANY`
    → USD / 100000 / 150000 / yearly. Restored Spec 012 / § 8
@@ -23421,7 +23474,7 @@ Spec 015 / spec.md / § 10 D-01 + D-02):
   block. Net additions: ~30 LOC including JSDoc + comments.
 - The call site `resolveSalaryLocale(options, detected.code)`
   becomes `resolveSalaryLocale(options, detected.code,
-  detected.confidence)`.
+detected.confidence)`.
 
 **Changes — docs / specs:**
 
@@ -23458,13 +23511,13 @@ Spec 015 / spec.md / § 10 D-01 + D-02):
 - `npx tsc --noEmit -p packages/common/tsconfig.json` — clean
   (no errors).
 - `npx jest --testPathPatterns
-  'packages/common/__tests__/helpers.spec'` — **71 passed,
+'packages/common/__tests__/helpers.spec'` — **71 passed,
   71 total** (baseline preserved; plan tracked the
   scaffolding-time figure 70). Substitute case
   `"€45,000 - €60,000" + country=USA` → EUR / 45000 /
   60000 / yearly verified green.
 - `npx jest --testPathPatterns
-  'packages/common/__tests__/helpers.bench'` — **fails**
+'packages/common/__tests__/helpers.bench'` — **fails**
   (pre-existing TS1127 at line 190; tracked as Q-037).
 - `npm run lint:docs` — pending (run before commit).
 
@@ -23663,7 +23716,7 @@ this run.
   acceptance:
   - (a) `$`-symbol promotion to `'symbol'` confidence (T01),
     with the asymmetry surfaced by Q-035 documented inline
-    + the K-suffix workaround named.
+    - the K-suffix workaround named.
   - (b) Swiss apostrophe-thousands now match the regex directly
     (T02), with the continental regex source's intentional
     asymmetry (NOT extended to avoid mis-classifying
@@ -23696,7 +23749,7 @@ this run.
   with "Landed run #64" annotation; Notes-for-the-next-run
   pinned default updated to **the Spec 015 candidate
   scaffolding pass** (open `.specify/specs/015-salary-parser-
-  locale-and-prose-immunity/`).
+locale-and-prose-immunity/`).
 - **`docs/index.md`** Spec 014 row updated; footer bumped to
   run #64.
 - **`CLAUDE.md`** run-tag bumped to #64.
@@ -23799,7 +23852,7 @@ cleanup story.
 
 ## 2026-04-28 — Scheduled run #63 (Spec 014 / Phase 4 / T04 partial — K-suffix end-to-end pin landed; Q-035 + Q-036 opened for deferred literal cases)
 
-**Scope:** land Spec 014 / Phase 4 / T04 *partially* — the
+**Scope:** land Spec 014 / Phase 4 / T04 _partially_ — the
 parent acceptance text called for three tests (literal Spec 012
 § 8 case 14 + two FR-7 false-positive immunity cases). Run #63's
 trace through the actual `extractSalary()` behaviour discovered
@@ -23810,9 +23863,9 @@ alongside a future source-side fix rather than as broken tests.
 **Run-#63 lands:**
 
 - **One new test case** — `extractSalary("$100K - $150K",
-  { country: GERMANY })` → USD / 100000 / 150000 / yearly. The
+{ country: GERMANY })` → USD / 100000 / 150000 / yearly. The
   K-suffix arithmetic path (`match[2] === 'k'` triggers `*
-  1000` after `parseSalaryNumber("100", "continental") = 100`)
+1000` after `parseSalaryNumber("100", "continental") = 100`)
   bypasses the comma-thousands locale conflict that breaks the
   literal `"$100,000 - $150,000"` shape. Pins FR-1 precedence
   end-to-end through `extractSalary()` via a workable variant
@@ -23828,9 +23881,9 @@ alongside a future source-side fix rather than as broken tests.
     all-`null` because "`5` < `lowerLimit = 1000` rejects the
     row" is incorrect: `5 < hourlyThreshold = 350` triggers
     the hourly conversion path (`* 2080`) → `annualMinSalary
-    = 10400`, which DOES pass `lowerLimit`. The row is
+= 10400`, which DOES pass `lowerLimit`. The row is
     wrongly emitted as `{ interval: 'hourly', minAmount: 5,
-    maxAmount: 7, currency: 'EUR' }`. Same mechanism breaks
+maxAmount: 7, currency: 'EUR' }`. Same mechanism breaks
     `"3 - 5 month internship"`. Default proceeds with a
     raw-value pre-check before annualisation, scoped to the
     bare-path match only (preserves prefix/suffix paths
@@ -23851,7 +23904,7 @@ alongside a future source-side fix rather than as broken tests.
 **Run-#63 defers (to the Spec 015 candidate):**
 
 - The literal Spec 012 § 8 case 14 (`"$100,000 - $150,000" +
-  country=GERMANY` → USD / 100000 / 150000 / yearly) — blocked
+country=GERMANY` → USD / 100000 / 150000 / yearly) — blocked
   on Q-035.
 - The two FR-7 false-positive immunity cases
   (`"5 - 7 years experience"` + `"3 - 5 month internship"`,
@@ -23917,7 +23970,7 @@ T04's edit pass:
 
 - `packages/common/__tests__/helpers.spec.ts` — new
   describe block `'extractSalary — Spec 014 / T04
-  ($-symbol end-to-end via K-suffix)'` appended after the
+($-symbol end-to-end via K-suffix)'` appended after the
   Spec 014 / T03 block. One case (the K-suffix variant of
   case 14). Test count grew from 70 → 71; all 71 cases pass
   byte-identically against this commit (verified locally
@@ -24012,18 +24065,18 @@ symbol-present variant. Two file edits + one closeout pass:
   staged both T02's regex extension AND T03's
   `buildSalaryRegexBare()` + dispatcher cascade together):**
   - New private function `buildSalaryRegexBare(numSrc: string):
-    RegExp` mirroring the prefix/suffix builders' four-capture
+RegExp` mirroring the prefix/suffix builders' four-capture
     shape (`[1] = min`, `[2] = min K-suffix`, `[3] = max`,
     `[4] = max K-suffix`). Body:
     `(${numSrc})\s*([kK]?\b)\s*[-–—]\s*(${numSrc})\s*([kK]?\b)`.
   - 17-line edit to `extractSalary()` body: conditional
     `barePattern = detected.confidence === 'country' ?
-    buildSalaryRegexBare(numSrc) : null`; 3-arm match cascade
+buildSalaryRegexBare(numSrc) : null`; 3-arm match cascade
     `prefixPattern.match() ?? suffixPattern.match() ??
-    (barePattern ? salaryStr.match(barePattern) : null)`.
+(barePattern ? salaryStr.match(barePattern) : null)`.
 - **Test-code edits (helpers.spec.ts, run #62 commit):**
   - New describe block `'extractSalary — Spec 014 / T03
-    (bare-numeric-range with country guard)'` appended after
+(bare-numeric-range with country guard)'` appended after
     the Spec 014 / T02 block. Three cases: literal Spec 012
     § 8 case 12 (bare path) + symbol-present substitute from
     T04 (suffix path; pinned for regression-detection) +
@@ -24064,7 +24117,7 @@ T03's edit pass (full prose in Spec 014 § 10):
    when the guard fires — but `RegExp` construction is the
    expensive part, not the match attempt. Conditional
    construction (`barePattern = confidence === 'country' ?
-   buildSalaryRegexBare(numSrc) : null`) means the no-country-
+buildSalaryRegexBare(numSrc) : null`) means the no-country-
    hint hot path doesn't pay any regex-compile cost. The
    match cascade is a 3-arm null-coalesce.
 2. **Three test cases shipped, not two.** The acceptance
@@ -24080,7 +24133,7 @@ T03's edit pass (full prose in Spec 014 § 10):
 3. **`!== 'default'` rejected as the guard form.** The
    acceptance text spelled out "the guard MUST be the
    literal string check `=== 'country'` — NOT `!==
-   'default'`". The `!== 'default'` shape would also pass
+'default'`". The `!== 'default'` shape would also pass
    through the `'symbol'` and `'iso'` paths that already
    missed BOTH anchored regex variants — a symbol-present
    input that misses prefix AND suffix is structurally
@@ -24275,9 +24328,9 @@ T02's edit pass (full prose in Spec 014 § 10):
   the prefix/suffix builders' four-capture shape; wire a
   third try-branch into `extractSalary()` body, gated on
   the literal string check `detected.confidence ===
-  'country'` (NOT `!== 'default'`). Add the literal Spec
+'country'` (NOT `!== 'default'`). Add the literal Spec
   012 § 8 case 12 (`extractSalary("100.000 - 150.000",
-  { country: GERMANY })` → EUR / 100000 / 150000 /
+{ country: GERMANY })` → EUR / 100000 / 150000 /
   yearly) PLUS the FR-7 negative pin (no country hint →
   all-`null`). Bare regex compiled per-call per FR-10
   (no module-level cache).
@@ -24297,6 +24350,7 @@ T02's edit pass (full prose in Spec 014 § 10):
 the implicit FR-7 default-USD branch to a first-class
 `'symbol'`-tier entry in `SALARY_UNIQUE_SYMBOLS`. Two file
 edits:
+
 - `packages/common/src/utils/helpers.ts` — single-array entry
   `['$', 'USD']` appended at the END of
   `SALARY_UNIQUE_SYMBOLS` (preserves byte-identical iteration
@@ -24339,7 +24393,7 @@ edit pass (full prose in Spec 014 § 10):
 2. **Two test cases shipped, not one.** The acceptance text
    required ≥ 1 case ("outranks country=GERMANY"). We added
    that PLUS the documented fast-fail check (`'see $TODO
-   inline'` → still resolves to USD via symbol tier) so the
+inline'` → still resolves to USD via symbol tier) so the
    "any `$` wins" semantic from § 7.2 is pinned in the test
    suite, not just in spec prose. A future contributor
    reading the test file cold can convince themselves the
@@ -24354,10 +24408,10 @@ edit pass (full prose in Spec 014 § 10):
   byte-identical-iteration-order discipline.
 - `packages/common/__tests__/helpers.spec.ts` — two new cases
   appended to `describe('parseSalaryCurrency (Spec 012 /
-  T01)')`: (a) `parseSalaryCurrency('$100,000', { country:
-  Country.GERMANY })` → USD via symbol tier (the required
+T01)')`: (a) `parseSalaryCurrency('$100,000', { country:
+Country.GERMANY })` → USD via symbol tier (the required
   precedence pin); (b) `parseSalaryCurrency('see $TODO
-  inline', { country: Country.GERMANY })` → same envelope
+inline', { country: Country.GERMANY })` → same envelope
   (the broad-match documentation pin). Test count grew from
   63 → 65; all 65 pass byte-for-byte (verified via
   `npx jest packages/common/__tests__/helpers.spec`).
@@ -24486,13 +24540,13 @@ open if a fixture surfaces during T01..T04 implementation.
 
 **Spec 014 lifecycle plan (5 runs across 5 phases):**
 
-| Phase | Estimated run | Task | Outcome (planned) |
-| ----- | ------------- | ---- | ----------------- |
-| 1 — `$` registration | #60 | T01 | `SALARY_UNIQUE_SYMBOLS` grows by 1 entry; `parseSalaryCurrency('$', { country: <non-USA> })` resolves to USD via symbol tier (FR-1 / FR-8) |
-| 2 — Apostrophe-in-regex + Spec 012 § 8 case 5 literal | #61 | T02 | `SALARY_NUMBER_REGEX_SRC.anglo` tolerates `'`; literal Swiss `"CHF 90'000 …"` parses (FR-2 / FR-6 / FR-9) |
-| 3 — Bare-numeric-range + Spec 012 § 8 case 12 literal | #62 | T03 | `extractSalary()` adds third try-branch gated on `confidence === 'country'`; literal `"100.000 - 150.000" + GERMANY` parses (FR-3 / FR-4 / FR-7) |
-| 4 — Spec 012 § 8 case 14 literal + FR-7 false-positive immunity | #63 | T04 | `"$100,000 - $150,000" + GERMANY` parses end-to-end; `"5 - 7 years experience" + GERMANY` filtered by `lowerLimit` (FR-1 / FR-6 / FR-7) |
-| 5 — Closeout | #64 | T05 | `PERFORMANCE_TUNING.md` bump; spec status flip; Q-026 / Q-027 resolution flip; `docs/index.md` row update; `docs/log.md` entry |
+| Phase                                                           | Estimated run | Task | Outcome (planned)                                                                                                                                |
+| --------------------------------------------------------------- | ------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1 — `$` registration                                            | #60           | T01  | `SALARY_UNIQUE_SYMBOLS` grows by 1 entry; `parseSalaryCurrency('$', { country: <non-USA> })` resolves to USD via symbol tier (FR-1 / FR-8)       |
+| 2 — Apostrophe-in-regex + Spec 012 § 8 case 5 literal           | #61           | T02  | `SALARY_NUMBER_REGEX_SRC.anglo` tolerates `'`; literal Swiss `"CHF 90'000 …"` parses (FR-2 / FR-6 / FR-9)                                        |
+| 3 — Bare-numeric-range + Spec 012 § 8 case 12 literal           | #62           | T03  | `extractSalary()` adds third try-branch gated on `confidence === 'country'`; literal `"100.000 - 150.000" + GERMANY` parses (FR-3 / FR-4 / FR-7) |
+| 4 — Spec 012 § 8 case 14 literal + FR-7 false-positive immunity | #63           | T04  | `"$100,000 - $150,000" + GERMANY` parses end-to-end; `"5 - 7 years experience" + GERMANY` filtered by `lowerLimit` (FR-1 / FR-6 / FR-7)          |
+| 5 — Closeout                                                    | #64           | T05  | `PERFORMANCE_TUNING.md` bump; spec status flip; Q-026 / Q-027 resolution flip; `docs/index.md` row update; `docs/log.md` entry                   |
 
 **Cross-cutting design notes (carried into T01..T05):**
 
@@ -24531,9 +24585,9 @@ open if a fixture surfaces during T01..T04 implementation.
   (Status / Owner / etc. / Problem Statement with G-1/G-2/
   G-3 framing / Goals / Non-Goals / User Stories / 10 FRs
   / 6 NFRs / Contracts with API + precedence + guard table
-  + errors / Test Plan with ≥ 6 new cases / Open Questions
-  + Q-033/Q-034 candidate slots / Decisions log empty /
-  References).
+  - errors / Test Plan with ≥ 6 new cases / Open Questions
+  - Q-033/Q-034 candidate slots / Decisions log empty /
+    References).
 - `.specify/specs/014-salary-parser-residuals/plan.md`
   (NEW) — 8 sections (Approach / 5 Phases / Packages
   Touched / Dependencies / Risks & Mitigations / Rollback
@@ -24541,7 +24595,7 @@ open if a fixture surfaces during T01..T04 implementation.
 - `.specify/specs/014-salary-parser-residuals/tasks.md`
   (NEW) — T01..T05 with per-task acceptance + estimates;
   Notes-for-the-next-run pinned to T01 default for run #60
-  + cross-spec coordination notes + out-of-scope reminders.
+  - cross-spec coordination notes + out-of-scope reminders.
 - `docs/index.md` — Spec 014 row appended under Spec 013;
   footer bumped from run #58 to run #59.
 - `docs/questions.md` — Q-026 + Q-027 resolution text both
@@ -24571,17 +24625,18 @@ shared with Spec 012 / 013 tasks files.
 
 **Notes for the next run (#60):** Default = Spec 014 /
 Phase 1 / T01 — `$` registration in `SALARY_UNIQUE_SYMBOLS`
-+ 1 new helper test case. Smallest possible first phase:
-1-LOC source edit (append `['$', 'USD']` to
-`SALARY_UNIQUE_SYMBOLS` at line ~70 of `helpers.ts`) + 1
-test case in `helpers.spec.ts`'s
-`describe('parseSalaryCurrency …')` block. The
-load-bearing acceptance check is the FR-7 default-USD case
-(`parseSalaryCurrency('foo bar')` → `{ code: 'USD',
+
+- 1 new helper test case. Smallest possible first phase:
+  1-LOC source edit (append `['$', 'USD']` to
+  `SALARY_UNIQUE_SYMBOLS` at line ~70 of `helpers.ts`) + 1
+  test case in `helpers.spec.ts`'s
+  `describe('parseSalaryCurrency …')` block. The
+  load-bearing acceptance check is the FR-7 default-USD case
+  (`parseSalaryCurrency('foo bar')` → `{ code: 'USD',
 symbol: null, confidence: 'default' }`) staying green
-byte-for-byte — the new `$`-symbol entry MUST NOT shadow
-the no-signal path. See Spec 014 / § 1 G-1 + tasks.md /
-T01 for full context.
+  byte-for-byte — the new `$`-symbol entry MUST NOT shadow
+  the no-signal path. See Spec 014 / § 1 G-1 + tasks.md /
+  T01 for full context.
 
 ---
 
@@ -24608,8 +24663,9 @@ lifecycle.
 
 **No new questions opened this run.** Spec 013 closes with
 **five** questions resolved across its lifecycle:
+
 - **Q-028** (Tesla Playwright dep strategy = pure-HTTP default
-  + opt-in companion) — implementation-ratified at run #50 / T07.
+  - opt-in companion) — implementation-ratified at run #50 / T07.
 - **Q-029** (Mercor catalogue-wide input semantics =
   empty-slug full / populated-slug post-filter) —
   implementation-ratified at run #48 / T05.
@@ -24650,15 +24706,15 @@ candidate; ATS detail-page enrichment (Spec 006 / Spec 013
 
 **Spec 013 lifecycle summary (15 runs across 7 phases):**
 
-| Phase | Runs | Tasks | Outcome |
-| ----- | ---- | ----- | ------- |
-| 1 — Bootstrap | #44 + #45 | T01..T02 | Site enum + tsconfig + jest mapper + DTO extensions; four plugin scaffolds with three appended to `ALL_SOURCE_MODULES` |
-| 2 — Oracle HCM Cloud | #46 + #47 | T03..T04 | `OracleService.scrape(input)` REST + finder-string; 10-case unit sweep + `eeho-us2` fixture |
-| 3 — Mercor | #48 + #49 | T05..T06 | `MercorService.scrape(input)` single-GET catalogue-wide; 11-case unit sweep + 50 × 12-company fixture |
-| 4 — Tesla (default, pure-HTTP) | #50 + #51 | T07..T08 | `TeslaService.scrape(input)` board + detail with broadened Akamai detection; 14-case unit sweep + 50 × 6 × 5 fixtures |
-| 5 — Tesla-Playwright (OPTIONAL) | #52 + #53 | T09..T10 | `TeslaPlaywrightService.scrape(input)` lazy-Playwright via `Function('s', 'return import(s)')` indirection; 10-case behavioural sweep |
-| 6 — Integration & Docs | #54..#57 | T11..T14 | Three-plugin integration + e2e specs; coverage docs in `ATS_INTEGRATIONS.md` + `COMPANY_SLUG_DIRECTORY.md`; performance benches with NFR-2 ceiling pins |
-| 7 — Closeout | #58 | T15 | This entry |
+| Phase                           | Runs      | Tasks    | Outcome                                                                                                                                                 |
+| ------------------------------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 — Bootstrap                   | #44 + #45 | T01..T02 | Site enum + tsconfig + jest mapper + DTO extensions; four plugin scaffolds with three appended to `ALL_SOURCE_MODULES`                                  |
+| 2 — Oracle HCM Cloud            | #46 + #47 | T03..T04 | `OracleService.scrape(input)` REST + finder-string; 10-case unit sweep + `eeho-us2` fixture                                                             |
+| 3 — Mercor                      | #48 + #49 | T05..T06 | `MercorService.scrape(input)` single-GET catalogue-wide; 11-case unit sweep + 50 × 12-company fixture                                                   |
+| 4 — Tesla (default, pure-HTTP)  | #50 + #51 | T07..T08 | `TeslaService.scrape(input)` board + detail with broadened Akamai detection; 14-case unit sweep + 50 × 6 × 5 fixtures                                   |
+| 5 — Tesla-Playwright (OPTIONAL) | #52 + #53 | T09..T10 | `TeslaPlaywrightService.scrape(input)` lazy-Playwright via `Function('s', 'return import(s)')` indirection; 10-case behavioural sweep                   |
+| 6 — Integration & Docs          | #54..#57  | T11..T14 | Three-plugin integration + e2e specs; coverage docs in `ATS_INTEGRATIONS.md` + `COMPANY_SLUG_DIRECTORY.md`; performance benches with NFR-2 ceiling pins |
+| 7 — Closeout                    | #58       | T15      | This entry                                                                                                                                              |
 
 **Cross-cutting design decisions** carried forward across all
 fifteen runs (full prose in spec.md § 10):
@@ -24681,7 +24737,7 @@ fifteen runs (full prose in spec.md § 10):
    (`https://work.mercor.com`) in addition to the literal
    `Authorization: Bearer` named in FR-8.
 3. **Two ts-jest friction tricks:** `Function('s', 'return
-   import(s)')` for the optional `playwright` dep (T09);
+import(s)')` for the optional `playwright` dep (T09);
    `jest.spyOn(loadPlaywright)` for the Playwright-mock
    boundary (T10) — Jest's hoisted `jest.mock` system can't
    intercept the `Function`-wrapped dynamic import.
@@ -24730,8 +24786,8 @@ fifteen runs (full prose in spec.md § 10):
   "**DONE (runs #44..#58)**" prose with ✅ glyph in Owner
   column. Each row's prose now narrates the full per-plugin
   shipping summary (service + tests + fixtures + integration
-  + e2e + coverage docs + perf bench) rather than the
-  in-progress status line.
+  - e2e + coverage docs + perf bench) rather than the
+    in-progress status line.
 
 **Verification (local, against this commit):**
 
@@ -24832,7 +24888,7 @@ T14's editing pass (full prose in Spec 013 § 10):
   `resultsWanted=100`. Emits a JSON record at
   `dist/bench/source-ats-oracle.json` carrying
   `min/median/mean/p95/p99/max`, `memory_bytes.{before,after,
-  delta}`, `nfr2_ceiling_ms=6000`, `p95_under_ceiling`,
+delta}`, `nfr2_ceiling_ms=6000`, `p95_under_ceiling`,
   `headroom_pct`, `node_version`. Single-fixture stub
   (`createHttpClient` factory always returns the cloned
   `oracle-page-1.json`) honours Oracle's short-page exit
@@ -24867,7 +24923,7 @@ T14's editing pass (full prose in Spec 013 § 10):
   existing `bench:ats-batch-1`: `bench:oracle`, `bench:mercor`,
   `bench:tesla`, `bench:ats-batch-2` (umbrella that chains the
   three with `&&`). Same `ts-node --project tsconfig.base.json
-  -r tsconfig-paths/register` invocation shape Spec 006 / T12
+-r tsconfig-paths/register` invocation shape Spec 006 / T12
   introduced.
 
 **Changes — docs / specs:**
@@ -24909,7 +24965,7 @@ T14's editing pass (full prose in Spec 013 § 10):
   AC-6 marked **DONE** with run-tag attributions and ✅ glyph;
   `docs/log.md` closeout entry; `docs/index.md` Spec 013
   status row updated to "All phases done"; `competitor-watch.md
-  §C` rows finalised. Pin Spec 014 candidate at closeout time
+§C` rows finalised. Pin Spec 014 candidate at closeout time
   based on upstream signal: AC-8 (seed-companies refresh) /
   Q-026 / Q-027 salary residuals / AC-9 (Workable diff).
   Estimated 0.25 day.
@@ -25105,8 +25161,8 @@ Spec 006 / T10 (batch-1 e2e):
   T10 and Spec 013 / T11). URL-keyed fixture router
   dispatches to the appropriate plugin's existing fixture
   (oracle-page-1.json / mercor-explore.json / tesla-board.json
-  + tesla-job-{id}.json for IDs 200001..200003; "missing all
-  four" envelope for the remaining detail GETs). 5 cases:
+  - tesla-job-{id}.json for IDs 200001..200003; "missing all
+    four" envelope for the remaining detail GETs). 5 cases:
   * Oracle single-source POST (`siteType=[Site.ORACLE]`,
     `companySlug='eeho-us2'`) → 201 + `count > 0` + every
     `job.site === Site.ORACLE`.
@@ -25244,25 +25300,25 @@ the failure mode FR-13 is trying to prevent.
   mercor-explore.json / tesla-board.json + tesla-job-{id}.json
   for IDs 200001..200003; "missing all four" envelope for the
   remaining detail GETs). 12 cases:
-  * Four-place registration (3 cases): `Site.ORACLE` /
+  - Four-place registration (3 cases): `Site.ORACLE` /
     `Site.MERCOR` / `Site.TESLA` present in
     `PluginRegistry.listSiteKeys()`; `Site.TESLA_PLAYWRIGHT`
     ABSENT; ATS-flag check (Oracle + Mercor are ATS, Tesla
     is not per its `category: 'company'`); each has a real
     `IScraper` bound via `getScraper()`.
-  * Fan-out (3 cases): cross-plugin slug `eeho-us2` emits
+  - Fan-out (3 cases): cross-plugin slug `eeho-us2` emits
     Oracle + Tesla rows + zero Mercor rows; Mercor `stripe`
     happy path emits ≥ 1 row whose `companyName` contains
     `stripe`; Tesla `resultsWanted: 5` cap pre-detail-fetch.
-  * Dedup (2 cases): `JobsAggregator.aggregate()` reports
+  - Dedup (2 cases): `JobsAggregator.aggregate()` reports
     zero collisions on synthetic fixtures; `dedup: false`
     opt-out preserves raw fan-out.
-  * Wire-format pins (3 cases): Oracle finder string
+  - Wire-format pins (3 cases): Oracle finder string
     contains `siteNumber=CX_45001` + 8-facet list (FR-2 /
     Q-030); Mercor single GET to `/work/listings-explore-page`
-    + literal `Authorization: Bearer` header set (FR-8);
-    Tesla board GET to `/cua-api/apps/careers/state` +
-    per-job detail GETs to `/cua-api/careers/job/{id}`.
+    - literal `Authorization: Bearer` header set (FR-8);
+      Tesla board GET to `/cua-api/apps/careers/state` +
+      per-job detail GETs to `/cua-api/careers/job/{id}`.
 
 **Changes — docs / specs:**
 
@@ -25419,16 +25475,16 @@ implementation pass (full prose in Spec 013 § 10):
   branch pinned on listing 300002 via `Remote, United States`;
   `browser.close()` invoked exactly once); Akamai-bypass-succeeds
   wire-format pin (`chromium.launch({headless: true, args:
-  expect.arrayContaining([anti-automation flag])})`,
+expect.arrayContaining([anti-automation flag])})`,
   `page.goto(careers-search, {waitUntil: 'networkidle', timeout:
-  60000})`, board-fetch URL pinned to
+60000})`, board-fetch URL pinned to
   `${TESLA_PLAYWRIGHT_BASE_URL}${TESLA_PLAYWRIGHT_BOARD_PATH}`);
   navigation-timeout case (`page.goto.mockRejectedValueOnce({
-  name: 'TimeoutError', message: 'Timeout 60000ms exceeded.' })`
+name: 'TimeoutError', message: 'Timeout 60000ms exceeded.' })`
   → empty JobResponseDto + zero detail fetches + browser still
   closed); `descriptionDepth='board'` skip-detail-loop case
   (exactly 1 evaluate call; every job has `description ===
-  null`); resultsWanted cap pre-detail-fetch case (exactly 1
+null`); resultsWanted cap pre-detail-fetch case (exactly 1
   board + 2 detail = 3 evaluate calls; jobs.length === 2). Two
   helper functions added: `buildStubbedPlaywright(opts)` returns
   a fresh `{ chromium: { launch } }` stub plus the underlying
@@ -25623,7 +25679,7 @@ implementation pass (full prose in Spec 013 § 10):
   with stubbed playwright module; missing-dep already
   exercised; Akamai bypass succeeds; navigation timeout
   returns empty) lands in T10 alongside a `jest.mock('playwright',
-  ...)` factory.
+...)` factory.
 
 **Changes — docs / specs:**
 
@@ -25765,7 +25821,7 @@ authoring (full prose in Spec 013 § 10):
 - `packages/plugins/source-tesla/__tests__/tesla.service.spec.ts`
   — bumped from 7 → 14 cases. Module-level fixture loads (4 ×
   detail + 1 × board) via `fs.readFileSync(path.join(__dirname,
-  'fixtures', …), 'utf8')` mirroring Mercor T06 / Oracle T04.
+'fixtures', …), 'utf8')` mirroring Mercor T06 / Oracle T04.
   New cases under `describe(...)` blocks: happy-path with
   mixed populated / null branches (asserts mockGet was called 6
   times — 1 board + 5 detail GETs — and pins first-row mapping
@@ -25953,8 +26009,8 @@ implementation pass (full prose in Spec 013 § 10):
   `detail-25:25`, `detail-all:Infinity`),
   `TESLA_DEFAULT_DESCRIPTION_DEPTH` (`'detail-25'` per Q-031),
   `TESLA_HEADERS` (browser-shaped UA + Accept + Accept-Language
-  + Origin + Referer), `TESLA_AKAMAI_STATUS_CODES` (`{403, 503}`),
-  and the two sentinel codes.
+  - Origin + Referer), `TESLA_AKAMAI_STATUS_CODES` (`{403, 503}`),
+    and the two sentinel codes.
 - `packages/plugins/source-tesla/src/tesla.types.ts` — NEW.
   ~50 LOC. Narrow internal types mirroring the board + detail
   envelopes: `TeslaBoardListing` (id / t / l / d / r / e short
@@ -26125,9 +26181,9 @@ test-authoring pass (full prose in Spec 013 § 10):
   intervals: yearly (default, ~46 listings), monthly (1 —
   Airbnb London brand-marketing lead), hourly (1 — Coinbase
   compliance contractor), null (2 — Notion customer-success
-  + Figma DevRel). Locations span SF, NY, Seattle, LA, Dublin,
-  London, Berlin, Singapore, "Remote, US", "Remote, EU",
-  "Remote, EMEA", "Remote, Worldwide".
+  - Figma DevRel). Locations span SF, NY, Seattle, LA, Dublin,
+    London, Berlin, Singapore, "Remote, US", "Remote, EU",
+    "Remote, EMEA", "Remote, Worldwide".
 - `packages/plugins/source-ats-mercor/__tests__/mercor.service.spec.ts`
   — bumped from 5 → 11 cases. Mocks `createHttpClient` at the
   factory boundary (matches the Oracle/Avature pattern). New
@@ -26302,7 +26358,7 @@ implementation pass (full prose in Spec 013 § 10):
   cases: DI resolution (carry-over), `Site.MERCOR` literal
   pin (carry-over), single-GET wire-format assertion (verifies
   URL + `MERCOR_HEADERS` including the literal `Authorization:
-  Bearer`), envelope-guard returning empty when `listings[]`
+Bearer`), envelope-guard returning empty when `listings[]`
   missing, HTTP-failure catching 500 and returning empty.
   Behavioural sweep (≥ 5 cases — happy path with full
   catalogue, slug post-filter narrowing, empty `listings[]`,
@@ -26407,7 +26463,7 @@ test-authoring pass (full prose in Spec 013 § 10):
    branches we actually need to pin. Decision: ship a five-row
    sanitised corpus for shape assertions, and synthesise the
    200-row corpus in-test via `buildSyntheticPage(count,
-   startId)` for the cap exercise. Same rationale that drives
+startId)` for the cap exercise. Same rationale that drives
    table-driven tests over file-driven tests when rows are
    homogeneous.
 3. **Fixture `ExternalUrl` uses the reserved `.example` TLD
@@ -26571,7 +26627,7 @@ implementation pass (full prose in Spec 013 § 10):
   `POSTING_DATES`, `FLEX_FIELDS`), the upstream `expand=` query
   parameter, the `findReqs` finder name and the REST resource
   path. Plus `ORACLE_HEADERS` (browser-shaped UA + `Accept:
-  application/json`) and the two sentinel error codes.
+application/json`) and the two sentinel error codes.
 - `packages/plugins/source-ats-oracle/src/oracle.types.ts` —
   NEW. ~50 LOC. Narrow internal types mirroring the live API's
   JSON envelope: `OracleRequisition` (Id / Title /
@@ -26585,11 +26641,11 @@ implementation pass (full prose in Spec 013 § 10):
   implementation: tenant resolution (companyUrl → companySlug
   → null), finder URL composition matching upstream Python's
   exact wire format, pagination loop honouring `resultsWanted`
-  + `ORACLE_MAX_PAGES`, error catch with sentinel logging,
-  `JobPostDto` mapping (`oracle-${Id}` ID, `EmployerName`-or-
-  fallback companyName, `PrimaryLocation` → `LocationDto.city`,
-  `PostedDate` → `datePosted`, isRemote heuristic on
-  PrimaryLocation lowercase substring).
+  - `ORACLE_MAX_PAGES`, error catch with sentinel logging,
+    `JobPostDto` mapping (`oracle-${Id}` ID, `EmployerName`-or-
+    fallback companyName, `PrimaryLocation` → `LocationDto.city`,
+    `PostedDate` → `datePosted`, isRemote heuristic on
+    PrimaryLocation lowercase substring).
 - `packages/plugins/source-ats-oracle/src/index.ts` — barrel
   refreshed to re-export the constants and types modules so
   T04's fixture authors can import the same literals.
@@ -26714,9 +26770,9 @@ T02's edit pass:
 3. **Alphabetical-within-group barrel ordering preserved.**
    `MercorModule` and `OracleModule` interleave alphabetically
    into the existing `source-ats-*` import block (`Manatal …
-   Mercor … Oracle … Paylocity`); `TeslaModule` interleaves into
-   the source-* (non-ATS) block (`Techcareers … Tesla …
-   TheMuse`). The `ALL_SOURCE_MODULES` array mirrors the import
+Mercor … Oracle … Paylocity`); `TeslaModule` interleaves into
+   the source-\* (non-ATS) block (`Techcareers … Tesla …
+TheMuse`). The `ALL_SOURCE_MODULES` array mirrors the import
    order. `TeslaPlaywrightModule` does NOT appear in either the
    imports or the array — consistent with FR-13's opt-in line.
 4. **`TeslaService` decorated with `category: 'company'`,
@@ -26742,8 +26798,8 @@ T02's edit pass:
 **Changes — source / test:**
 
 - `packages/plugins/source-ats-oracle/{package.json,tsconfig.json,
-  src/{index.ts,oracle.module.ts,oracle.service.ts},
-  __tests__/oracle.service.spec.ts}` — six new files. Stub
+src/{index.ts,oracle.module.ts,oracle.service.ts},
+__tests__/oracle.service.spec.ts}` — six new files. Stub
   `scrape(input)` returns `new JobResponseDto([])`. JSDoc on
   `oracle.service.ts` documents the URL-resolution rules (FR-1 /
   FR-2 / FR-3) and the `siteNumber` default (`'CX_45001'` per
@@ -26766,7 +26822,7 @@ T02's edit pass:
 - `packages/plugins/index.ts` — three new imports added
   alphabetically into existing import blocks (`MercorModule`,
   `OracleModule` into the `source-ats-*` block; `TeslaModule`
-  into the source-* block). Three matching `ALL_SOURCE_MODULES`
+  into the source-\* block). Three matching `ALL_SOURCE_MODULES`
   entries appended in the same order. `TeslaPlaywrightModule`
   intentionally absent.
 
@@ -26853,7 +26909,7 @@ T01's edit pass:
 
 - `packages/models/src/enums/site.enum.ts` — four new enum
   values added under a new `// Phase 29: Spec 013 — ATS-Scrapers
-  Parity, Batch 2 (Oracle HCM / Mercor / Tesla)` group comment:
+Parity, Batch 2 (Oracle HCM / Mercor / Tesla)` group comment:
   `ORACLE = 'oracle'`, `MERCOR = 'mercor'`, `TESLA = 'tesla'`,
   `TESLA_PLAYWRIGHT = 'tesla_playwright'`. `mapStringToSite()`
   handles all four via the existing case-insensitive lookup —
@@ -26882,7 +26938,7 @@ T01's edit pass:
   T01 row flipped from `[ ]` to `[x]` with "Landed run #44"
   annotation; Notes-for-the-next-run pinned default updated to
   **Spec 013 / Phase 1 / T02** (four plugin packages scaffolded
-  + `ALL_SOURCE_MODULES` updated).
+  - `ALL_SOURCE_MODULES` updated).
 - `.specify/specs/013-ats-scrapers-parity-batch-2/spec.md` —
   Status flipped from "draft (run #43); T01..T15 pending" to
   "T01 landed run #44; T02..T15 pending"; Last-updated bumped
@@ -26901,7 +26957,7 @@ T01's edit pass:
 - `npx tsc --noEmit -p tsconfig.base.json` — pending.
 - `npm test -- --testPathPatterns 'packages/models'` —
   pending (existing model tests must still pass after enum
-  + DTO additions).
+  - DTO additions).
 - No new unit tests this run — T01 acceptance pins via the
   enum / DTO literal values themselves; the first new tests
   land at T02 (per-plugin DI-resolution + literal-pin tests).
@@ -26913,7 +26969,7 @@ T01's edit pass:
   (`source-ats-oracle`, `source-ats-mercor`, `source-tesla`,
   `source-tesla-playwright`). Each gets `package.json`,
   `tsconfig.json`, `src/{index.ts,<plugin>.module.ts,
-  <plugin>.service.ts}`, and `__tests__/<plugin>.service.spec.ts`
+<plugin>.service.ts}`, and `__tests__/<plugin>.service.spec.ts`
   (≥ 3 cases pinning DI resolution + stub `scrape()` + the new
   `Site` enum literal). `packages/plugins/index.ts` gains
   three appends to `ALL_SOURCE_MODULES` (Oracle / Mercor /
@@ -26992,7 +27048,7 @@ scaffold pass and pinned in the new questions:
    Default `descriptionDepth: 'detail-25'` caps follow-ups
    at 25 to keep NFR-2 < 12 s on the happy path. New
    optional field `ScraperInputDto.descriptionDepth: 'board' |
-   'detail-25' | 'detail-all'` provides the override (FR-11).
+'detail-25' | 'detail-all'` provides the override (FR-11).
 
 **Cross-spec coordination — Spec 013 vs Q-026/Q-027:**
 Q-026/Q-027 (Spec 012 / T04 spillover) were tentatively
@@ -27021,7 +27077,7 @@ future agents don't re-conflate them.
   NEW. ~210 LOC. 7 phases (Bootstrap → Oracle → Mercor →
   Tesla → Tesla-Playwright → Integration & docs → Closeout);
   15 tasks (T01..T15); explicit "Packages touched" matrix
-  + "Risks" matrix + "Acceptance gates" checklist.
+  - "Risks" matrix + "Acceptance gates" checklist.
 - `.specify/specs/013-ats-scrapers-parity-batch-2/tasks.md` —
   NEW. ~290 LOC. 15 tasks with planned-files lists +
   acceptance bullets + estimates. Notes-for-the-next-run
@@ -27119,7 +27175,7 @@ closeout pass:
   four H3 subsections: detection precedence (§ 7.2),
   locale dispatch (§ 7.3), example call patterns (four
   invocations), performance budget (NFR-1..NFR-5 table
-  + bench-ceiling explanation).
+  - bench-ceiling explanation).
 - `.specify/specs/012-european-salary-parser/tasks.md` —
   T05 graduates to "done" with full planned-vs-actual
   file lists and per-bullet acceptance verification.
@@ -27127,7 +27183,7 @@ closeout pass:
   **AC-4..AC-6 bundled spec (Spec 013)**.
 - `.specify/specs/012-european-salary-parser/spec.md` —
   `Status` → `All phases done (T01..T05 runs
-  #38..#42); spec complete`.
+#38..#42); spec complete`.
 - `docs/index.md` — Spec 012 row + footer bumped to
   run #42.
 - `docs/questions.md` — Q-025 marked **resolved** with
@@ -27136,8 +27192,8 @@ closeout pass:
 - `docs/log.md` — this entry.
 - `/competitor-watch.md` — run #42 sync line; §C row
   AC-7 rewritten with **DONE (runs #37..#42)** prefix
-  + ✅ glyph + one-line summary of shipped capability.
-  Twenty-six consecutive zero-churn runs.
+  - ✅ glyph + one-line summary of shipped capability.
+    Twenty-six consecutive zero-churn runs.
 
 **Verification (local, against this commit):**
 
@@ -27148,7 +27204,7 @@ closeout pass:
 
 - **Spec 012 is now complete.** All five tasks across
   five phases ship; 63 total cases in `helpers.spec.ts`
-  + micro-bench suite.
+  - micro-bench suite.
 - Default for run #43 is **scaffold Spec 013 —
   AC-4..AC-6 bundled spec** (Oracle HCM Cloud / Mercor /
   Tesla). Pure docs — open the Spec-Kit trio under
@@ -27191,7 +27247,7 @@ test cases to keep the sweep ≥ 14 green in the meantime):
 - **Q-027** — `$` not registered as USD unique-symbol +
   apostrophe-thousands not in regex `numSrc`. Spec § 8 case 5
   (`"CHF 90'000 ..."`) and case 14 (`"$100,000 ... +
-  country=GERMANY → USD`) both depend on these gaps closing.
+country=GERMANY → USD`) both depend on these gaps closing.
   Default = bundle into Spec 013.
 
 **Five load-bearing decisions** locked into the source/test
@@ -27243,7 +27299,7 @@ the-next-run, decisions 3–5 surfaced during the sweep):
 
 - `packages/common/__tests__/helpers.spec.ts` — extended
   ~165 LOC. New `describe('extractSalary — Spec 012 / T04
-  multi-currency sweep')` block with **14 cases** covering
+multi-currency sweep')` block with **14 cases** covering
   EUR (×2), GBP (×2), CHF (×2), SEK, NOK, DKK, PLN (×2),
   cross-cutting locale dispatch (×3). Each case asserts the
   full `{ currency, minAmount, maxAmount, interval }` envelope.
@@ -27256,7 +27312,7 @@ the-next-run, decisions 3–5 surfaced during the sweep):
   measurement loop mirroring the three Spec 006 / T12 plugin
   benches; writes `dist/bench/helpers-salary.json` with
   overall + per-currency `{ min, median, mean, p95, p99,
-  max, runs }`. Jest assert: `p95 < 2.0 ms` (CI ceiling);
+max, runs }`. Jest assert: `p95 < 2.0 ms` (CI ceiling);
   absolute NFR-1 status reported in `p95_under_nfr1`.
 
 **Changes — tests:**
@@ -27283,7 +27339,7 @@ the-next-run, decisions 3–5 surfaced during the sweep):
   to point at T05 (closeout — docs only).
 - `.specify/specs/012-european-salary-parser/spec.md` —
   `Status` → `Phases 1–4 done (T01 run #38, T02 run #39,
-  T03 run #40, T04 run #41); T05 pending`. New § 10 / "T04
+T03 run #40, T04 run #41); T05 pending`. New § 10 / "T04
   (run #41)" decision-log block with the four substitution
   rationales.
 - `docs/questions.md` — Q-026 + Q-027 opened (both deferred
@@ -27343,7 +27399,7 @@ source/test surface during T03:
    `'45.000'` reads as `45.0` under anglo.
 2. **Two regex shapes, not one.**
    `buildSalaryRegexPrefix` matches `<sym><num> -
-   [<sym>?]<num>`; `buildSalaryRegexSuffix` matches
+[<sym>?]<num>`; `buildSalaryRegexSuffix` matches
    `<num><sym> - <num><sym?>`. Tried in sequence (prefix
    first, suffix only if prefix misses).
 3. **`[kK]?\b` discipline (debugged in-run).** The original
@@ -27367,7 +27423,7 @@ source/test surface during T03:
   module-private constants: `SALARY_SYMBOL_ALTERNATIONS`,
   `SALARY_NUMBER_REGEX_SRC`, `CURRENCY_TO_NATURAL_LOCALE`.
   Two new private functions: `resolveSalaryLocale(options,
-  currency)` and the pair
+currency)` and the pair
   `buildSalaryRegexPrefix(symAlt, numSrc)` /
   `buildSalaryRegexSuffix(symAlt, numSrc)`. The exported
   `extractSalary(salaryStr, options?)` now dispatches via
@@ -27380,7 +27436,7 @@ source/test surface during T03:
 
 - `packages/common/__tests__/helpers.spec.ts` — extended
   ~55 LOC. New `describe('extractSalary — Spec 012 / T03
-  multi-currency smoke')` block with **5 cases**:
+multi-currency smoke')` block with **5 cases**:
   EUR-suffix (Continental, Country.GERMANY hint),
   GBP-prefix (anglo locale via currency default),
   CHF-ISO-prefix (anglo with Swiss apostrophe-thousands
@@ -27404,7 +27460,7 @@ green byte-for-byte (FR-10 confirmed).
   rewritten to point at T04.
 - `.specify/specs/012-european-salary-parser/spec.md` —
   `Status` → `Phases 1–3 done (T01 run #38, T02 run #39,
-  T03 run #40); T04..T05 pending`.
+T03 run #40); T04..T05 pending`.
 - `docs/index.md` — Spec 012 row + footer bumped to run #40.
 - `CLAUDE.md` — run-tag → #40.
 - `docs/log.md` — this entry.
@@ -27460,52 +27516,52 @@ run #38's Notes-for-the-next-run expectations:
 
 - `packages/common/src/utils/helpers.ts` — extended ~165 LOC.
   Five new module-level symbols:
-    - `SALARY_LOCALE_MAP: ReadonlyMap<Country, SalaryLocale>` —
-      30 entries covering Continental EU + extended (18 rows)
-      and Anglosphere + Switzerland (12 rows). Single-source
-      table; both helpers branch off it.
-    - `pickLocale(country)` — module-private function
-      returning `'continental' | 'anglo'`. Defaults to
-      `'anglo'` for `undefined` (preserves USD-mode
-      byte-for-byte) and for any unmapped country (defensive).
-    - `parseSalaryNumber(raw, locale)` — exported function.
-      Up-front normalisation (U+00A0 → space, strip `'`,
-      trim), `SALARY_NUMBER_PRE_PATTERN` validity bail-out,
-      locale-specific replace pass (continental: strip `.`/` `
-      then `,` → `.`; anglo: strip `,`/` `),
-      `SALARY_NUMBER_POST_PATTERN` final shape check, then
-      `parseFloat`. NEVER throws; returns `null` for
-      unparseable input.
-    - `SALARY_NUMBER_PRE_PATTERN` / `SALARY_NUMBER_POST_PATTERN`
-      — module-level regex literals compiled once at module-load
-      (NFR-2 / NFR-4: zero per-call allocation).
-    - `__INTERNAL_TEST_ONLY__: Readonly<{ pickLocale }>` —
-      frozen test-shim export so the test file can reach
-      `pickLocale` without exporting it from the package
-      barrel. Production code MUST NOT consume.
+  - `SALARY_LOCALE_MAP: ReadonlyMap<Country, SalaryLocale>` —
+    30 entries covering Continental EU + extended (18 rows)
+    and Anglosphere + Switzerland (12 rows). Single-source
+    table; both helpers branch off it.
+  - `pickLocale(country)` — module-private function
+    returning `'continental' | 'anglo'`. Defaults to
+    `'anglo'` for `undefined` (preserves USD-mode
+    byte-for-byte) and for any unmapped country (defensive).
+  - `parseSalaryNumber(raw, locale)` — exported function.
+    Up-front normalisation (U+00A0 → space, strip `'`,
+    trim), `SALARY_NUMBER_PRE_PATTERN` validity bail-out,
+    locale-specific replace pass (continental: strip `.`/` `
+    then `,` → `.`; anglo: strip `,`/` `),
+    `SALARY_NUMBER_POST_PATTERN` final shape check, then
+    `parseFloat`. NEVER throws; returns `null` for
+    unparseable input.
+  - `SALARY_NUMBER_PRE_PATTERN` / `SALARY_NUMBER_POST_PATTERN`
+    — module-level regex literals compiled once at module-load
+    (NFR-2 / NFR-4: zero per-call allocation).
+  - `__INTERNAL_TEST_ONLY__: Readonly<{ pickLocale }>` —
+    frozen test-shim export so the test file can reach
+    `pickLocale` without exporting it from the package
+    barrel. Production code MUST NOT consume.
 
 **Changes — tests:**
 
 - `packages/common/__tests__/helpers.spec.ts` — extended
   ~140 LOC. Two new `describe` blocks:
-    - `parseSalaryNumber (Spec 012 / T02)` — **14 cases**
-      covering: continental period-thousands, anglo
-      comma-thousands + period-decimal, continental
-      space-thousands + comma-decimal, Swiss
-      apostrophe-thousands under both locales, U+00A0
-      (non-breaking space) thousands, deeply-grouped
-      continental + anglo numbers, non-numeric input rejection,
-      empty / whitespace input, null / undefined input,
-      anglo double-decimal rejection, defensive negative-amount
-      handling, bare integer in either locale.
-    - `pickLocale (Spec 012 / T02, internal)` — **5 cases**
-      covering: Continental EU country → `'continental'`,
-      Anglosphere → `'anglo'`, Switzerland → `'anglo'`,
-      `undefined` → `'anglo'` default, unmapped country (Japan
-      / Brazil / Worldwide) → `'anglo'` defensive default.
-  Plus the new `__INTERNAL_TEST_ONLY__` import via relative
-  path (`../src/utils/helpers`) — explicit signal that the
-  test is reaching for an implementation detail.
+  - `parseSalaryNumber (Spec 012 / T02)` — **14 cases**
+    covering: continental period-thousands, anglo
+    comma-thousands + period-decimal, continental
+    space-thousands + comma-decimal, Swiss
+    apostrophe-thousands under both locales, U+00A0
+    (non-breaking space) thousands, deeply-grouped
+    continental + anglo numbers, non-numeric input rejection,
+    empty / whitespace input, null / undefined input,
+    anglo double-decimal rejection, defensive negative-amount
+    handling, bare integer in either locale.
+  - `pickLocale (Spec 012 / T02, internal)` — **5 cases**
+    covering: Continental EU country → `'continental'`,
+    Anglosphere → `'anglo'`, Switzerland → `'anglo'`,
+    `undefined` → `'anglo'` default, unmapped country (Japan
+    / Brazil / Worldwide) → `'anglo'` defensive default.
+    Plus the new `__INTERNAL_TEST_ONLY__` import via relative
+    path (`../src/utils/helpers`) — explicit signal that the
+    test is reaching for an implementation detail.
 
 Verification: `npx jest --testPathPatterns 'packages/common/__tests__/helpers'`
 locally → `Test Suites: 1 passed · Tests: 44 passed (25
@@ -27525,7 +27581,7 @@ cases also stay green byte-for-byte (no regression).
   with three load-bearing decisions deferred to that run.
 - `.specify/specs/012-european-salary-parser/spec.md` —
   `Status` flipped to `Phases 1–2 done (T01 run #38, T02
-  run #39); T03..T05 pending`; `Last updated` bumped to
+run #39); T03..T05 pending`; `Last updated` bumped to
   `2026-04-27 (run #39)`.
 - `docs/index.md` — Spec 012 row + footer bumped to run #39.
 - `CLAUDE.md` — run-tag → #39.
@@ -27578,7 +27634,7 @@ case `uses SEK as the no-hint default for "kr" (Q-025)`.
    tasks.md draft used `'country'` in its example, but the
    precedence rule documented in spec § 7.2 / rule 3 — "ambiguous
    symbol disambiguated by country hint" — fires under the
-   `'symbol'` branch because the symbol *was* the trigger.
+   `'symbol'` branch because the symbol _was_ the trigger.
    The country hint disambiguates the symbol's ISO mapping; it
    doesn't change the detection path. Test asserts the rule,
    not the loose example.
@@ -27607,7 +27663,7 @@ case `uses SEK as the no-hint default for "kr" (Q-025)`.
 
 - `packages/common/__tests__/helpers.spec.ts` — extended
   ~95 LOC. New `describe('parseSalaryCurrency (Spec 012 /
-  T01)')` block with **9 cases**: EUR-from-symbol,
+T01)')` block with **9 cases**: EUR-from-symbol,
   ISO-prefix, country-disambiguated `'kr'` (Denmark),
   country-fallback (Germany → EUR), default-USD,
   defaultCode-override, null/empty input, Q-025 SEK fallback
@@ -27629,7 +27685,7 @@ byte-for-byte (FR-10 pre-validation).
   at T02 (`parseSalaryNumber` + private `pickLocale`).
 - `.specify/specs/012-european-salary-parser/spec.md` —
   `Status` flipped to `Phase 1 done (T01 run #38);
-  T02..T05 pending`; `Last updated` bumped to
+T02..T05 pending`; `Last updated` bumped to
   `2026-04-27 (run #38)`.
 - `docs/index.md` — Spec 012 row + footer bumped to run #38.
 - `CLAUDE.md` — run-tag → #38.
@@ -27662,9 +27718,10 @@ target is to extend the existing USD-only `extractSalary` golden
 set with **EUR / GBP / CHF / SEK / NOK / DKK / PLN** branches
 plus two new exported helpers (`parseSalaryCurrency` /
 `parseSalaryNumber`). Run #37 is the Spec-Kit scaffold (spec.md
-+ plan.md + tasks.md, three new artefacts under
-`.specify/specs/012-european-salary-parser/`); zero source code
-touched.
+
+- plan.md + tasks.md, three new artefacts under
+  `.specify/specs/012-european-salary-parser/`); zero source code
+  touched.
 
 **One new question opened this run — Q-025** (`kr`
 disambiguation default when no country hint is set: SEK vs DKK
@@ -27680,7 +27737,7 @@ next-run):
 
 1. **`Currency` ISO codes inlined as a string-literal union**
    (`'USD' | 'EUR' | 'GBP' | 'CHF' | 'SEK' | 'NOK' | 'DKK' |
-   'PLN'`) rather than a new `Currency` enum in
+'PLN'`) rather than a new `Currency` enum in
    `@ever-jobs/models`. Reasoning: the codes are well-known
    ISO 4217 strings; introducing an enum forces every plugin to
    import it for ~25 LOC of value vs the cost of a churned
@@ -27817,7 +27874,7 @@ surface (per Q-024):
   deferred to that spec's future Q file.
 - `.specify/specs/006-ats-scrapers-parity-batch-1/spec.md` —
   `Status` flipped to `All phases done (T01..T13 runs
-  #29..#36); spec complete`; `Last updated` bumped to
+#29..#36); spec complete`; `Last updated` bumped to
   `2026-04-27 (run #36)`.
 - `docs/index.md` — Spec 006 row updated with new status
   string; `Last revised` bumped to `2026-04-27 (run #36)`.
@@ -27848,7 +27905,7 @@ surface (per Q-024):
   salary parser"**. The spec scaffold lands in run #37.
 - Specs **004 / 005 / 006** are all complete as of this
   run. The active backlog is `competitor-watch.md §C /
-  AC-4..AC-9` — six items totalling ~7..8 scheduled runs.
+AC-4..AC-9` — six items totalling ~7..8 scheduled runs.
 - External research repos: no new commits since run #35.
   Twenty-three consecutive zero-churn runs.
 - Pre-existing dedup-hybrid red tests unchanged from runs
@@ -27931,7 +27988,7 @@ Notes-for-the-next-run and were locked into the bench surface:
   `"bench:avature"`, `"bench:gem"`, `"bench:joincom"`, and
   `"bench:ats-batch-1"` (the latter chains all three sequentially
   via `&&`). Each invokes `ts-node --project tsconfig.base.json
-  -r tsconfig-paths/register <bench-file>`.
+-r tsconfig-paths/register <bench-file>`.
 
 **Common bench shape (across all three):**
 
@@ -27966,8 +28023,8 @@ Notes-for-the-next-run and were locked into the bench surface:
   next-batch pinning).
 - `.specify/specs/006-ats-scrapers-parity-batch-1/spec.md` —
   `Status` → `Phase 1+2+3+4 done (T01..T08 runs #29..#32); Phase 5
-  / T09+T10 done (run #33); T11 done (run #34); T12 done (run
-  #35); T13 pending`.
+/ T09+T10 done (run #33); T11 done (run #34); T12 done (run
+#35); T13 pending`.
 - `docs/index.md` — Spec 006 row + footer bumped to run #35.
 - `CLAUDE.md` — run-tag → #35.
 - `docs/log.md` — this entry.
@@ -27980,22 +28037,22 @@ Notes-for-the-next-run and were locked into the bench surface:
   after this run's edits.
 - `npx jest --testPathPatterns 'packages/plugins/source-ats-(avature|gem|joincom)'`
   reports `Test Suites: 3 passed, 3 total · Tests: 28 passed, 28
-  total` — the bench files (with their `.bench.ts` suffix) are
+total` — the bench files (with their `.bench.ts` suffix) are
   not picked up by jest's `testMatch`, so the unit-suite count
   is unchanged.
 - All three benches were smoke-run locally against this commit:
-    - `npm run bench:avature` → p95=7.112 ms, ceiling 8000 ms,
-      headroom 99.91% (single populated page + empty page; cheerio
-      five-cascade selector chain).
-    - `npm run bench:gem` → p95=0.107 ms, ceiling 1500 ms,
-      headroom 99.99% (single in-process JSON parse over the
-      3-posting batch envelope — fastest of the three).
-    - `npm run bench:joincom` → p95=0.13 ms, ceiling 4000 ms,
-      headroom 100.00% (Step-1 HTML probe + 2-page paginated
-      Step-2 JSON; URL-substring router routes by `?page=N`).
-  All three p95 readings sit comfortably under their NFR-2
-  ceilings; bench JSON records are emitted at
-  `dist/bench/<plugin>.json` (gitignored, fresh per-run output).
+  - `npm run bench:avature` → p95=7.112 ms, ceiling 8000 ms,
+    headroom 99.91% (single populated page + empty page; cheerio
+    five-cascade selector chain).
+  - `npm run bench:gem` → p95=0.107 ms, ceiling 1500 ms,
+    headroom 99.99% (single in-process JSON parse over the
+    3-posting batch envelope — fastest of the three).
+  - `npm run bench:joincom` → p95=0.13 ms, ceiling 4000 ms,
+    headroom 100.00% (Step-1 HTML probe + 2-page paginated
+    Step-2 JSON; URL-substring router routes by `?page=N`).
+    All three p95 readings sit comfortably under their NFR-2
+    ceilings; bench JSON records are emitted at
+    `dist/bench/<plugin>.json` (gitignored, fresh per-run output).
 - The benches are excluded from CI's unit/integration/e2e gates
   by filename convention (`.bench.ts` doesn't match jest's
   `testMatch`); CI on push will validate the existing test bundle
@@ -28023,9 +28080,10 @@ Notes-for-the-next-run and were locked into the bench surface:
 across `docs/ATS_INTEGRATIONS.md` + `docs/COMPANY_SLUG_DIRECTORY.md`.
 Run #33's Notes-for-the-next-run pinned this default ("Spec 006 /
 Phase 5 / T11 — coverage docs update for `docs/ATS_INTEGRATIONS.md`
-+ `docs/COMPANY_SLUG_DIRECTORY.md`. Acceptance: ≥ 10 seed slugs
-per plugin sampled from upstream
-`OTHERS/Ats-scrapers/<id>/<id>_companies.csv`").
+
+- `docs/COMPANY_SLUG_DIRECTORY.md`. Acceptance: ≥ 10 seed slugs
+  per plugin sampled from upstream
+  `OTHERS/Ats-scrapers/<id>/<id>_companies.csv`").
 
 **No new questions opened this run.**
 
@@ -28033,19 +28091,19 @@ per plugin sampled from upstream
 
 - `docs/ATS_INTEGRATIONS.md` — extended ~50 LOC. Three new
   sections under "Supported Platforms":
-    - **Avature** — HTML scrape + cheerio + custom-domain
-      override; sampled Notable Users from `avature_companies.csv`.
-    - **Gem** — single batched GraphQL POST against
-      `https://jobs.gem.com/api/public/graphql/batch`; Notable
-      Users sampled from `gem_companies.csv` (Accel, Alex and Ani,
-      A16Z Speedrun, 43North, Acre, Agora, Airframe).
-    - **Join.com** — REST two-step flow with regex extraction;
-      polite pacing 0.5 s; Notable Users sampled from
-      `join_companies.csv` (Awork, Alteos, Aitad, Capitalmind,
-      Brandcircle, etc.).
-  Intro count bumped: "38 ATSes" → "41 ATSes" in two places
-  (the headline and the "all N ATS scrapers run concurrently"
-  paragraph).
+  - **Avature** — HTML scrape + cheerio + custom-domain
+    override; sampled Notable Users from `avature_companies.csv`.
+  - **Gem** — single batched GraphQL POST against
+    `https://jobs.gem.com/api/public/graphql/batch`; Notable
+    Users sampled from `gem_companies.csv` (Accel, Alex and Ani,
+    A16Z Speedrun, 43North, Acre, Agora, Airframe).
+  - **Join.com** — REST two-step flow with regex extraction;
+    polite pacing 0.5 s; Notable Users sampled from
+    `join_companies.csv` (Awork, Alteos, Aitad, Capitalmind,
+    Brandcircle, etc.).
+    Intro count bumped: "38 ATSes" → "41 ATSes" in two places
+    (the headline and the "all N ATS scrapers run concurrently"
+    paragraph).
 - `docs/COMPANY_SLUG_DIRECTORY.md` — extended ~80 LOC. Three
   new tables — Avature (15 rows), Gem (14 rows), Join.com
   (15 rows) — all ≥ 10 seed slugs as mandated by T11. Slugs
@@ -28066,8 +28124,8 @@ per plugin sampled from upstream
   planned-vs-actual file lists and acceptance verification.
 - `.specify/specs/006-ats-scrapers-parity-batch-1/spec.md` —
   `Status` → `Phase 1+2+3+4 done (T01..T08 runs #29..#32);
-  Phase 5 / T09+T10 done (run #33); T11 done (run #34);
-  T12+T13 pending`.
+Phase 5 / T09+T10 done (run #33); T11 done (run #34);
+T12+T13 pending`.
 - `docs/index.md` — Spec 006 row + footer bumped to run #34.
 - `CLAUDE.md` — run-tag → #34.
 - `docs/log.md` — this entry.
@@ -28135,7 +28193,7 @@ Notes-for-the-next-run and were locked into the test surface:
    but the controller exposes a JSON body via POST (see
    `apps/api/src/jobs/jobs.controller.ts`). The tasks-file
    phrasing predates the body-vs-query refactor; we honour the
-   *intent* (per-plugin HTTP round-trip) by hitting the real
+   _intent_ (per-plugin HTTP round-trip) by hitting the real
    endpoint shape instead of the literal text. Documented as
    a "Departures from the literal acceptance text" block in
    the spec file's leading JSDoc and in `tasks.md`'s T10 entry.
@@ -28156,39 +28214,39 @@ Notes-for-the-next-run and were locked into the test surface:
 
 - `apps/api/__tests__/integration/source-ats-batch-1.integration.spec.ts`
   — new ~270 LOC. **9 cases** across 4 describe-blocks:
-    1. **four-place registration (PluginRegistry)** — 3 cases.
-       `listSiteKeys()` includes `Site.AVATURE/GEM/JOIN_COM`;
-       `listAtsSites()` flags all three as ATS; `getScraper()`
-       returns a real `IScraper` for each.
-    2. **JobsService.searchJobs fan-out** — 2 cases. Single
-       fan-out across all three plugins emits ≥ 1 row from each
-       (filtered by `j.site`); per-plugin `resultsWanted` cap
-       honoured.
-    3. **JobsAggregator — Spec 003 dedup applied** — 2 cases.
-       All three plugins still contribute ≥ 1 row after dedup;
-       envelope flag `deduped=true`; zero collisions on the
-       synthetic corpus (`outputCount === rawCount`); `dedup=false`
-       opt-out leaves output unchanged.
-    4. **HTTP-client mock — wire-call shape** — 2 cases. Gem
-       issues exactly ONE POST to
-       `jobs.gem.com/api/public/graphql/batch`; Join.com issues
-       a Step-1 HTML GET against `/companies/<slug>` before any
-       Step-2 JSON GETs against `/api/public/companies/`.
+  1. **four-place registration (PluginRegistry)** — 3 cases.
+     `listSiteKeys()` includes `Site.AVATURE/GEM/JOIN_COM`;
+     `listAtsSites()` flags all three as ATS; `getScraper()`
+     returns a real `IScraper` for each.
+  2. **JobsService.searchJobs fan-out** — 2 cases. Single
+     fan-out across all three plugins emits ≥ 1 row from each
+     (filtered by `j.site`); per-plugin `resultsWanted` cap
+     honoured.
+  3. **JobsAggregator — Spec 003 dedup applied** — 2 cases.
+     All three plugins still contribute ≥ 1 row after dedup;
+     envelope flag `deduped=true`; zero collisions on the
+     synthetic corpus (`outputCount === rawCount`); `dedup=false`
+     opt-out leaves output unchanged.
+  4. **HTTP-client mock — wire-call shape** — 2 cases. Gem
+     issues exactly ONE POST to
+     `jobs.gem.com/api/public/graphql/batch`; Join.com issues
+     a Step-1 HTML GET against `/companies/<slug>` before any
+     Step-2 JSON GETs against `/api/public/companies/`.
 - `apps/api/__tests__/e2e/source-ats-batch-1.e2e-spec.ts` —
   new ~210 LOC. **5 cases** against the real
   `POST /api/jobs/search` HTTP surface:
-    1. `siteType:[AVATURE]`, `companySlug:'bloomberg'`,
-       `resultsWanted:5` → 201 + non-empty `jobs[]`; every row
-       tagged `site=Site.AVATURE`.
-    2. `siteType:[GEM]`, `companySlug:'accel'` → 201 +
-       non-empty body; every row tagged `site=Site.GEM`.
-    3. `siteType:[JOIN_COM]`, `companySlug:'primer-ai'` → 201 +
-       non-empty body; every row tagged `site=Site.JOIN_COM`.
-    4. Cross-plugin fan-out — response carries `count`,
-       `raw_count`, `deduped:true`; `count === raw_count`; the
-       `Set` of `j.site` values covers all three.
-    5. `?dedup=false` query-string opt-out — `deduped:false`;
-       `count === raw_count`; non-empty body.
+  1. `siteType:[AVATURE]`, `companySlug:'bloomberg'`,
+     `resultsWanted:5` → 201 + non-empty `jobs[]`; every row
+     tagged `site=Site.AVATURE`.
+  2. `siteType:[GEM]`, `companySlug:'accel'` → 201 +
+     non-empty body; every row tagged `site=Site.GEM`.
+  3. `siteType:[JOIN_COM]`, `companySlug:'primer-ai'` → 201 +
+     non-empty body; every row tagged `site=Site.JOIN_COM`.
+  4. Cross-plugin fan-out — response carries `count`,
+     `raw_count`, `deduped:true`; `count === raw_count`; the
+     `Set` of `j.site` values covers all three.
+  5. `?dedup=false` query-string opt-out — `deduped:false`;
+     `count === raw_count`; non-empty body.
 
 Verification: tests authored but not executed in this scheduled
 run — `node_modules` is not installed in the agent sandbox; CI
@@ -28201,10 +28259,10 @@ on push validates the full integration + E2E bundle.
   lists and per-bullet acceptance verification. Notes-for-the-
   next-run repinned to "Spec 006 / Phase 5 / T11" (coverage
   docs update — three new matrix rows in `ATS_INTEGRATIONS.md`
-  + ≥ 10 seed slugs per plugin in `COMPANY_SLUG_DIRECTORY.md`).
+  - ≥ 10 seed slugs per plugin in `COMPANY_SLUG_DIRECTORY.md`).
 - `.specify/specs/006-ats-scrapers-parity-batch-1/spec.md` —
   `Status` → `Phase 1+2+3+4 done (T01..T08 runs #29..#32);
-  Phase 5 / T09+T10 done (run #33); T11..T13 pending`.
+Phase 5 / T09+T10 done (run #33); T11..T13 pending`.
 - `docs/index.md` — Spec 006 row + footer bumped to run #33.
 - `CLAUDE.md` — run-tag → #33.
 - `docs/log.md` — this entry.
@@ -28305,7 +28363,7 @@ surface:
   — extended ~300 LOC (replaces the ~10 LOC stub from T02).
   `resolveTenant(client, slug)` runs Step 1, walks both regexes,
   returns `null` on any miss. `collectJobItems(client, tenant,
-  resultsWanted)` runs Step 2 paginated GETs until empty page,
+resultsWanted)` runs Step 2 paginated GETs until empty page,
   totalPages reached, or resultsWanted hit. `toJobPost` maps
   each item to `JobPostDto` with three-tier remote detection.
   `formatDescription` applies `DescriptionFormat.PLAIN` via
@@ -28332,7 +28390,7 @@ surface:
   — new ~10 LOC. 404 page with no embedded company id at all.
 - `packages/plugins/source-ats-joincom/__tests__/fixtures/joincom-jobs-page-1.json`
   — new ~35 LOC. 2-item page with `pagination.totalPages=2,
-  total=3` (exercises mid-pagination cap and the "second page
+total=3` (exercises mid-pagination cap and the "second page
   fails / loop-breaks" branch).
 
 Verification: `npx jest --testPathPatterns 'packages/plugins/source-ats-joincom'`
@@ -28346,7 +28404,7 @@ locally → `Test Suites: 1 passed, 1 total · Tests: 11 passed,
   file lists and per-bullet acceptance verification.
 - `.specify/specs/006-ats-scrapers-parity-batch-1/spec.md` —
   `Status` → `Phase 1+2+3+4 done (T01..T08 runs #29..#32);
-  T09..T13 pending`.
+T09..T13 pending`.
 - `docs/index.md` — Spec 006 row + footer bumped to run #32.
 - `CLAUDE.md` — run-tag → #32.
 - `docs/log.md` — this entry.
@@ -28358,13 +28416,13 @@ locally → `Test Suites: 1 passed, 1 total · Tests: 11 passed,
 - Default for run #33 is **Spec 006 / Phase 5 / T09 + T10**
   — three-plugin live integration spec
   (`apps/api/__tests__/integration/source-ats-batch-1.integration.spec.ts`)
-  + e2e supertest spec
-  (`apps/api/__tests__/e2e/source-ats-batch-1.e2e-spec.ts`).
-  T09 boots `AppModule` with stubbed `createHttpClient` for all
-  three plugins and asserts ≥ 1 row from each in the deduped
-  result. T10 hits `/api/jobs?site=avature&companySlug=bloomberg`
-  etc. against a `nock`-fixture upstream and asserts dedup-engine
-  collapses identical postings across the three plugins.
+  - e2e supertest spec
+    (`apps/api/__tests__/e2e/source-ats-batch-1.e2e-spec.ts`).
+    T09 boots `AppModule` with stubbed `createHttpClient` for all
+    three plugins and asserts ≥ 1 row from each in the deduped
+    result. T10 hits `/api/jobs?site=avature&companySlug=bloomberg`
+    etc. against a `nock`-fixture upstream and asserts dedup-engine
+    collapses identical postings across the three plugins.
 - All three Phase-4 plugins are now fully implemented behaviourally;
   the remaining Phase 5 work is wiring + docs + perf benches.
   Spec 006 closes after T13.
@@ -28461,7 +28519,7 @@ locally → `9 passed · exit 0`.
   file lists and per-bullet acceptance verification.
 - `.specify/specs/006-ats-scrapers-parity-batch-1/spec.md` —
   `Status` → `Phase 1+2+3 done (T01..T06 runs #29..#31);
-  T07..T13 pending`.
+T07..T13 pending`.
 - `docs/index.md` — Spec 006 row + footer bumped to run #31.
 - `CLAUDE.md` — run-tag → #31.
 - `docs/log.md` — this entry.
@@ -28495,8 +28553,9 @@ HTML-scrape implementation. Cheerio is already in
 `@ever-jobs/common`; no lockfile churn expected. T04 (Avature
 unit tests with HTML fixtures) typically lands alongside T03 if
 the diff stays reviewable."). The diff did stay reviewable — T03
-+ T04 together touch nine files (six plugin source/test/fixture
-files, one cross-cutting DTO, three doc updates).
+
+- T04 together touch nine files (six plugin source/test/fixture
+  files, one cross-cutting DTO, three doc updates).
 
 **No new questions opened this run.** Q-022 (Avature tenant
 resolution `companyUrl` vs `companySlug`) was already opened in
@@ -28566,25 +28625,25 @@ proofing) remain open but unchanged.
   that returns `{ get: mockGet, setHeaders: mockSetHeaders }`,
   letting each test feed a controlled fixture chain via
   `mockGet.mockResolvedValueOnce(...)`. **8 cases**:
-    1. NestJS DI resolution via `AvatureModule` (carried from T02).
-    2. `Site.AVATURE === 'avature'` literal pin (carried from T02).
-    3. Happy path — 12 anchors in the fixture, 1 Apply-decoy
-       filtered out, 11 `JobPostDto` rows; pins title/id/url/
-       company/location/department/`isRemote=false`. Also pins
-       remote detection on the SRE row (id=12347, "Remote —
-       Americas" → `isRemote=true`).
-    4. Empty board (page 1 = empty fixture → empty
-       `JobResponseDto`, exactly 1 HTTP call).
-    5. HTTP 500 caught (mock rejects → empty
-       `JobResponseDto`, no thrown error).
-    6. `resultsWanted=5` mid-page cap (12 anchors, take 5,
-       skip the second pagination request entirely).
-    7. Custom-domain override — `companyUrl =
-       'https://careers.ibm.com/en_US'` → request URL starts
-       with `https://careers.ibm.com/en_US/careers/SearchJobs/`
-       (locale prefix preserved).
-    8. Neither `companyUrl` nor `companySlug` supplied → empty
-       `JobResponseDto`, zero HTTP calls (warning branch).
+  1. NestJS DI resolution via `AvatureModule` (carried from T02).
+  2. `Site.AVATURE === 'avature'` literal pin (carried from T02).
+  3. Happy path — 12 anchors in the fixture, 1 Apply-decoy
+     filtered out, 11 `JobPostDto` rows; pins title/id/url/
+     company/location/department/`isRemote=false`. Also pins
+     remote detection on the SRE row (id=12347, "Remote —
+     Americas" → `isRemote=true`).
+  4. Empty board (page 1 = empty fixture → empty
+     `JobResponseDto`, exactly 1 HTTP call).
+  5. HTTP 500 caught (mock rejects → empty
+     `JobResponseDto`, no thrown error).
+  6. `resultsWanted=5` mid-page cap (12 anchors, take 5,
+     skip the second pagination request entirely).
+  7. Custom-domain override — `companyUrl =
+'https://careers.ibm.com/en_US'` → request URL starts
+     with `https://careers.ibm.com/en_US/careers/SearchJobs/`
+     (locale prefix preserved).
+  8. Neither `companyUrl` nor `companySlug` supplied → empty
+     `JobResponseDto`, zero HTTP calls (warning branch).
 - `packages/plugins/source-ats-avature/__tests__/fixtures/avature-page-1.html`
   — new ~85 LOC. 12 `<article class="job">` elements, one of
   which is an Apply-decoy (anchor text = "Apply Now", no h2/h3,
@@ -28606,7 +28665,7 @@ proofing) remain open but unchanged.
   implementation + ≥ 4 unit cases).
 - `.specify/specs/006-ats-scrapers-parity-batch-1/spec.md` —
   Status flipped to `Phase 1+2 done (T01..T04 run #30); T05..T13
-  pending`; `Last updated` bumped to `2026-04-27 (run #30)`.
+pending`; `Last updated` bumped to `2026-04-27 (run #30)`.
 - `docs/index.md` — Spec 006 row updated with new status string;
   `Last revised` bumped to `2026-04-27 (run #30)`.
 - `CLAUDE.md` — run-tag bumped to #30 in the footer.
@@ -28619,10 +28678,10 @@ proofing) remain open but unchanged.
 
 - `npx jest --testPathPatterns 'packages/plugins/source-ats-avature'`
   reports `Test Suites: 1 passed, 1 total · Tests: 8 passed, 8
-  total · exit 0`.
+total · exit 0`.
 - `npx jest --testPathPatterns 'packages/plugins/source-'`
   reports `Test Suites: 1 skipped, 120 passed, 120 of 121 total
-  · Tests: 12 skipped, 318 passed, 330 total · exit 0`. The 318
+· Tests: 12 skipped, 318 passed, 330 total · exit 0`. The 318
   passing total is +5 vs run #29's baseline of 313 (= 8 new
   cases minus the 3 carry-over T02 stubs that the new spec
   subsumes). The 1 skipped suite remains the pre-existing
@@ -28703,7 +28762,7 @@ Notes-for-the-next-run; this run honoured them exactly:
 - `packages/plugins/source-ats-avature/{package.json,tsconfig.json,src/{index.ts,avature.module.ts,avature.service.ts}}`
   — new ~70 LOC across 5 files. `AvatureService` decorated with
   `@SourcePlugin({ site: Site.AVATURE, name: 'Avature', category:
-  'ats', isAts: true })` plus `@Injectable()`. `scrape(input)`
+'ats', isAts: true })` plus `@Injectable()`. `scrape(input)`
   is a stub: logs at `debug` level + returns
   `new JobResponseDto([])`. JSDoc cross-references T03 as the
   landing point for the actual HTML scrape.
@@ -28746,7 +28805,7 @@ alongside T03 / T05 / T07 in their respective phases.
   verification numbers.
 - `.specify/specs/006-ats-scrapers-parity-batch-1/spec.md` —
   `Status` flipped to `Phase 1 done (T01..T02 run #29);
-  T03..T13 pending`; `Last updated` bumped to `2026-04-27 (run #29)`.
+T03..T13 pending`; `Last updated` bumped to `2026-04-27 (run #29)`.
 - `docs/index.md` — Spec 006 row updated with new status string;
   `Last revised` bumped to `2026-04-27 (run #29)`.
 - `CLAUDE.md` — run-tag bumped to #29 in the footer.
@@ -28760,7 +28819,7 @@ alongside T03 / T05 / T07 in their respective phases.
 - T01 + T02 ship TypeScript source + tests; locally
   `npx jest --testPathPatterns 'packages/plugins/source-'`
   reports `Test Suites: 1 skipped, 120 passed, 120 of 121 total
-  · Tests: 12 skipped, 313 passed, 325 total · exit 0`.
+· Tests: 12 skipped, 313 passed, 325 total · exit 0`.
   Both my 9 new cases AND the 313 existing source-plugin
   cases pass against this commit's tree.
 - `npm run lint:docs` — clean after this run's edits.
@@ -28888,7 +28947,7 @@ surface (deferred to T01..T13 implementation runs):
   / T01 + T02" for run #29.
 - `docs/index.md` — Spec 006 row added with status "draft (run
   #28); T01..T13 pending"; `Last revised` bumped to `2026-04-27
-  (run #28)`.
+(run #28)`.
 - `docs/questions.md` — three new questions Q-021, Q-022, Q-023
   added at the top with full Options A/B/C + Default + Resolution
   =pending. Run-tag `(run #28)`.
@@ -28984,7 +29043,7 @@ surface (per Q-020 + the in-run rename below):
 2. **Method renamed from `putAll` → `putBatch` (in-run
    adjustment).** Initial draft used `putAll(snapshots, ts)`
    for symmetry with `IJobObservationStore.putAll(canonicalJobId,
-   observations)`. The collision becomes an issue the moment a
+observations)`. The collision becomes an issue the moment a
    single class wants to implement both interfaces (the
    in-memory reference backend a future spec ships will): the
    two `putAll` overloads have non-overlapping signatures but
@@ -29038,7 +29097,7 @@ surface (per Q-020 + the in-run rename below):
 - `packages/models/src/interfaces/health-snapshot-store.interface.ts`
   — new ~155 LOC. New sibling `IHealthSnapshotStore` interface
   with `putBatch(snapshots, ts) / listSince(since, opts?) /
-  latest(site)`. New types `HealthSnapshotQuery`
+latest(site)`. New types `HealthSnapshotQuery`
   (`{ site?, limit? }`), `HealthSnapshotRow` (`{ ts, health }`).
   New constants `HEALTH_SNAPSHOT_QUERY_DEFAULT_LIMIT = 1_000`
   (mirrors Spec 004's `JOB_STORE_QUERY_DEFAULT_LIMIT = 100`
@@ -29049,7 +29108,7 @@ surface (per Q-020 + the in-run rename below):
   documents the `putAll` → `putBatch` rename rationale so a
   future contributor doesn't try to rename it back.
 - `packages/models/src/interfaces/index.ts` — 1-line `export *
-  from './health-snapshot-store.interface'` addition.
+from './health-snapshot-store.interface'` addition.
 - `apps/api/src/jobs/health-snapshot.cron.ts` — new ~210 LOC.
   `HealthSnapshotCron` provider implementing
   `OnApplicationBootstrap` + `OnApplicationShutdown`.
@@ -29125,7 +29184,7 @@ surface (per Q-020 + the in-run rename below):
   literal error code string).
 - `packages/plugins/store-memory/__tests__/store-memory.spec.ts`
   — extended ~150 LOC. New `describe('IHealthSnapshotStore
-  (Spec 005 / T09)')` block with **10 cases**: putBatch happy
+(Spec 005 / T09)')` block with **10 cases**: putBatch happy
   path, empty short-circuit, defensive `ts` copy (caller
   mutation doesn't shift stored rows), `listSince` ascending
   order + site filter + limit clamp, `latest` hit / miss,
@@ -29133,7 +29192,7 @@ surface (per Q-020 + the in-run rename below):
   non-positive / non-finite values, `clear()` drops snapshots.
 - `packages/plugin/src/store/__tests__/store.module.spec.ts` —
   extended ~80 LOC. New `describe('bindHealthSnapshotStore
-  (Spec 005 / T09 / FR-8)')` block with **4 cases** —
+(Spec 005 / T09 / FR-8)')` block with **4 cases** —
   co-resident binding when active backend implements
   `IHealthSnapshotStore` (`SnapshotAwareStubStore` fixture
   introduced for this purpose), `null` binding when it doesn't
@@ -29166,7 +29225,7 @@ surface (per Q-020 + the in-run rename below):
   spec complete".
 - `.specify/specs/005-source-health-circuit-breaker/spec.md` —
   `Status` flipped to `All phases done (T01–T09); spec
-  complete`; `Last updated` bumped to `2026-04-27 (run #27)`.
+complete`; `Last updated` bumped to `2026-04-27 (run #27)`.
 - `docs/questions.md` — new Q-020 at the top with two axes,
   three options each, default = Option A on both. Resolution =
   pending. Run-tag `(run #27)`.
@@ -29190,7 +29249,7 @@ surface (per Q-020 + the in-run rename below):
 - `npm run lint:docs` — clean ("✓ Doc-lint passed — no issues.")
   after this run's edits.
 - Type-check via `npx tsc --project apps/api/tsconfig.build.json
-  --noEmit` — also CI-only (sandbox has no `node_modules`); the
+--noEmit` — also CI-only (sandbox has no `node_modules`); the
   edited `jobs.module.ts` only adds one new provider in the
   array; the new `health-snapshot.cron.ts` only consumes
   already-exported types from `@ever-jobs/models`.
@@ -29208,25 +29267,25 @@ surface (per Q-020 + the in-run rename below):
   end-to-end.
 - **Specs 004 AND 005 are both complete as of run #27.** The
   hourly schedule has caught the back-half of the persistence
-  + source-health backlog. The next high-leverage area is the
-  open `Ats-scrapers`-parity items in `competitor-watch.md §C`
-  (AC-1..AC-9) — which historically required persistent
-  breaker state for half-open recovery counters; that
-  prerequisite now exists (the cron persists the SourceHealth
-  shape into `IHealthSnapshotStore`-bound backends, and Spec
-  004's `IJobStore` covers canonical jobs). Run #28 should
-  open a new spec — candidate Spec 006 (`Ats-scrapers parity:
-  AC-1..AC-3`) — addressing the highest-priority three items
-  from the competitor-watch table.
+  - source-health backlog. The next high-leverage area is the
+    open `Ats-scrapers`-parity items in `competitor-watch.md §C`
+    (AC-1..AC-9) — which historically required persistent
+    breaker state for half-open recovery counters; that
+    prerequisite now exists (the cron persists the SourceHealth
+    shape into `IHealthSnapshotStore`-bound backends, and Spec
+    004's `IJobStore` covers canonical jobs). Run #28 should
+    open a new spec — candidate Spec 006 (`Ats-scrapers parity:
+AC-1..AC-3`) — addressing the highest-priority three items
+    from the competitor-watch table.
 - The in-memory backend ships with a full
   `IHealthSnapshotStore` impl as of this run; sqlite-drizzle
-  + postgres-prisma remain opt-in (deferred T10 candidate).
-  Operators wanting persistent snapshots in those backends
-  bind their own `IHealthSnapshotStore` implementation to
-  `HEALTH_SNAPSHOT_STORE_TOKEN` in their root module; the
-  cron's `@Optional()` injection picks it up without further
-  wiring. A future spec can add Drizzle / Prisma schemas +
-  conformance tests by mirroring this run's in-memory pattern.
+  - postgres-prisma remain opt-in (deferred T10 candidate).
+    Operators wanting persistent snapshots in those backends
+    bind their own `IHealthSnapshotStore` implementation to
+    `HEALTH_SNAPSHOT_STORE_TOKEN` in their root module; the
+    cron's `@Optional()` injection picks it up without further
+    wiring. A future spec can add Drizzle / Prisma schemas +
+    conformance tests by mirroring this run's in-memory pattern.
 - External research repos in `OTHERS/` re-fetched via their
   `upstream-https` remotes; **no new commits** since run #26
   (Ats-scrapers @ `3bacd6e`, JobSpy @ `fda080a`, Jobspy-api @
@@ -29239,7 +29298,7 @@ surface (per Q-020 + the in-run rename below):
   remain red (unchanged from runs #11–#26; not wired into
   CI). Open fall-back follow-up.
 - Default for run #28 is **opening Spec 006 — `Ats-scrapers
-  parity: AC-1..AC-3`** (or whichever subset of the
+parity: AC-1..AC-3`** (or whichever subset of the
   `competitor-watch.md §C` items hasn't yet been spec'd).
   Begin with `.specify/specs/006-ats-scrapers-parity/`
   scaffold (spec.md + plan.md + tasks.md) per the
@@ -29316,11 +29375,11 @@ rather than as new questions:
   `EVER_JOBS_STORE_ENV_VAR = 'EVER_JOBS_STORE'` (op-dashboard grep
   target), `DEFAULT_STORE_ID = 'memory'` (fallback when env-var is
   unset / blank), `KNOWN_STORE_IDS = ['memory', 'sqlite',
-  'postgres'] as const` (single source of truth — error messages
+'postgres'] as const` (single source of truth — error messages
   enumerate this list verbatim), `KnownStoreId` (the literal-union
   type), `ResolvedStoreBootstrap` (the `{ id, backendClass }`
   envelope), and the function `resolveStoreBootstrap(env =
-  process.env)` itself. Internal `STORE_BACKEND_BY_ID` map wires
+process.env)` itself. Internal `STORE_BACKEND_BY_ID` map wires
   each known id to its `@StorePlugin()`-decorated class.
   `resolveStoreBootstrap` is pure: same env → same output, never
   mutates `process.env`. Trims surrounding whitespace before lookup
@@ -29334,12 +29393,12 @@ rather than as new questions:
   `import { StoreModule } from '@ever-jobs/plugin'` plus
   `import { resolveStoreBootstrap } from './jobs/store-bootstrap.factory'`.
   New module-eval-time constant `const ACTIVE_STORE =
-  resolveStoreBootstrap();` — runs synchronously when the module is
+resolveStoreBootstrap();` — runs synchronously when the module is
   loaded, so a bad env-var fails NestJS `bootstrap()` BEFORE any
   HTTP listener is attached. New import slotted between
   `HealthModule` and `JobsModule`:
   `StoreModule.forActive(ACTIVE_STORE.id, { backends:
-  [ACTIVE_STORE.backendClass] })`. Ordering matters because
+[ACTIVE_STORE.backendClass] })`. Ordering matters because
   `StoreModule` is `global: true` but the `JOB_STORE_TOKEN`
   provider only resolves once the module is imported — placing it
   above `JobsModule` ensures `JobsAggregator`'s
@@ -29352,7 +29411,7 @@ rather than as new questions:
   new ~190 LOC. **18 cases** across 6 describe-blocks:
   (1) constants — `EVER_JOBS_STORE_ENV_VAR === 'EVER_JOBS_STORE'`,
   `DEFAULT_STORE_ID === 'memory'`, `KNOWN_STORE_IDS === ['memory',
-  'sqlite', 'postgres']` (3 cases); (2) happy-path — `memory` /
+'sqlite', 'postgres']` (3 cases); (2) happy-path — `memory` /
   `sqlite` / `postgres` each resolve to their decorated class via
   `it.each`, plus surrounding-whitespace trim case (4 cases);
   (3) default fallback — undefined / empty / whitespace-only env
@@ -29366,7 +29425,7 @@ rather than as new questions:
   restore the original env-var); (6) returned class identity —
   the resolver hands back the exact `@StorePlugin`-decorated class
   (not a wrapper / proxy) so `Reflect.getMetadata(STORE_PLUGIN_METADATA_KEY,
-  cls)` succeeds in `StoreModule.forActive`.
+cls)` succeeds in `StoreModule.forActive`.
 
 **Changes — docs / specs:**
 
@@ -29402,7 +29461,7 @@ rather than as new questions:
 - `npm run lint:docs` — clean ("✓ Doc-lint passed — no issues.")
   after this run's edits.
 - Type-check via `npx tsc --project apps/api/tsconfig.build.json
-  --noEmit` — also CI-only (sandbox has no `node_modules`); the
+--noEmit` — also CI-only (sandbox has no `node_modules`); the
   edited `app.module.ts` only adds module-eval-time imports plus
   one new import in the `imports:` array — no API surface change
   to any consumer of `AppModule`.
@@ -29484,14 +29543,15 @@ opt-in vs opt-out, error policy, observation-store coupling,
 `upsertMany` failure log + structured `persistError`; capture
 observations via `IJobObservationStore.putAll` (best-effort within
 best-effort); extend `AggregateResult` additively with `persisted`
-+ `persistCounts` + `persistError`. The full options matrix and the
-load-bearing reasoning sit in `docs/questions.md` Q-018; the
-short version is "best-effort persistence keeps the search hot
-path 100 % available during an unrelated DB blip" — Spec 004 /
-NFR-4 budgets cold-start at 750 ms but says nothing about graceful
-degradation, and Option A fills that gap without breaking the wire
-shape (every existing controller / resolver / test compiles
-unchanged).
+
+- `persistCounts` + `persistError`. The full options matrix and the
+  load-bearing reasoning sit in `docs/questions.md` Q-018; the
+  short version is "best-effort persistence keeps the search hot
+  path 100 % available during an unrelated DB blip" — Spec 004 /
+  NFR-4 budgets cold-start at 750 ms but says nothing about graceful
+  degradation, and Option A fills that gap without breaking the wire
+  shape (every existing controller / resolver / test compiles
+  unchanged).
 
 **Changes — code:**
 
@@ -29524,7 +29584,7 @@ unchanged).
 
 - `apps/api/src/jobs/__tests__/jobs.aggregator.spec.ts` — extended.
   New top-level `describe('aggregateRaw — persistence (Spec 004 /
-  T11)')` block with **9 cases**: (1) default-success path (store
+T11)')` block with **9 cases**: (1) default-success path (store
   bound, dedup ran, `persisted: true` + `persistCounts` propagated),
   (2) `persist=false` short-circuit (no `upsertMany` call,
   `persisted` remains undefined), (3) no-store silent skip,
@@ -29538,11 +29598,11 @@ unchanged).
   optimisation, (9) dedup=false / no-engine pass-through paths
   skip persistence by construction. New stub helpers
   `makeStubStore` / `makeFailingStore` / `makeStubObservationStore`
-  + `withSources` flag on `makeStubEngine`. Pre-existing 11 cases
-  continue to compile + pass — every existing test that used
-  `new JobsAggregator(makeJobsService())` or
-  `new JobsAggregator(makeJobsService(), engine)` is preserved by
-  the positional-optional ctor extension.
+  - `withSources` flag on `makeStubEngine`. Pre-existing 11 cases
+    continue to compile + pass — every existing test that used
+    `new JobsAggregator(makeJobsService())` or
+    `new JobsAggregator(makeJobsService(), engine)` is preserved by
+    the positional-optional ctor extension.
 
 **Changes — docs / specs:**
 
@@ -29555,7 +29615,7 @@ unchanged).
   pending).
 - `.specify/specs/004-persistence-storage-plugins/spec.md` —
   `Status` flipped to `Phases 1–4 done (T01–T10); Phase 5 in
-  progress (T11 done, T12 pending)`; `Last updated` bumped to
+progress (T11 done, T12 pending)`; `Last updated` bumped to
   `2026-04-27 (run #25)`.
 - `docs/questions.md` — new Q-018 at the top with the five
   sub-questions, three options, default = Option A, resolution =
@@ -29578,7 +29638,7 @@ unchanged).
 - `npm run lint:docs` — clean ("✓ Doc-lint passed — no issues.")
   after this run's edits.
 - Type-check via `npx tsc --project apps/api/tsconfig.build.json
-  --noEmit` — also CI-only (sandbox has no `node_modules`); the
+--noEmit` — also CI-only (sandbox has no `node_modules`); the
   edited `jobs.aggregator.ts` only adds optional positional ctor
   params, optional fields on the result interface, and a new
   exported constant — none of which break the existing
@@ -29590,7 +29650,7 @@ unchanged).
   default for **run #26**. T12 requires deciding the default
   backend-fleet shape (Q-019 candidate): does the API ship with
   every `@StorePlugin` class wired into `StoreModule.forActive(...,
-  { backends: [...] })`, or only the lightweight ones (memory +
+{ backends: [...] })`, or only the lightweight ones (memory +
   sqlite-drizzle), or all three gated on env probes? The
   decision interacts with the existing lockfile/prisma-generate
   ergonomics that already gate the `store-postgres-prisma`
@@ -29640,12 +29700,12 @@ Notes-for-the-next-run and were locked into the source/test surface
 rather than as new questions:
 
 1. **Structural `PrismaJobsClient` interface over `import type
-   { PrismaClient } from '@prisma/client'`.** The typed `PrismaClient`
+{ PrismaClient } from '@prisma/client'`.** The typed `PrismaClient`
    is a `prisma generate` artefact — it lives under
    `node_modules/.prisma/client` only after the generator has run, and
    the scheduled-task sandbox has no `node_modules` and cannot run
    `npm install` / `prisma generate`. Three options: (a) `import type
-   { PrismaClient } from '@prisma/client'` — fails ts-jest
+{ PrismaClient } from '@prisma/client'` — fails ts-jest
    type-resolution when the generator hasn't run, breaking the entire
    plugin's type-check; (b) `any` cast at every call-site — loses
    type-safety and propagates `any` into consumer code via the public
@@ -29698,18 +29758,18 @@ rather than as new questions:
 - `packages/plugins/store-postgres-prisma/src/store-postgres-prisma.service.ts`
   — new ~470 LOC service. `PostgresPrismaJobStore` decorated with
   `@StorePlugin({ id: 'postgres', description:
-  STORE_POSTGRES_PRISMA_DESCRIPTION })` and `@Injectable()`;
+STORE_POSTGRES_PRISMA_DESCRIPTION })` and `@Injectable()`;
   constructor takes `@Optional() @Inject(STORE_POSTGRES_PRISMA_CONFIG)`
   parameter and FAILS FAST when unbound. Implements `IJobStore`
   (`upsert / upsertMany / getById / findByCanonicalId / listByQuery
-  / delete`) and `IJobObservationStore` (`putAll / listByCanonicalId
-  / deleteByCanonicalId`), plus diagnostic `size()`. Keyset cursor
+/ delete`) and `IJobObservationStore` (`putAll / listByCanonicalId
+/ deleteByCanonicalId`), plus diagnostic `size()`. Keyset cursor
   envelope `{ v: 1, mergedAt, canonicalJobId }` (base64-of-JSON; wire-
   compatible with T08 sqlite-drizzle). Cursor decoder rejects every
   malformed shape with `ERR_STORE_INVALID_CURSOR`
   (`PostgresStoreCursorError`). Filter predicates use Prisma's
   `{ contains, mode: 'insensitive' }` which compiles to `ILIKE
-  '%term%'` and is satisfied by the `pg_trgm` GIN trigram indexes
+'%term%'` and is satisfied by the `pg_trgm` GIN trigram indexes
   from T09's `0_init/migration.sql`. Bulk `upsertMany` runs in a
   single `$transaction(async tx => ...)` so partial failure leaves
   no half-written cohort. `delete` does a `count` first to
@@ -29718,7 +29778,7 @@ rather than as new questions:
   inside `$transaction` for replace-not-merge semantics.
 - `packages/plugins/store-postgres-prisma/src/store-postgres-prisma.module.ts`
   — new ~38 LOC NestJS module. `@Module({ providers:
-  [PostgresPrismaJobStore], exports: [PostgresPrismaJobStore] })` —
+[PostgresPrismaJobStore], exports: [PostgresPrismaJobStore] })` —
   does NOT bind `JOB_STORE_TOKEN` itself (that's
   `StoreModule.forActive`'s responsibility per AGENTS.md §5).
   Module JSDoc documents the bootstrap pattern (`new PrismaClient`
@@ -29728,7 +29788,7 @@ rather than as new questions:
   LOC barrel. Re-exports `PostgresPrismaJobStore`,
   `StorePostgresPrismaModule`, `STORE_POSTGRES_PRISMA_ID`,
   `STORE_POSTGRES_PRISMA_DESCRIPTION`, `STORE_POSTGRES_PRISMA_CONFIG`
-  + type-only `PrismaJobsClient` and `StorePostgresPrismaConfig`.
+  - type-only `PrismaJobsClient` and `StorePostgresPrismaConfig`.
 
 **Changes — tests:**
 
@@ -29736,18 +29796,18 @@ rather than as new questions:
   — new ~440 LOC test file. **Always-on layer** (3 describe-blocks,
   4 cases): `@StorePlugin` metadata via raw `Reflect.getMetadata` AND
   `Reflector.get`; constructor fail-fast on missing config (zero-arg
-  + partial-config rejection); NestJS module singleton resolution
-  against a structural fake `PrismaJobsClient`. **Gated layer**
-  (`RUN_PG_TESTS=1` → `describeIfPg`; 7 describe-blocks: conformance
-  re-run + 6 backend-specific): runs the shared `runStoreConformance`
-  against a Testcontainers `postgres:16-alpine` instance (per-suite
-  container, per-test `TRUNCATE … CASCADE` for fresh state), plus
-  cursor envelope encode/decode + 8 invalid-cursor cases via
-  `it.each`, FK CASCADE drop verification, keyset-pagination
-  tie-break (10 rows sharing `mergedAt`, paginated 3 at a time),
-  ILIKE substring filter exercising the `pg_trgm` GIN indexes,
-  `jsonb` round-trip preserving nested fields/sources, `size()`
-  diagnostic.
+  - partial-config rejection); NestJS module singleton resolution
+    against a structural fake `PrismaJobsClient`. **Gated layer**
+    (`RUN_PG_TESTS=1` → `describeIfPg`; 7 describe-blocks: conformance
+    re-run + 6 backend-specific): runs the shared `runStoreConformance`
+    against a Testcontainers `postgres:16-alpine` instance (per-suite
+    container, per-test `TRUNCATE … CASCADE` for fresh state), plus
+    cursor envelope encode/decode + 8 invalid-cursor cases via
+    `it.each`, FK CASCADE drop verification, keyset-pagination
+    tie-break (10 rows sharing `mergedAt`, paginated 3 at a time),
+    ILIKE substring filter exercising the `pg_trgm` GIN indexes,
+    `jsonb` round-trip preserving nested fields/sources, `size()`
+    diagnostic.
 
 **Changes — wiring:**
 
@@ -29788,7 +29848,7 @@ rather than as new questions:
 - `npm run lint:docs` — clean ("✓ Doc-lint passed — no issues.")
   after this run's edits.
 - Type-check via `npx tsc --project apps/api/tsconfig.build.json
-  --noEmit` — also CI-only (sandbox has no `node_modules`); the
+--noEmit` — also CI-only (sandbox has no `node_modules`); the
   apps/api tsconfig deliberately doesn't include the
   `store-postgres-prisma` plugin source, so the apps/api type-check
   is unaffected by T10. The plugin's own tsconfig is included in
@@ -29800,7 +29860,7 @@ rather than as new questions:
   `testcontainers@^10.13.0` addition is in `package.json` but not
   yet in `package-lock.json`. CI will fail at the `npm ci` step
   until the user's interactive environment runs `npm install
-  --registry=https://registry.npmjs.org/` and pushes the regen
+--registry=https://registry.npmjs.org/` and pushes the regen
   lockfile commit. This is the established flow for this
   scheduled-task sandbox per `Agents.md` §"Scheduled-task agents".
 - External research repos in `OTHERS/` re-fetched via their
@@ -29893,7 +29953,7 @@ questions:
 
 - `packages/plugins/store-postgres-prisma/package.json` — new
   (~7-line) package manifest. `name:
-  "@ever-jobs/store-postgres-prisma"`, `version: "0.1.0"`,
+"@ever-jobs/store-postgres-prisma"`, `version: "0.1.0"`,
   `main`/`types` → `src/index.ts`, MIT licence. Mirrors the existing
   `store-sqlite-drizzle` shape so the npm-workspaces resolution stays
   uniform.
@@ -29906,41 +29966,41 @@ questions:
   it without a follow-up edit.
 - `packages/plugins/store-postgres-prisma/prisma/schema.prisma` —
   new ~75-LOC Prisma DSL schema. Two models:
-    - `CanonicalJob` — `canonicalJobId` PK (`text`); flat fields for
-      title/company/location/description/url; `mergedAt` as
-      `Timestamptz(6)`; `fields` and `sources` as `JsonB` with
-      defaults `{}`/`[]`; composite index on `(mergedAt(Desc),
-      canonicalJobId)` mapped to `idx_canonical_job_merged_at_id`.
-    - `SourceObservation` — composite PK `(canonicalJobId, site,
-      sourceJobId)` (FR-2); FK on `canonicalJobId` with
-      `onDelete: Cascade` (FR-1 / FR-2; Postgres enforces FKs
-      unconditionally, no PRAGMA toggle); single-column index on
-      `canonicalJobId` for FK lookups.
-  Schema header doc-comment captures the design choices that
-  diverge from the Drizzle SQLite schema (Postgres-native types, no
-  `_lc` shadow columns, `jsonb` over `text`/`json`).
+  - `CanonicalJob` — `canonicalJobId` PK (`text`); flat fields for
+    title/company/location/description/url; `mergedAt` as
+    `Timestamptz(6)`; `fields` and `sources` as `JsonB` with
+    defaults `{}`/`[]`; composite index on `(mergedAt(Desc),
+canonicalJobId)` mapped to `idx_canonical_job_merged_at_id`.
+  - `SourceObservation` — composite PK `(canonicalJobId, site,
+sourceJobId)` (FR-2); FK on `canonicalJobId` with
+    `onDelete: Cascade` (FR-1 / FR-2; Postgres enforces FKs
+    unconditionally, no PRAGMA toggle); single-column index on
+    `canonicalJobId` for FK lookups.
+    Schema header doc-comment captures the design choices that
+    diverge from the Drizzle SQLite schema (Postgres-native types, no
+    `_lc` shadow columns, `jsonb` over `text`/`json`).
 - `packages/plugins/store-postgres-prisma/prisma/migrations/migration_lock.toml`
   — new (3-line) Prisma migration provider lock. `provider =
-  "postgresql"` so `prisma migrate dev` against the schema produces
+"postgresql"` so `prisma migrate dev` against the schema produces
   Postgres-flavoured SQL (not SQLite or MySQL).
 - `packages/plugins/store-postgres-prisma/prisma/migrations/0_init/migration.sql`
   — new ~95-LOC hand-authored migration matching the Prisma schema
   byte-for-byte plus the Postgres-specific bits the Prisma DSL can't
   currently express:
-    - `CREATE EXTENSION IF NOT EXISTS "pg_trgm"` — required before
-      the GIN trigram indexes.
-    - Three GIN indexes on `company` / `title` / `location` using
-      the `gin_trgm_ops` opclass — backs FR-7 case-insensitive
-      substring search via `ILIKE '%term%'`. Without `gin_trgm_ops`,
-      the planner falls back to seq scan even when a GIN index
-      exists.
-    - Composite B-tree index on `(merged_at DESC, canonical_job_id
-      ASC)` — backs deterministic listing order and the keyset-
-      cursor seek that T10 will exercise (matches the Drizzle
-      backend's index strategy from T07).
-    - FK constraint via `ALTER TABLE … ADD CONSTRAINT … ON DELETE
-      CASCADE ON UPDATE CASCADE` — matches Prisma's emission style
-      so a future `prisma migrate dev` produces byte-identical SQL.
+  - `CREATE EXTENSION IF NOT EXISTS "pg_trgm"` — required before
+    the GIN trigram indexes.
+  - Three GIN indexes on `company` / `title` / `location` using
+    the `gin_trgm_ops` opclass — backs FR-7 case-insensitive
+    substring search via `ILIKE '%term%'`. Without `gin_trgm_ops`,
+    the planner falls back to seq scan even when a GIN index
+    exists.
+  - Composite B-tree index on `(merged_at DESC, canonical_job_id
+ASC)` — backs deterministic listing order and the keyset-
+    cursor seek that T10 will exercise (matches the Drizzle
+    backend's index strategy from T07).
+  - FK constraint via `ALTER TABLE … ADD CONSTRAINT … ON DELETE
+CASCADE ON UPDATE CASCADE` — matches Prisma's emission style
+    so a future `prisma migrate dev` produces byte-identical SQL.
 
 **Changes — wiring:**
 
@@ -29977,7 +30037,7 @@ questions:
   assertion that the planner uses the GIN index for `ILIKE`).
 - `.specify/specs/004-persistence-storage-plugins/spec.md` —
   `Status` flipped to `Phases 1–3 done (T01–T08); Phase 4 in
-  progress (T09 done, T10 pending); Phase 5 pending`; `Last updated`
+progress (T09 done, T10 pending); Phase 5 pending`; `Last updated`
   bumped to `2026-04-27 (run #23)`.
 - `docs/index.md` — Spec 004 row updated with new status string
   (`T09 run #23, T10 pending`); `Last revised` bumped to
@@ -29994,9 +30054,9 @@ questions:
   TypeScript source — so the in-sandbox verification is limited to
   doc-lint and the existing test surface. The Prisma schema and
   migration SQL would normally be validated by `npx prisma validate`
-  + `npx prisma migrate dev --name init` against a Postgres test
-  container; both gates run in CI on push and are documented in
-  `.specify/specs/004-persistence-storage-plugins/plan.md`.
+  - `npx prisma migrate dev --name init` against a Postgres test
+    container; both gates run in CI on push and are documented in
+    `.specify/specs/004-persistence-storage-plugins/plan.md`.
 - `npm run lint:docs` — clean ("✓ Doc-lint passed — no issues.")
   after this run's edits. The doc-lint catches: broken internal
   links, unindexed docs, duplicate log entries, newest-at-top
@@ -30017,33 +30077,33 @@ questions:
   Open fall-back follow-up.
 - Default for run #24 is **Spec 004 / Phase 4 / T10 —
   `store-postgres-prisma` `IJobStore` implementation**:
-    - Author `src/index.ts` (barrel),
-      `src/store-postgres-prisma.module.ts` (NestJS `@Module`
-      providing `PostgresPrismaJobStore` only — does NOT bind
-      `JOB_STORE_TOKEN`, leaving that to `StoreModule.forActive()`
-      per AGENTS.md §5),
-      `src/store-postgres-prisma.service.ts` (~440 LOC; class
-      decorated with `@StorePlugin({ id: 'postgres', description:
-      STORE_POSTGRES_PRISMA_DESCRIPTION })`, constructor takes an
-      `@Optional() @Inject(STORE_POSTGRES_PRISMA_CONFIG)` config
-      object containing `databaseUrl` and an optional pre-built
-      `PrismaClient` for testcontainers injection).
-    - Re-use the shared `runStoreConformance(label, factory)` from
-      T06 (with the `upsert` preamble fix from T08) for full
-      contract coverage.
-    - Add backend-specific tests that exercise the Postgres-only
-      surface: (a) ILIKE substring filter on a 100k-row seed, (b)
-      `EXPLAIN (ANALYZE, FORMAT JSON)` assertion that the planner
-      picks `idx_canonical_job_company_trgm` for the ILIKE path,
-      (c) FK CASCADE assertion via `DELETE` + `SELECT COUNT(*)`,
-      (d) `jsonb` round-trip preserving nested object order
-      (Postgres's `jsonb` reorders keys; our test should not
-      depend on key order).
-    - CI gate: `RUN_PG_TESTS=1` per the spec's Phase 4 Notes;
-      Testcontainers with `postgres:16-alpine`.
-    - T10 estimate: 1 day.
-  Together with T09 this completes Phase 4. T11 + T12 (aggregator
-  persistence + bootstrap env-var honouring) remain Phase 5.
+  - Author `src/index.ts` (barrel),
+    `src/store-postgres-prisma.module.ts` (NestJS `@Module`
+    providing `PostgresPrismaJobStore` only — does NOT bind
+    `JOB_STORE_TOKEN`, leaving that to `StoreModule.forActive()`
+    per AGENTS.md §5),
+    `src/store-postgres-prisma.service.ts` (~440 LOC; class
+    decorated with `@StorePlugin({ id: 'postgres', description:
+STORE_POSTGRES_PRISMA_DESCRIPTION })`, constructor takes an
+    `@Optional() @Inject(STORE_POSTGRES_PRISMA_CONFIG)` config
+    object containing `databaseUrl` and an optional pre-built
+    `PrismaClient` for testcontainers injection).
+  - Re-use the shared `runStoreConformance(label, factory)` from
+    T06 (with the `upsert` preamble fix from T08) for full
+    contract coverage.
+  - Add backend-specific tests that exercise the Postgres-only
+    surface: (a) ILIKE substring filter on a 100k-row seed, (b)
+    `EXPLAIN (ANALYZE, FORMAT JSON)` assertion that the planner
+    picks `idx_canonical_job_company_trgm` for the ILIKE path,
+    (c) FK CASCADE assertion via `DELETE` + `SELECT COUNT(*)`,
+    (d) `jsonb` round-trip preserving nested object order
+    (Postgres's `jsonb` reorders keys; our test should not
+    depend on key order).
+  - CI gate: `RUN_PG_TESTS=1` per the spec's Phase 4 Notes;
+    Testcontainers with `postgres:16-alpine`.
+  - T10 estimate: 1 day.
+    Together with T09 this completes Phase 4. T11 + T12 (aggregator
+    persistence + bootstrap env-var honouring) remain Phase 5.
 
 ---
 
@@ -30107,21 +30167,21 @@ surface rather than as new questions:
    uniform-class-list pattern, (c) `@Optional() @Inject(TOKEN)`
    constructor parameter that defaults to `:memory:` when no
    provider is bound. Picked (c) — tests pass `new
-   SqliteDrizzleJobStore({ databaseUrl: ':memory:' })` directly,
+SqliteDrizzleJobStore({ databaseUrl: ':memory:' })` directly,
    production binds a config provider via `apps/api`'s root module.
    The `@Optional()` is what made the `StoreModule.forActive` path
    work without any config provider at all (config is OFF by
    default, in-memory DB; production overrides via
    `EVER_JOBS_SQLITE_PATH` env var → config provider). Test
    `StoreSqliteDrizzleModule resolves SqliteDrizzleJobStore as a
-   NestJS singleton` pins the contract that the bare-module path
+NestJS singleton` pins the contract that the bare-module path
    compiles + resolves without a config provider.
 3. **Conformance-suite `upsert` preamble for two
    `IJobObservationStore` cases.** The original `runStoreConformance`
    from T06 called `store.putAll('job-1', …)` without first
    `store.upsert(makeJob())` in two cases (`putAll REPLACES (not
-   merges) the existing set` and `deleteByCanonicalId returns count
-   and is idempotent`). The in-memory backend tolerated this (no FK
+merges) the existing set` and `deleteByCanonicalId returns count
+and is idempotent`). The in-memory backend tolerated this (no FK
    enforcement); the SQL-backed backend's
    `source_observation.canonical_job_id REFERENCES canonical_job(...)`
    constraint (FR-1 / FR-2 / 1-N relationship) rejected it with
@@ -30157,22 +30217,22 @@ surface rather than as new questions:
   and `source_observation` tables plus `INITIAL_SCHEMA_SQL` raw-SQL
   bootstrap statement consumed by the service constructor on a
   fresh `:memory:` database. Schema covers:
-    - `canonical_job` PK = `canonical_job_id`; flat columns for
-      title/company/location/description/url/merged_at; JSON-column
-      fallbacks for `fields_json`/`sources_json` (round-trip the
-      provenance map and observation array without an extra JOIN);
-      case-folded shadow columns `company_lc`/`title_lc`/
-      `location_lc` populated by the application layer + indexed
-      so case-insensitive substring filters stay a B-tree probe
-      (FR-7 / NFR-1).
-    - `source_observation` composite PK
-      `(canonical_job_id, site, source_job_id)` (FR-2; double-write
-      guard); FK on `canonical_job_id` with `ON DELETE CASCADE`
-      (FR-1 / FR-2; SQL-layer cascade replaces the JS-side cascade
-      from the in-memory backend).
-    - Composite index `idx_canonical_job_merged_at_id` on
-      `(merged_at, canonical_job_id)` — backs both deterministic
-      listing order and the keyset-cursor seek (NFR-1).
+  - `canonical_job` PK = `canonical_job_id`; flat columns for
+    title/company/location/description/url/merged_at; JSON-column
+    fallbacks for `fields_json`/`sources_json` (round-trip the
+    provenance map and observation array without an extra JOIN);
+    case-folded shadow columns `company_lc`/`title_lc`/
+    `location_lc` populated by the application layer + indexed
+    so case-insensitive substring filters stay a B-tree probe
+    (FR-7 / NFR-1).
+  - `source_observation` composite PK
+    `(canonical_job_id, site, source_job_id)` (FR-2; double-write
+    guard); FK on `canonical_job_id` with `ON DELETE CASCADE`
+    (FR-1 / FR-2; SQL-layer cascade replaces the JS-side cascade
+    from the in-memory backend).
+  - Composite index `idx_canonical_job_merged_at_id` on
+    `(merged_at, canonical_job_id)` — backs both deterministic
+    listing order and the keyset-cursor seek (NFR-1).
 - `packages/plugins/store-sqlite-drizzle/drizzle/migrations/0000_init.sql`
   — new ~55-LOC hand-authored migration matching the schema. Includes
   `PRAGMA foreign_keys = ON` for production-disk deployments. Kept
@@ -30182,50 +30242,50 @@ surface rather than as new questions:
 - `packages/plugins/store-sqlite-drizzle/src/store-sqlite-drizzle.service.ts`
   — new ~440-LOC file. Exports `SqliteDrizzleJobStore` (decorated
   with `@StorePlugin({ id: 'sqlite', description:
-  STORE_SQLITE_DRIZZLE_DESCRIPTION })` and `@Injectable()`),
+STORE_SQLITE_DRIZZLE_DESCRIPTION })` and `@Injectable()`),
   `STORE_SQLITE_DRIZZLE_ID = 'sqlite'`,
   `STORE_SQLITE_DRIZZLE_DESCRIPTION`, and the
   `STORE_SQLITE_DRIZZLE_CONFIG` injection token. Surface area:
-    - **`upsert(job)` / `upsertMany(jobs)`** — `INSERT … ON CONFLICT
-      DO UPDATE` per row; `upsertMany` pre-checks existence with one
-      `SELECT canonical_job_id WHERE canonical_job_id IN (…)` so
-      inserted-vs-updated counts come back in two round-trips total.
-      Whole batch wrapped in a `better-sqlite3` synchronous
-      transaction so partial failure leaves no half-written cohort.
-    - **`getById(id)` / `findByCanonicalId(id)`** — single
-      `SELECT … LIMIT 1`; `null` (NOT `undefined`) on miss to pin
-      the contract.
-    - **`listByQuery(query)`** — single `SELECT` with optional
-      case-insensitive substring `LIKE` predicates against
-      `_lc` columns plus `mergedAt >= since` if provided.
-      Ordering is `merged_at DESC, canonical_job_id ASC`.
-      Pagination is keyset; `nextCursor` is omitted on the final
-      page (key absent, not `nextCursor: undefined`).
-    - **`delete(id)`** — `DELETE FROM canonical_job WHERE …`; FK
-      cascade drops attached observations.
-    - **`putAll(canonicalJobId, observations)`** — wrapped in a
-      synchronous transaction: `DELETE` the prior set, then `INSERT`
-      the new rows.
-    - **`listByCanonicalId(id)` / `deleteByCanonicalId(id)`** —
-      `SELECT` / `DELETE` against `source_observation`.
-    - **Test/diagnostic surface:** `size` (`SELECT COUNT(*)`),
-      `clear()`, `close()`.
-  Cursor envelope helpers — `encodeCursor(SqliteCursor)` (base64 of
-  `JSON.stringify`), `decodeCursor(string) → SqliteCursor` (rejects
-  not-base64 / not-JSON / non-object / wrong-version /
-  non-string-mergedAt / empty-canonicalJobId paths via
-  `SqliteStoreCursorError`), and `resolveLimit(limit?)` (mirrors
-  T06's clamp/default behaviour). `SqliteStoreCursorError` carries
-  `code = ERR_STORE_INVALID_CURSOR` so structural matching works.
-  `buildKeysetCursorPredicate(cursor)` returns the inverted SQL
-  predicate that resumes after the cursor's tuple (`merged_at <
-  cursor.mergedAt OR (merged_at = cursor.mergedAt AND
-  canonical_job_id > cursor.canonicalJobId)`) — pinned because the
-  asymmetry (DESC `<`, ASC `>`) is exactly where a future
-  refactor could silently desync pagination.
+  - **`upsert(job)` / `upsertMany(jobs)`** — `INSERT … ON CONFLICT
+DO UPDATE` per row; `upsertMany` pre-checks existence with one
+    `SELECT canonical_job_id WHERE canonical_job_id IN (…)` so
+    inserted-vs-updated counts come back in two round-trips total.
+    Whole batch wrapped in a `better-sqlite3` synchronous
+    transaction so partial failure leaves no half-written cohort.
+  - **`getById(id)` / `findByCanonicalId(id)`** — single
+    `SELECT … LIMIT 1`; `null` (NOT `undefined`) on miss to pin
+    the contract.
+  - **`listByQuery(query)`** — single `SELECT` with optional
+    case-insensitive substring `LIKE` predicates against
+    `_lc` columns plus `mergedAt >= since` if provided.
+    Ordering is `merged_at DESC, canonical_job_id ASC`.
+    Pagination is keyset; `nextCursor` is omitted on the final
+    page (key absent, not `nextCursor: undefined`).
+  - **`delete(id)`** — `DELETE FROM canonical_job WHERE …`; FK
+    cascade drops attached observations.
+  - **`putAll(canonicalJobId, observations)`** — wrapped in a
+    synchronous transaction: `DELETE` the prior set, then `INSERT`
+    the new rows.
+  - **`listByCanonicalId(id)` / `deleteByCanonicalId(id)`** —
+    `SELECT` / `DELETE` against `source_observation`.
+  - **Test/diagnostic surface:** `size` (`SELECT COUNT(*)`),
+    `clear()`, `close()`.
+    Cursor envelope helpers — `encodeCursor(SqliteCursor)` (base64 of
+    `JSON.stringify`), `decodeCursor(string) → SqliteCursor` (rejects
+    not-base64 / not-JSON / non-object / wrong-version /
+    non-string-mergedAt / empty-canonicalJobId paths via
+    `SqliteStoreCursorError`), and `resolveLimit(limit?)` (mirrors
+    T06's clamp/default behaviour). `SqliteStoreCursorError` carries
+    `code = ERR_STORE_INVALID_CURSOR` so structural matching works.
+    `buildKeysetCursorPredicate(cursor)` returns the inverted SQL
+    predicate that resumes after the cursor's tuple (`merged_at <
+cursor.mergedAt OR (merged_at = cursor.mergedAt AND
+canonical_job_id > cursor.canonicalJobId)`) — pinned because the
+    asymmetry (DESC `<`, ASC `>`) is exactly where a future
+    refactor could silently desync pagination.
 - `packages/plugins/store-sqlite-drizzle/src/store-sqlite-drizzle.module.ts`
   — new ~33-LOC NestJS module. `@Module({ providers:
-  [SqliteDrizzleJobStore], exports: [SqliteDrizzleJobStore] })`
+[SqliteDrizzleJobStore], exports: [SqliteDrizzleJobStore] })`
   only — does NOT bind `JOB_STORE_TOKEN` itself, leaving active-
   backend selection to `StoreModule.forActive()` per AGENTS.md §5.
   Doc-block walks the consumer through the canonical `apps/api`
@@ -30241,8 +30301,8 @@ surface rather than as new questions:
 - `packages/plugin/src/store/__tests__/conformance.ts` — added
   `await store.upsert(makeJob())` preamble to two
   `IJobObservationStore` cases (`putAll REPLACES (not merges) the
-  existing set` and `deleteByCanonicalId returns count and is
-  idempotent`) so the FK constraint on production-grade backends
+existing set` and `deleteByCanonicalId returns count and is
+idempotent`) so the FK constraint on production-grade backends
   like sqlite-drizzle is satisfied. The in-memory backend continues
   to pass unchanged (the upsert is harmless there). Comment block
   documents the rationale so future readers don't mistake it for
@@ -30250,11 +30310,11 @@ surface rather than as new questions:
 - `packages/plugins/store-sqlite-drizzle/__tests__/store-sqlite-drizzle.spec.ts`
   — new ~315-LOC file. Calls
   `runStoreConformance('store-sqlite-drizzle', () => new
-  SqliteDrizzleJobStore({ databaseUrl: ':memory:' }))`
+SqliteDrizzleJobStore({ databaseUrl: ':memory:' }))`
   AND adds **18 backend-specific cases** in 7 describe-blocks:
   1. **`@StorePlugin` metadata** (2 cases): raw `Reflect.getMetadata`
      and NestJS `Reflector.get` both resolve `{ id: 'sqlite',
-     description: STORE_SQLITE_DRIZZLE_DESCRIPTION }` for
+description: STORE_SQLITE_DRIZZLE_DESCRIPTION }` for
      `SqliteDrizzleJobStore` (pins T07 acceptance — discoverable
      by `StoreModule.forActive`).
   2. **`StoreSqliteDrizzleModule`** (1 case): exports
@@ -30302,7 +30362,7 @@ surface rather than as new questions:
   the broad regression bundle).
 - `.specify/specs/004-persistence-storage-plugins/spec.md` —
   `Status` flipped to `Phases 1–3 done (T01–T08); Phases 4–5
-  pending`; `Last updated` bumped to `2026-04-27 (run #22)`.
+pending`; `Last updated` bumped to `2026-04-27 (run #22)`.
 - `docs/index.md` — Spec 004 row updated with new status string;
   `Last revised` bumped to `2026-04-27 (run #22)`.
 - `CLAUDE.md` — run-tag bumped to #22 in the footer.
@@ -30329,13 +30389,13 @@ surface rather than as new questions:
   — **42 / 42 passed** (T07 + T08 plugin suite: 24 conformance
   cases + 18 backend-specific cases).
 - `npx jest --testPathPatterns
-  'packages/models|packages/plugin/__tests__|packages/plugin/src/store|packages/plugin/src/circuit-breaker|packages/plugins/store-memory|packages/plugins/store-sqlite-drizzle'`
+'packages/models|packages/plugin/__tests__|packages/plugin/src/store|packages/plugin/src/circuit-breaker|packages/plugins/store-memory|packages/plugins/store-sqlite-drizzle'`
   — **212 / 212 passed across 11 suites** (focused regression: T01
-  + T02 + T03 + T04 + T05 + T06 + T07 + T08 + circuit-breaker +
-  canonical-job + disabled-sources + plugin-discovery tests all
-  green).
+  - T02 + T03 + T04 + T05 + T06 + T07 + T08 + circuit-breaker +
+    canonical-job + disabled-sources + plugin-discovery tests all
+    green).
 - `npx jest --testPathPatterns
-  'apps/api/__tests__/(e2e/sources-(health|admin)|e2e/metrics-circuit-state|integration/circuit-breaker|integration/plugin-policy|health\.e2e)|packages/plugin/src/circuit-breaker|apps/api/src/jobs/__tests__/(plugin-policy|sources-admin)|apps/api/src/auth/__tests__/api-key|apps/api/src/metrics/__tests__/metrics.service|packages/models|packages/plugin/__tests__|packages/plugin/src/store|packages/plugins/store-memory|packages/plugins/store-sqlite-drizzle'`
+'apps/api/__tests__/(e2e/sources-(health|admin)|e2e/metrics-circuit-state|integration/circuit-breaker|integration/plugin-policy|health\.e2e)|packages/plugin/src/circuit-breaker|apps/api/src/jobs/__tests__/(plugin-policy|sources-admin)|apps/api/src/auth/__tests__/api-key|apps/api/src/metrics/__tests__/metrics.service|packages/models|packages/plugin/__tests__|packages/plugin/src/store|packages/plugins/store-memory|packages/plugins/store-sqlite-drizzle'`
   — **278 / 278 passed across 21 suites** (broad regression: Spec
   005 / T01–T08, legacy `/health` + `/ping`, Spec 004 / T01–T08,
   canonical-job schema, disabled-sources, plugin-discovery,
@@ -30361,32 +30421,32 @@ surface rather than as new questions:
   Open fall-back follow-up.
 - Default for run #23 is **Spec 004 / Phase 4 / T09 + T10 —
   `store-postgres-prisma` reference backend**:
-    - T09 scaffolds `packages/plugins/store-postgres-prisma/`
-      (package.json, tsconfig.json, `prisma/schema.prisma`,
-      `prisma/migrations/<ts>_init/migration.sql`,
-      `src/{index.ts, store-postgres-prisma.module.ts,
-      store-postgres-prisma.service.ts}`,
-      `__tests__/store-postgres-prisma.spec.ts`). Adds the path
-      alias in `tsconfig.base.json` and `jest.config.js`. Prisma
-      schema mirrors the Drizzle schema's tables but uses
-      Postgres-native types (`text` for canonical id, `timestamptz`
-      for `merged_at`, `jsonb` for the JSON columns instead of
-      `text`). Cursor encoding stays the same `{ v: 1, mergedAt,
-      canonicalJobId }` envelope so the wire shape is uniform
-      across all three backends. T09 estimate: 0.5 day.
-    - T10 implements `IJobStore` over Prisma against a
-      Testcontainers-managed Postgres instance. Re-runs the same
-      `runStoreConformance(label, factory)` from T06 (plus the
-      `upsert` preamble fix from T08). Adds backend-specific tests
-      for the Postgres-specific `tsvector` GIN index path — Spec
-      004 / FR-7 says "case-insensitive substring", which on
-      Postgres is best served by `pg_trgm` GIN (a `LIKE` against a
-      `text` column without trigram indexes degrades to seq scan
-      at scale). CI gate: `RUN_PG_TESTS=1` per the spec's Phase 4
-      note. T10 estimate: 1 day.
-  Together T09 + T10 give us the third concrete `IJobStore`
-  backend and unblock T11 + T12 (aggregator persistence + bootstrap
-  env-var honouring).
+  - T09 scaffolds `packages/plugins/store-postgres-prisma/`
+    (package.json, tsconfig.json, `prisma/schema.prisma`,
+    `prisma/migrations/<ts>_init/migration.sql`,
+    `src/{index.ts, store-postgres-prisma.module.ts,
+store-postgres-prisma.service.ts}`,
+    `__tests__/store-postgres-prisma.spec.ts`). Adds the path
+    alias in `tsconfig.base.json` and `jest.config.js`. Prisma
+    schema mirrors the Drizzle schema's tables but uses
+    Postgres-native types (`text` for canonical id, `timestamptz`
+    for `merged_at`, `jsonb` for the JSON columns instead of
+    `text`). Cursor encoding stays the same `{ v: 1, mergedAt,
+canonicalJobId }` envelope so the wire shape is uniform
+    across all three backends. T09 estimate: 0.5 day.
+  - T10 implements `IJobStore` over Prisma against a
+    Testcontainers-managed Postgres instance. Re-runs the same
+    `runStoreConformance(label, factory)` from T06 (plus the
+    `upsert` preamble fix from T08). Adds backend-specific tests
+    for the Postgres-specific `tsvector` GIN index path — Spec
+    004 / FR-7 says "case-insensitive substring", which on
+    Postgres is best served by `pg_trgm` GIN (a `LIKE` against a
+    `text` column without trigram indexes degrades to seq scan
+    at scale). CI gate: `RUN_PG_TESTS=1` per the spec's Phase 4
+    note. T10 estimate: 1 day.
+    Together T09 + T10 give us the third concrete `IJobStore`
+    backend and unblock T11 + T12 (aggregator persistence + bootstrap
+    env-var honouring).
 
 ---
 
@@ -30459,7 +30519,7 @@ and were locked into the test surface rather than as new questions:
 
 - `packages/plugins/store-memory/package.json` — new (~7-line)
   package manifest. `name: "@ever-jobs/store-memory"`, `version:
-  "0.1.0"`, `main`/`types` → `src/index.ts`, MIT licence.
+"0.1.0"`, `main`/`types` → `src/index.ts`, MIT licence.
   Mirrors the existing `merge-default` / `dedup-hybrid` shape
   exactly so the npm-workspaces resolution stays uniform.
 - `packages/plugins/store-memory/tsconfig.json` — new (~9-line)
@@ -30473,51 +30533,51 @@ and were locked into the test surface rather than as new questions:
   `@StorePlugin({ id: 'memory', description: STORE_MEMORY_DESCRIPTION })`
   and `@Injectable()`), `STORE_MEMORY_ID = 'memory'`, and
   `STORE_MEMORY_DESCRIPTION = 'In-memory reference store (Spec 004 —
-  dev / tests, no persistence)'`. Surface area:
-    - **`upsert(job)` / `upsertMany(jobs)`** — single-row and bulk
-      writes against `Map<canonicalJobId, CanonicalJob>`. `upsertMany`
-      pre-checks `Map.has` to split inserted-vs-updated counts; total
-      O(N) with a single Map walk (no second pass).
-    - **`getById(id)` / `findByCanonicalId(id)`** — both delegate to
-      `Map.get(id) ?? null` (pinning the `null`-NOT-`undefined`
-      interface contract). The two methods are aliases per Spec 004
-      §7.1; the second one exists for caller clarity at the
-      dedup-engine boundary.
-    - **`listByQuery(query)`** — single-pass filter (case-folded
-      substring match on `company` / `title` / `location`, inclusive
-      ISO-8601 lower bound on `mergedAt` for `since`), then sorts by
-      `compareForListing` (mergedAt DESC, canonicalJobId ASC), then
-      slices `[offset, offset + limit)`. Returns `{ items }` (NO
-      `nextCursor` key) when the slice exhausts the filtered set,
-      `{ items, nextCursor }` otherwise. `nextCursor` is encoded
-      via `encodeCursor({ v: 1, offset: offset + items.length })`.
-    - **`delete(id)`** — removes from canonicals, cascades to
-      observations on hit. Returns the boolean indicating whether
-      anything was actually removed.
-    - **`putAll(canonicalJobId, observations)`** — replaces the
-      observation array (NOT merges); copies the input via `.slice()`
-      so caller mutations after the call don't bleed into stored state.
-    - **`listByCanonicalId(id)`** — returns a fresh `.slice()` of the
-      stored observation array (defence against caller-side mutation),
-      `[]` for unknown ids.
-    - **`deleteByCanonicalId(id)`** — returns the count of removed
-      observations (idempotent: second call returns 0).
-    - **`size` / `clear`** — diagnostic surface for tests; not part
-      of either `IJobStore` or `IJobObservationStore`. Production
-      callers SHOULD use `listByQuery` for any business logic.
-  Cursor envelope helpers — `encodeCursor(MemoryCursor)` (base64 of
-  `JSON.stringify`), `decodeCursor(string) → MemoryCursor` (rejects
-  not-base64 / not-JSON / non-object / wrong-version /
-  non-integer-offset / negative-offset / string-offset /
-  fractional-offset paths via `MemoryStoreCursorError`), and
-  `resolveLimit(limit?)` (default to `JOB_STORE_QUERY_DEFAULT_LIMIT`
-  when omitted / non-finite / non-positive; clamp to
-  `JOB_STORE_QUERY_MAX_LIMIT`). `MemoryStoreCursorError` carries
-  `code = ERR_STORE_INVALID_CURSOR` so `instanceof` and structural
-  matching (`.toMatchObject({ code })`) both work.
+dev / tests, no persistence)'`. Surface area:
+  - **`upsert(job)` / `upsertMany(jobs)`** — single-row and bulk
+    writes against `Map<canonicalJobId, CanonicalJob>`. `upsertMany`
+    pre-checks `Map.has` to split inserted-vs-updated counts; total
+    O(N) with a single Map walk (no second pass).
+  - **`getById(id)` / `findByCanonicalId(id)`** — both delegate to
+    `Map.get(id) ?? null` (pinning the `null`-NOT-`undefined`
+    interface contract). The two methods are aliases per Spec 004
+    §7.1; the second one exists for caller clarity at the
+    dedup-engine boundary.
+  - **`listByQuery(query)`** — single-pass filter (case-folded
+    substring match on `company` / `title` / `location`, inclusive
+    ISO-8601 lower bound on `mergedAt` for `since`), then sorts by
+    `compareForListing` (mergedAt DESC, canonicalJobId ASC), then
+    slices `[offset, offset + limit)`. Returns `{ items }` (NO
+    `nextCursor` key) when the slice exhausts the filtered set,
+    `{ items, nextCursor }` otherwise. `nextCursor` is encoded
+    via `encodeCursor({ v: 1, offset: offset + items.length })`.
+  - **`delete(id)`** — removes from canonicals, cascades to
+    observations on hit. Returns the boolean indicating whether
+    anything was actually removed.
+  - **`putAll(canonicalJobId, observations)`** — replaces the
+    observation array (NOT merges); copies the input via `.slice()`
+    so caller mutations after the call don't bleed into stored state.
+  - **`listByCanonicalId(id)`** — returns a fresh `.slice()` of the
+    stored observation array (defence against caller-side mutation),
+    `[]` for unknown ids.
+  - **`deleteByCanonicalId(id)`** — returns the count of removed
+    observations (idempotent: second call returns 0).
+  - **`size` / `clear`** — diagnostic surface for tests; not part
+    of either `IJobStore` or `IJobObservationStore`. Production
+    callers SHOULD use `listByQuery` for any business logic.
+    Cursor envelope helpers — `encodeCursor(MemoryCursor)` (base64 of
+    `JSON.stringify`), `decodeCursor(string) → MemoryCursor` (rejects
+    not-base64 / not-JSON / non-object / wrong-version /
+    non-integer-offset / negative-offset / string-offset /
+    fractional-offset paths via `MemoryStoreCursorError`), and
+    `resolveLimit(limit?)` (default to `JOB_STORE_QUERY_DEFAULT_LIMIT`
+    when omitted / non-finite / non-positive; clamp to
+    `JOB_STORE_QUERY_MAX_LIMIT`). `MemoryStoreCursorError` carries
+    `code = ERR_STORE_INVALID_CURSOR` so `instanceof` and structural
+    matching (`.toMatchObject({ code })`) both work.
 - `packages/plugins/store-memory/src/store-memory.module.ts` — new
   ~30-LOC NestJS module. `@Module({ providers: [InMemoryJobStore],
-  exports: [InMemoryJobStore] })` only — does NOT bind
+exports: [InMemoryJobStore] })` only — does NOT bind
   `JOB_STORE_TOKEN` itself. Active-backend selection stays in
   `StoreModule.forActive(storeId, { backends: [InMemoryJobStore] })`
   so the seam isn't duplicated. Doc-block walks the consumer through
@@ -30552,7 +30612,7 @@ and were locked into the test surface rather than as new questions:
      `company` / `title` / `location`; inclusive lower bound on
      `since`; combined `company + since` filter.
   5. **listByQuery limits** (2 cases): clamps `limit >
-     JOB_STORE_QUERY_MAX_LIMIT` to MAX (seeds MAX+5 rows so the
+JOB_STORE_QUERY_MAX_LIMIT` to MAX (seeds MAX+5 rows so the
      clamp is observable); defaults to
      `JOB_STORE_QUERY_DEFAULT_LIMIT` when omitted.
   6. **listByQuery cursor pagination** (3 cases): paginates 25
@@ -30583,7 +30643,7 @@ and were locked into the test surface rather than as new questions:
      yields the next 2 rows with no overlap.
   2. **@StorePlugin metadata** (2 cases): raw `Reflect.getMetadata`
      and `new Reflector().get` both resolve `{ id: 'memory',
-     description: STORE_MEMORY_DESCRIPTION }` for `InMemoryJobStore`
+description: STORE_MEMORY_DESCRIPTION }` for `InMemoryJobStore`
      (pins T05 acceptance — the plugin is discoverable by
      `StoreModule.forActive`).
   3. **StoreMemoryModule** (2 cases): exports `InMemoryJobStore`
@@ -30608,7 +30668,7 @@ and were locked into the test surface rather than as new questions:
   across the broad regression bundle).
 - `.specify/specs/004-persistence-storage-plugins/spec.md` —
   `Status` flipped to `Phases 1–2 done (T01–T06); Phases 3–5
-  pending`; `Last updated` bumped to `2026-04-27 (run #21)`.
+pending`; `Last updated` bumped to `2026-04-27 (run #21)`.
 - `docs/index.md` — Spec 004 row updated with new status string;
   `Last revised` bumped to `2026-04-27 (run #21)`.
 - `CLAUDE.md` — run-tag bumped to #21 in the footer.
@@ -30625,14 +30685,14 @@ and were locked into the test surface rather than as new questions:
 
 - `npx jest --testPathPatterns 'packages/plugins/store-memory'` —
   **42 / 42 passed** (T05 + T06 plugin suite: 24 conformance cases
-  + 18 backend-specific cases).
+  - 18 backend-specific cases).
 - `npx jest --testPathPatterns
-  'packages/models|packages/plugin/__tests__|packages/plugin/src/store|packages/plugin/src/circuit-breaker|packages/plugins/store-memory'`
+'packages/models|packages/plugin/__tests__|packages/plugin/src/store|packages/plugin/src/circuit-breaker|packages/plugins/store-memory'`
   — **170 / 170 passed across 10 suites** (focused regression: T01
-  + T02 + T03 + T04 + T05 + T06 + circuit-breaker + canonical-job
-  + disabled-sources + plugin-discovery tests all green).
+  - T02 + T03 + T04 + T05 + T06 + circuit-breaker + canonical-job
+  - disabled-sources + plugin-discovery tests all green).
 - `npx jest --testPathPatterns
-  'apps/api/__tests__/(e2e/sources-(health|admin)|e2e/metrics-circuit-state|integration/circuit-breaker|integration/plugin-policy|health\.e2e)|packages/plugin/src/circuit-breaker|apps/api/src/jobs/__tests__/(plugin-policy|sources-admin)|apps/api/src/auth/__tests__/api-key|apps/api/src/metrics/__tests__/metrics.service|packages/models|packages/plugin/__tests__|packages/plugin/src/store|packages/plugins/store-memory'`
+'apps/api/__tests__/(e2e/sources-(health|admin)|e2e/metrics-circuit-state|integration/circuit-breaker|integration/plugin-policy|health\.e2e)|packages/plugin/src/circuit-breaker|apps/api/src/jobs/__tests__/(plugin-policy|sources-admin)|apps/api/src/auth/__tests__/api-key|apps/api/src/metrics/__tests__/metrics.service|packages/models|packages/plugin/__tests__|packages/plugin/src/store|packages/plugins/store-memory'`
   — **236 / 236 passed across 20 suites** (broad regression: Spec
   005 / T01–T08, legacy `/health` + `/ping`, Spec 004 / T01–T06,
   canonical-job schema, disabled-sources, plugin-discovery,
@@ -30656,44 +30716,44 @@ and were locked into the test surface rather than as new questions:
   Open fall-back follow-up.
 - Default for run #22 is **Spec 004 / Phase 3 / T07 + T08 —
   `store-sqlite-drizzle` reference backend**:
-    - T07 scaffolds `packages/plugins/store-sqlite-drizzle/`
-      (package.json, tsconfig.json, `drizzle/schema.ts`,
-      `drizzle/migrations/0000_init.sql`,
-      `src/{index.ts, store-sqlite-drizzle.module.ts,
-      store-sqlite-drizzle.service.ts}`,
-      `__tests__/store-sqlite-drizzle.spec.ts`). Adds the path
-      alias in `tsconfig.base.json` and `jest.config.js`. Drizzle
-      schema covers `canonical_job` (PK = `canonical_job_id`,
-      indexed `merged_at`, case-folded shadow columns for
-      `company` / `title` / `location` per FR-7 / NFR-1) and
-      `source_observation` (FK + ON DELETE CASCADE per FR-2,
-      composite PK `(canonical_job_id, site, source_job_id)`).
-      T07 estimate: 0.5 day.
-    - T08 implements `IJobStore` over Drizzle, using `better-sqlite3`
-      (synchronous driver — fits the in-process model and avoids
-      the connection-pool overhead for the dev-only backend). The
-      same `runStoreConformance(label, factory)` from T06 will
-      re-execute against the SQLite backend; per-test isolation via
-      a fresh in-memory `:memory:` database per `factory()` call.
-      Adds a Drizzle-specific cursor envelope (`{ v: 1, mergedAt,
-      canonicalJobId }` — keyset pagination, NOT offset, because
-      offset paging on SQLite degrades to O(N) at scale per Drizzle
-      docs / NFR-1 budget). Adds a backend-specific test for the
-      ON DELETE CASCADE path (T06's conformance covers the JS-side
-      cascade; SQLite enforces it via FK). T08 estimate: 1 day.
-  Together T07 + T08 give us the second concrete `IJobStore`
-  implementation, which (a) lets contributors run the full test
-  matrix without Postgres / Docker and (b) flushes any contract
-  ambiguities before T09 / T10 wire up Postgres + Prisma. If
-  T07 / T08 is blocked for any reason, fall-back order is:
-    1. T11 / T12 — wire `EVER_JOBS_STORE=memory` into `apps/api`
-       end-to-end now that we have a working backend (~0.75 day
-       combined; defers the dev-vs-prod backend choice but lets
-       us start exercising the active-backend seam from real HTTP
-       flows).
-    2. competitor-watch §C / AC-1 (`source-ats-avature` plugin —
-       0.5 day).
-    3. The open `dedup-hybrid` LSH follow-up (~0.5 day).
+  - T07 scaffolds `packages/plugins/store-sqlite-drizzle/`
+    (package.json, tsconfig.json, `drizzle/schema.ts`,
+    `drizzle/migrations/0000_init.sql`,
+    `src/{index.ts, store-sqlite-drizzle.module.ts,
+store-sqlite-drizzle.service.ts}`,
+    `__tests__/store-sqlite-drizzle.spec.ts`). Adds the path
+    alias in `tsconfig.base.json` and `jest.config.js`. Drizzle
+    schema covers `canonical_job` (PK = `canonical_job_id`,
+    indexed `merged_at`, case-folded shadow columns for
+    `company` / `title` / `location` per FR-7 / NFR-1) and
+    `source_observation` (FK + ON DELETE CASCADE per FR-2,
+    composite PK `(canonical_job_id, site, source_job_id)`).
+    T07 estimate: 0.5 day.
+  - T08 implements `IJobStore` over Drizzle, using `better-sqlite3`
+    (synchronous driver — fits the in-process model and avoids
+    the connection-pool overhead for the dev-only backend). The
+    same `runStoreConformance(label, factory)` from T06 will
+    re-execute against the SQLite backend; per-test isolation via
+    a fresh in-memory `:memory:` database per `factory()` call.
+    Adds a Drizzle-specific cursor envelope (`{ v: 1, mergedAt,
+canonicalJobId }` — keyset pagination, NOT offset, because
+    offset paging on SQLite degrades to O(N) at scale per Drizzle
+    docs / NFR-1 budget). Adds a backend-specific test for the
+    ON DELETE CASCADE path (T06's conformance covers the JS-side
+    cascade; SQLite enforces it via FK). T08 estimate: 1 day.
+    Together T07 + T08 give us the second concrete `IJobStore`
+    implementation, which (a) lets contributors run the full test
+    matrix without Postgres / Docker and (b) flushes any contract
+    ambiguities before T09 / T10 wire up Postgres + Prisma. If
+    T07 / T08 is blocked for any reason, fall-back order is:
+  1. T11 / T12 — wire `EVER_JOBS_STORE=memory` into `apps/api`
+     end-to-end now that we have a working backend (~0.75 day
+     combined; defers the dev-vs-prod backend choice but lets
+     us start exercising the active-backend seam from real HTTP
+     flows).
+  2. competitor-watch §C / AC-1 (`source-ats-avature` plugin —
+     0.5 day).
+  3. The open `dedup-hybrid` LSH follow-up (~0.5 day).
 - The shared conformance suite at
   `packages/plugin/src/store/__tests__/conformance.ts` is the
   load-bearing artefact for Phases 3–5: every later backend (T08
@@ -30787,37 +30847,37 @@ test suite and exported constants rather than as questions:
   `forActive(storeId, options)` factory plus the
   `StoreModuleConfigurationError` class and two registry-local
   error codes. Surface area:
-    - **Factory:** `StoreModule.forActive(storeId, { backends?,
-      bindObservationStore? })` returns `DynamicModule` with
-      `global: true` so feature modules can `@Inject(JOB_STORE_TOKEN)`
-      without re-importing per-feature (mirrors `PluginModule`).
-    - **Inputs:**
-      - `backends: ReadonlyArray<Type<IJobStore>>` — declared
-        backend classes (each must be `@StorePlugin()`-decorated).
-        Empty list is permitted; downstream `registry.get(storeId)`
-        will then raise `ERR_STORE_NOT_FOUND` with the friendly
-        "Registered ids: []" message — exactly the failure mode
-        T12 (`EVER_JOBS_STORE` honoured at bootstrap) will rely on.
-      - `bindObservationStore?: boolean` (default `true`) — bind
-        the active backend to `JOB_OBSERVATION_STORE_TOKEN` as well.
-    - **Providers (in order):** `StoreRegistry`, all backend classes,
-      a `useFactory` for `JOB_STORE_TOKEN` (depends on
-      `[StoreRegistry, ...backends]`; walks the parallel arrays to
-      register each instance, then returns `registry.get(storeId)`),
-      and (default-on) a `useFactory` for `JOB_OBSERVATION_STORE_TOKEN`
-      that depends on `[JOB_STORE_TOKEN]` and casts.
-    - **Exports:** `JOB_STORE_TOKEN`, `StoreRegistry`, and (when
-      bound) `JOB_OBSERVATION_STORE_TOKEN`.
-    - **Error path:** `StoreModuleConfigurationError extends Error`
-      with a `code: string` field so `instanceof` works in
-      interceptors / structured-log middleware. Two registry-local
-      codes — `ERR_STORE_ACTIVE_ID_REQUIRED` (blank `storeId`)
-      and `ERR_STORE_BACKEND_NOT_DECORATED` (class missing
-      `@StorePlugin()`) — are exported alongside.
-  Doc-block cites Spec 004 / FR-3 / FR-4 / T04 / §7 / §7.3 and
-  explains the synchronous-vs-bootstrap-time validation split, the
-  default-on observation-token binding, the duplicate-id-fails-loud
-  decision, and the global-module rationale.
+  - **Factory:** `StoreModule.forActive(storeId, { backends?,
+bindObservationStore? })` returns `DynamicModule` with
+    `global: true` so feature modules can `@Inject(JOB_STORE_TOKEN)`
+    without re-importing per-feature (mirrors `PluginModule`).
+  - **Inputs:**
+    - `backends: ReadonlyArray<Type<IJobStore>>` — declared
+      backend classes (each must be `@StorePlugin()`-decorated).
+      Empty list is permitted; downstream `registry.get(storeId)`
+      will then raise `ERR_STORE_NOT_FOUND` with the friendly
+      "Registered ids: []" message — exactly the failure mode
+      T12 (`EVER_JOBS_STORE` honoured at bootstrap) will rely on.
+    - `bindObservationStore?: boolean` (default `true`) — bind
+      the active backend to `JOB_OBSERVATION_STORE_TOKEN` as well.
+  - **Providers (in order):** `StoreRegistry`, all backend classes,
+    a `useFactory` for `JOB_STORE_TOKEN` (depends on
+    `[StoreRegistry, ...backends]`; walks the parallel arrays to
+    register each instance, then returns `registry.get(storeId)`),
+    and (default-on) a `useFactory` for `JOB_OBSERVATION_STORE_TOKEN`
+    that depends on `[JOB_STORE_TOKEN]` and casts.
+  - **Exports:** `JOB_STORE_TOKEN`, `StoreRegistry`, and (when
+    bound) `JOB_OBSERVATION_STORE_TOKEN`.
+  - **Error path:** `StoreModuleConfigurationError extends Error`
+    with a `code: string` field so `instanceof` works in
+    interceptors / structured-log middleware. Two registry-local
+    codes — `ERR_STORE_ACTIVE_ID_REQUIRED` (blank `storeId`)
+    and `ERR_STORE_BACKEND_NOT_DECORATED` (class missing
+    `@StorePlugin()`) — are exported alongside.
+    Doc-block cites Spec 004 / FR-3 / FR-4 / T04 / §7 / §7.3 and
+    explains the synchronous-vs-bootstrap-time validation split, the
+    default-on observation-token binding, the duplicate-id-fails-loud
+    decision, and the global-module rationale.
 - `packages/plugin/src/index.ts` — appends 5 new exports under the
   existing `// Persistence-store plugin (Spec 004)` group:
   `StoreModule`, `StoreModuleConfigurationError`,
@@ -30831,7 +30891,7 @@ test suite and exported constants rather than as questions:
   new ~340-LOC suite (**16 cases** across 10 describe-blocks):
   1. **happy path** (3 cases): `JOB_STORE_TOKEN` resolves to the
      declared backend instance; `JOB_OBSERVATION_STORE_TOKEN`
-     resolves to the *same* instance by default; `StoreRegistry`
+     resolves to the _same_ instance by default; `StoreRegistry`
      itself is injectable alongside the active store binding.
   2. **`bindObservationStore: false`** (1 case): the observation
      token is NOT registered; injecting it throws.
@@ -30851,7 +30911,7 @@ test suite and exported constants rather than as questions:
      includes the registered ids for triage.
   6. **empty `storeId`** (3 cases via `it.each`): empty string and
      whitespace-only both throw `StoreModuleConfigurationError`
-     with code `ERR_STORE_ACTIVE_ID_REQUIRED` *synchronously* from
+     with code `ERR_STORE_ACTIVE_ID_REQUIRED` _synchronously_ from
      `forActive()` — no `Test.createTestingModule` involved; +1
      case asserting the error message lists the configured backend
      ids ("Set EVER_JOBS_STORE to one of: [memory, sqlite]").
@@ -30866,13 +30926,14 @@ test suite and exported constants rather than as questions:
      swallowed this silently via `if (!registry.has(id))` — the
      test pins the loud-failure behaviour explicitly.
   9. **error class identity** (2 cases): `StoreModuleConfigurationError
-     extends Error`, `.name === 'StoreModuleConfigurationError'`,
+extends Error`, `.name === 'StoreModuleConfigurationError'`,
      `.code` propagates; both error code constants have the
      expected literal string values.
- 10. **no-backends edge case** (1 case): `forActive('memory',
-     { backends: [] })` throws `ERR_STORE_NOT_FOUND` from the
-     registry with "Registered ids: []" — the exact failure mode
-     T12 (`EVER_JOBS_STORE` honoured at bootstrap) needs.
+
+10. **no-backends edge case** (1 case): `forActive('memory',
+{ backends: [] })` throws `ERR_STORE_NOT_FOUND` from the
+    registry with "Registered ids: []" — the exact failure mode
+    T12 (`EVER_JOBS_STORE` honoured at bootstrap) needs.
 
 **Changes — docs / specs:**
 
@@ -30897,15 +30958,15 @@ test suite and exported constants rather than as questions:
 **Verification (local, against this commit):**
 
 - `npx jest --testPathPatterns
-  'packages/plugin/src/store/__tests__/store\.module'` —
+'packages/plugin/src/store/__tests__/store\.module'` —
   **16 / 16 passed** (T04 module suite).
 - `npx jest --testPathPatterns
-  'packages/models|packages/plugin/__tests__|packages/plugin/src/store|packages/plugin/src/circuit-breaker'`
+'packages/models|packages/plugin/__tests__|packages/plugin/src/store|packages/plugin/src/circuit-breaker'`
   — **128 / 128 passed across 9 suites** (regression: T01 + T02
-  + T03 + T04 + circuit-breaker + canonical-job + disabled-sources
-  + plugin-discovery tests all green).
+  - T03 + T04 + circuit-breaker + canonical-job + disabled-sources
+  - plugin-discovery tests all green).
 - `npx jest --testPathPatterns
-  'apps/api/__tests__/(e2e/sources-(health|admin)|e2e/metrics-circuit-state|integration/circuit-breaker|integration/plugin-policy|health\.e2e)|packages/plugin/src/circuit-breaker|apps/api/src/jobs/__tests__/(plugin-policy|sources-admin)|apps/api/src/auth/__tests__/api-key|apps/api/src/metrics/__tests__/metrics.service|packages/models|packages/plugin/__tests__|packages/plugin/src/store'`
+'apps/api/__tests__/(e2e/sources-(health|admin)|e2e/metrics-circuit-state|integration/circuit-breaker|integration/plugin-policy|health\.e2e)|packages/plugin/src/circuit-breaker|apps/api/src/jobs/__tests__/(plugin-policy|sources-admin)|apps/api/src/auth/__tests__/api-key|apps/api/src/metrics/__tests__/metrics.service|packages/models|packages/plugin/__tests__|packages/plugin/src/store'`
   — **194 / 194 passed across 19 suites** (full regression bundle:
   Spec 005 / T01–T08, legacy `/health` + `/ping`, Spec 004 /
   T01–T04, canonical-job schema, disabled-sources, plugin-discovery,
@@ -30927,33 +30988,33 @@ test suite and exported constants rather than as questions:
   fall-back follow-up.
 - Default for run #21 is **Spec 004 / Phase 2 / T05 + T06 — `store-memory`
   reference backend**:
-    - T05 scaffolds `packages/plugins/store-memory/` (package.json,
-      tsconfig.json, `src/{index.ts, store-memory.module.ts,
-      store-memory.service.ts}`, `__tests__/store-memory.spec.ts`).
-      Pure infrastructure work — register the path alias in
-      `tsconfig.base.json` and `jest.config.js` (T05 estimate:
-      0.25 day).
-    - T06 implements the in-memory `Map<canonicalJobId, CanonicalJob>`
-      backend behind `IJobStore`, plus the parallel
-      `Map<canonicalJobId, SourceObservation[]>` for
-      `IJobObservationStore`. Adds opaque-cursor pagination
-      (base64-encoded `{ offset: number }` is sufficient for an
-      in-memory store; production backends will use a real cursor
-      shape per their query plan). Conformance tests live in
-      `packages/plugin/src/store/__tests__/conformance.ts` (the
-      shared suite called out in `tasks.md` Notes) and re-import
-      into `packages/plugins/store-memory/__tests__/store-memory.spec.ts`.
-      T06 estimate: 0.5 day.
-  Together T05 + T06 give us the first concrete `IJobStore`
-  implementation, which (a) lets `apps/api` wire `EVER_JOBS_STORE`
-  end-to-end against a working backend without needing Postgres,
-  and (b) bootstraps the conformance suite that every later
-  backend (T08 sqlite-drizzle, T10 postgres-prisma) will reuse.
-  If T05/T06 is blocked for any reason, fall-back order is:
-    1. competitor-watch §C / AC-1 (`source-ats-avature` plugin —
-       0.5 day).
-    2. The open `dedup-hybrid` LSH follow-up (~0.5 day).
-- T04 is the **first** task in Spec 004 to ship a *runtime*
+  - T05 scaffolds `packages/plugins/store-memory/` (package.json,
+    tsconfig.json, `src/{index.ts, store-memory.module.ts,
+store-memory.service.ts}`, `__tests__/store-memory.spec.ts`).
+    Pure infrastructure work — register the path alias in
+    `tsconfig.base.json` and `jest.config.js` (T05 estimate:
+    0.25 day).
+  - T06 implements the in-memory `Map<canonicalJobId, CanonicalJob>`
+    backend behind `IJobStore`, plus the parallel
+    `Map<canonicalJobId, SourceObservation[]>` for
+    `IJobObservationStore`. Adds opaque-cursor pagination
+    (base64-encoded `{ offset: number }` is sufficient for an
+    in-memory store; production backends will use a real cursor
+    shape per their query plan). Conformance tests live in
+    `packages/plugin/src/store/__tests__/conformance.ts` (the
+    shared suite called out in `tasks.md` Notes) and re-import
+    into `packages/plugins/store-memory/__tests__/store-memory.spec.ts`.
+    T06 estimate: 0.5 day.
+    Together T05 + T06 give us the first concrete `IJobStore`
+    implementation, which (a) lets `apps/api` wire `EVER_JOBS_STORE`
+    end-to-end against a working backend without needing Postgres,
+    and (b) bootstraps the conformance suite that every later
+    backend (T08 sqlite-drizzle, T10 postgres-prisma) will reuse.
+    If T05/T06 is blocked for any reason, fall-back order is:
+  1. competitor-watch §C / AC-1 (`source-ats-avature` plugin —
+     0.5 day).
+  2. The open `dedup-hybrid` LSH follow-up (~0.5 day).
+- T04 is the **first** task in Spec 004 to ship a _runtime_
   consumer surface — T01–T03 were structural (interfaces, decorator,
   registry). The 16 cases here pin the contract that `apps/api`'s
   root module will bind against, so a future contributor can't
@@ -30989,7 +31050,7 @@ persisting health snapshots into `IJobStore`) remains in place.
 shape decision is already pinned by Spec 004 §7.3 (error codes), Spec
 004 §7.2 (`IStoreMetadata`), and the `PluginRegistry` precedent (the
 analogous registry for source plugins). The two free decisions
-(*where* id validation lives, and *which* error codes registration-time
+(_where_ id validation lives, and _which_ error codes registration-time
 failures use) were both load-bearing enough to lock in via the test
 suite and exported constants rather than as questions:
 
@@ -31022,27 +31083,27 @@ suite and exported constants rather than as questions:
   `instanceof` works in interceptors / structured-log middleware), and
   the two registry-local error codes `ERR_STORE_INVALID_ID` and
   `ERR_STORE_DUPLICATE_ID`. Surface area:
-    - `register(metadata, store)` — validates `id` (non-empty
-      kebab-case), rejects duplicates, calls `Logger.error(message)`
-      before throwing. Atomic — failed registration leaves
-      `size` unchanged.
-    - `get(id)` — returns `IJobStore` or throws with code
-      `ERR_STORE_NOT_FOUND`. Error message lists currently-registered
-      ids for ops triage (e.g. `Unknown store plugin id: 'postgres'.
-      Registered ids: [memory, sqlite]`).
-    - `tryGet(id)` — non-throwing variant; returns `undefined` for
-      unknown id. Used by diagnostic / listing code paths
-      (e.g. `GET /api/storage` when listing only).
-    - `has(id)` — O(1) presence check.
-    - `getMetadata(id)` — returns `IStoreMetadata | undefined`.
-    - `listIds()` — insertion-order `string[]` (matches
-      `PluginRegistry.listSiteKeys()` so admin endpoints can share
-      rendering logic without sorting twice).
-    - `listMetadata()` — insertion-order `IStoreMetadata[]`.
-    - `size` — O(1) total registered backends.
-  Doc-block cites Spec 004 / FR-4 / T03 / T04 / §7.3 and explains the
-  decoration-time-vs-registry-time validation split + the
-  registry-local-vs-§7.3 error code split.
+  - `register(metadata, store)` — validates `id` (non-empty
+    kebab-case), rejects duplicates, calls `Logger.error(message)`
+    before throwing. Atomic — failed registration leaves
+    `size` unchanged.
+  - `get(id)` — returns `IJobStore` or throws with code
+    `ERR_STORE_NOT_FOUND`. Error message lists currently-registered
+    ids for ops triage (e.g. `Unknown store plugin id: 'postgres'.
+Registered ids: [memory, sqlite]`).
+  - `tryGet(id)` — non-throwing variant; returns `undefined` for
+    unknown id. Used by diagnostic / listing code paths
+    (e.g. `GET /api/storage` when listing only).
+  - `has(id)` — O(1) presence check.
+  - `getMetadata(id)` — returns `IStoreMetadata | undefined`.
+  - `listIds()` — insertion-order `string[]` (matches
+    `PluginRegistry.listSiteKeys()` so admin endpoints can share
+    rendering logic without sorting twice).
+  - `listMetadata()` — insertion-order `IStoreMetadata[]`.
+  - `size` — O(1) total registered backends.
+    Doc-block cites Spec 004 / FR-4 / T03 / T04 / §7.3 and explains the
+    decoration-time-vs-registry-time validation split + the
+    registry-local-vs-§7.3 error code split.
 - `packages/plugin/src/index.ts` — appends 4 new exports under the
   existing `// Persistence-store plugin (Spec 004)` group:
   `StoreRegistry`, `StoreRegistryError`, `ERR_STORE_INVALID_ID`,
@@ -31074,7 +31135,7 @@ suite and exported constants rather than as questions:
      preserved (NOT overwritten); error message names the existing
      description for triage.
   6. **error class identity** (2 cases): `StoreRegistryError extends
-     Error`, `.name === 'StoreRegistryError'`, `.code` propagates;
+Error`, `.name === 'StoreRegistryError'`, `.code` propagates;
      all three error code constants have the expected literal
      string values (`ERR_STORE_INVALID_ID`, `ERR_STORE_DUPLICATE_ID`,
      `ERR_STORE_NOT_FOUND`).
@@ -31103,15 +31164,15 @@ suite and exported constants rather than as questions:
 **Verification (local, against this commit):**
 
 - `npx jest --testPathPatterns
-  'packages/plugin/src/store/__tests__/store-registry'` —
+'packages/plugin/src/store/__tests__/store-registry'` —
   **39 / 39 passed** (T03 registry suite).
 - `npx jest --testPathPatterns
-  'packages/models|packages/plugin/__tests__|packages/plugin/src/store|packages/plugin/src/circuit-breaker'`
+'packages/models|packages/plugin/__tests__|packages/plugin/src/store|packages/plugin/src/circuit-breaker'`
   — **112 / 112 passed across 8 suites** (regression: T01 + T02 + T03
-  + circuit-breaker + canonical-job + disabled-sources +
-  plugin-discovery tests all green).
+  - circuit-breaker + canonical-job + disabled-sources +
+    plugin-discovery tests all green).
 - `npx jest --testPathPatterns
-  'apps/api/__tests__/(e2e/sources-(health|admin)|e2e/metrics-circuit-state|integration/circuit-breaker|integration/plugin-policy|health\.e2e)|packages/plugin/src/circuit-breaker|apps/api/src/jobs/__tests__/(plugin-policy|sources-admin)|apps/api/src/auth/__tests__/api-key|apps/api/src/metrics/__tests__/metrics.service|packages/models|packages/plugin/__tests__|packages/plugin/src/store'`
+'apps/api/__tests__/(e2e/sources-(health|admin)|e2e/metrics-circuit-state|integration/circuit-breaker|integration/plugin-policy|health\.e2e)|packages/plugin/src/circuit-breaker|apps/api/src/jobs/__tests__/(plugin-policy|sources-admin)|apps/api/src/auth/__tests__/api-key|apps/api/src/metrics/__tests__/metrics.service|packages/models|packages/plugin/__tests__|packages/plugin/src/store'`
   — **178 / 178 passed across 18 suites** (full regression bundle:
   Spec 005 / T01–T08, legacy `/health` + `/ping`, Spec 004 / T01–T03,
   canonical-job schema, disabled-sources, plugin-discovery, api-key
@@ -31138,7 +31199,7 @@ suite and exported constants rather than as questions:
   dependency order, starting with T05/T06 (`store-memory` reference
   backend). Estimate: 0.25 day. If T04 is blocked for any reason,
   the fall-back is the open `dedup-hybrid` LSH follow-up (~0.5 day).
-- T03 is the *first* T0x in Spec 004 that exercises runtime
+- T03 is the _first_ T0x in Spec 004 that exercises runtime
   behaviour — T01 was contract-only (interfaces erase at runtime) and
   T02 was decoration-only (`SetMetadata`). The 39 unit cases here are
   load-bearing because they pin (a) the validation rules backend
@@ -31172,15 +31233,15 @@ persisting health snapshots into `IJobStore`) remains in place.
 **No new questions opened this run.** T02 is mechanical: every choice
 is already pinned by Spec 004 §7.2 (decorator shape) and by T01's
 already-exported `STORE_PLUGIN_METADATA_KEY` / `IStoreMetadata`
-constants. The only free decision was *where to enforce id
-validation* — and that was load-bearing enough to lock in via the
+constants. The only free decision was _where to enforce id
+validation_ — and that was load-bearing enough to lock in via the
 test suite and a doc-block comment rather than as a question:
 
 1. **`id` validation lives in `StoreRegistry` (T03), NOT in the
    decorator.** This mirrors the existing `@SourcePlugin()` pattern
    where `Site`-uniqueness is enforced by `PluginDiscoveryService`,
    not the decorator itself. Decoration runs at class-load time
-   *before* the NestJS logger is wired up, so a thrown error inside
+   _before_ the NestJS logger is wired up, so a thrown error inside
    the decorator surfaces as a cryptic stack trace pointing at the
    class declaration site rather than as a structured registry log
    line operators can grep for. T03 will reject empty / non-kebab-case
@@ -31216,7 +31277,7 @@ test suite and a doc-block comment rather than as a question:
   2. `@StorePlugin({ id, description })` round-trips both fields via
      `Reflector.get` (the registry's read path).
   3. `@StorePlugin({ id })`-only round-trips with `description ===
-     undefined` (matches `IStoreMetadata`'s optional field).
+undefined` (matches `IStoreMetadata`'s optional field).
   4. `Reflect.getMetadata(KEY, Class)` (raw, no Nest) returns the same
      object — pins us to the plain `reflect-metadata` API so dev
      tooling that doesn't import `@nestjs/core` still works.
@@ -31251,15 +31312,15 @@ test suite and a doc-block comment rather than as a question:
 **Verification (local, against this commit):**
 
 - `npx jest --testPathPatterns
-  'packages/plugin/src/store/__tests__/store-plugin.decorator'` —
+'packages/plugin/src/store/__tests__/store-plugin.decorator'` —
   **8 / 8 passed** (T02 decorator suite).
 - `npx jest --testPathPatterns
-  'packages/models|packages/plugin/__tests__|packages/plugin/src/store'`
+'packages/models|packages/plugin/__tests__|packages/plugin/src/store'`
   — **50 / 50 passed across 5 suites** (regression: T01 + T02 +
   pre-existing canonical-job + disabled-sources + plugin-discovery
   tests all green).
 - `npx jest --testPathPatterns
-  'apps/api/__tests__/(e2e/sources-(health|admin)|e2e/metrics-circuit-state|integration/circuit-breaker|integration/plugin-policy|health\.e2e)|packages/plugin/src/circuit-breaker|apps/api/src/jobs/__tests__/(plugin-policy|sources-admin)|apps/api/src/auth/__tests__/api-key|apps/api/src/metrics/__tests__/metrics.service|packages/models|packages/plugin/__tests__|packages/plugin/src/store'`
+'apps/api/__tests__/(e2e/sources-(health|admin)|e2e/metrics-circuit-state|integration/circuit-breaker|integration/plugin-policy|health\.e2e)|packages/plugin/src/circuit-breaker|apps/api/src/jobs/__tests__/(plugin-policy|sources-admin)|apps/api/src/auth/__tests__/api-key|apps/api/src/metrics/__tests__/metrics.service|packages/models|packages/plugin/__tests__|packages/plugin/src/store'`
   — **139 / 139 passed across 17 suites** (full regression bundle:
   Spec 005 / T01–T08, legacy `/health` + `/ping`, Spec 004 / T01–T02,
   canonical-job schema, disabled-sources, plugin-discovery, api-key
@@ -31331,14 +31392,14 @@ asserts and constants rather than as questions:
    absent-optional, and JSON.stringify drops `undefined` keys — so
    the wire payload is `{"items": [...]}` with no `nextCursor` field
    at the tail of pagination, instead of `{"items": [...],
-   "nextCursor": null}`. The test suite asserts this so a future
+"nextCursor": null}`. The test suite asserts this so a future
    backend can't drift to `null`.
 
 **Changes — code (interfaces only, no runtime behaviour change):**
 
 - `packages/models/src/interfaces/job-store-query.interface.ts` — new
   ~60-LOC file declaring `JobStoreQuery` (`company / title /
-  location / since / cursor / limit`), the `JobStorePage<T>` page
+location / since / cursor / limit`), the `JobStorePage<T>` page
   envelope, and the two clamp constants
   (`JOB_STORE_QUERY_DEFAULT_LIMIT = 100`,
   `JOB_STORE_QUERY_MAX_LIMIT = 1_000`). Doc-blocks call out the
@@ -31347,11 +31408,11 @@ asserts and constants rather than as questions:
   `eval`, no caller-side parsing).
 - `packages/models/src/interfaces/job-store.interface.ts` — new
   ~170-LOC file. `IJobStore` covers `upsert / upsertMany / getById /
-  findByCanonicalId / listByQuery / delete` per §7.1; method comments
+findByCanonicalId / listByQuery / delete` per §7.1; method comments
   cite each Spec 004 FR (e.g. `delete` returns `boolean`, MUST
   cascade observation rows, MUST NOT soft-delete in v1 — Spec 012
   revisits retention). `IJobObservationStore` covers `putAll /
-  listByCanonicalId / deleteByCanonicalId` per FR-2 with an explicit
+listByCanonicalId / deleteByCanonicalId` per FR-2 with an explicit
   "replace, don't merge" doc-block: the dedup engine is the single
   writer, so partial-update semantics would only invite drift bugs.
   `IStoreMetadata = { id, description? }` per §7.2. Three DI tokens
@@ -31374,7 +31435,7 @@ asserts and constants rather than as questions:
   ~170-LOC suite (11 cases). The interfaces themselves erase at
   runtime, so the suite tests them via two compile-time-typed stubs:
   `class StubStore implements IJobStore` and `class StubObsStore
-  implements IJobObservationStore`. Cases:
+implements IJobObservationStore`. Cases:
   1. `ERR_STORE_NOT_FOUND` literal value.
   2. `ERR_STORE_BACKEND_DOWN` literal value.
   3. `ERR_STORE_INVALID_CURSOR` literal value.
@@ -31387,7 +31448,7 @@ asserts and constants rather than as questions:
   9. Stub `IJobStore` round-trip (covers all six methods).
   10. `listByQuery` returns `nextCursor` as `undefined`, NOT `null`.
   11. Stub `IJobObservationStore` round-trip: `putAll →
-      listByCanonicalId → deleteByCanonicalId` is idempotent (second
+listByCanonicalId → deleteByCanonicalId` is idempotent (second
       delete returns 0).
   12. `IStoreMetadata` accepts both id-only and id+description shapes.
 
@@ -31401,7 +31462,7 @@ asserts and constants rather than as questions:
   list, line-count notes, and per-case test summary.
 - `.specify/specs/004-persistence-storage-plugins/spec.md` — `Status`
   flipped from `draft` to `Phase 1 partial (T01 done; T02–T04
-  pending)`; `Last updated` bumped to `2026-04-27 (run #17)`.
+pending)`; `Last updated` bumped to `2026-04-27 (run #17)`.
 - `docs/index.md` — Spec 004 row updated with new status string;
   `Last revised` bumped to `2026-04-27 (run #17)`.
 - `CLAUDE.md` — run-tag bumped to #17 in the footer.
@@ -31417,11 +31478,11 @@ asserts and constants rather than as questions:
   across 2 suites (regression: T01 + the pre-existing canonical-job
   schema suite both green).
 - `npx jest --testPathPatterns 'apps/api/__tests__/(e2e/sources-(health|
-  admin)|e2e/metrics-circuit-state|integration/circuit-breaker|integration/
-  plugin-policy|health\.e2e)|packages/plugin/src/circuit-breaker|
-  apps/api/src/jobs/__tests__/(plugin-policy|sources-admin)|
-  apps/api/src/auth/__tests__/api-key|apps/api/src/metrics/
-  __tests__/metrics.service|packages/models'` — 111 / 111 passed
+admin)|e2e/metrics-circuit-state|integration/circuit-breaker|integration/
+plugin-policy|health\.e2e)|packages/plugin/src/circuit-breaker|
+apps/api/src/jobs/__tests__/(plugin-policy|sources-admin)|
+apps/api/src/auth/__tests__/api-key|apps/api/src/metrics/
+__tests__/metrics.service|packages/models'` — 111 / 111 passed
   across 14 suites (regression: T01–T08 of Spec 005 all green plus
   legacy `/health`, `/ping`, the canonical-job schema, and the new
   T01 surface).
@@ -31501,7 +31562,7 @@ for the full options matrix.
   ~110 LOC. Constructor now takes `Reflector` (auto-injected by
   Nest's DI; no module changes needed). `canActivate` reads
   `ADMIN_AUTH_METADATA_KEY` via `Reflector.getAllAndOverride([
-  handler, class])` and dispatches per-tier:
+handler, class])` and dispatches per-tier:
   - **Standard route (no metadata)** — preserved legacy
     behaviour: `auth.enabled=false` or `apiKeys=[]` → allow;
     otherwise validate key; 403 `ForbiddenException` on missing /
@@ -31575,7 +31636,7 @@ for the full options matrix.
   (11 + 11 + 14 = 36 cases).
 - `.specify/specs/005-source-health-circuit-breaker/spec.md` —
   `Status` flipped to `Phase 1+2+3+4 done (T01–T08); Phase 5
-  pending`; `Last updated` bumped to `2026-04-27 (run #16)`; §10
+pending`; `Last updated` bumped to `2026-04-27 (run #16)`; §10
   records the run #16 / Q-017 decision in detail.
 - `docs/questions.md` — adds **Q-017** at the top (above Q-016):
   Options A/B/C with trade-offs, Default = Option A (proceeding),
@@ -31591,18 +31652,18 @@ for the full options matrix.
 **Verification (local, against this commit):**
 
 - `npx jest --testPathPatterns 'apps/api/src/auth/__tests__/
-  api-key\.guard'` — 11 / 11 passed (T07 guard suite).
+api-key\.guard'` — 11 / 11 passed (T07 guard suite).
 - `npx jest --testPathPatterns 'apps/api/src/jobs/__tests__/
-  sources-admin\.controller'` — 9 / 9 passed (T07 controller suite).
+sources-admin\.controller'` — 9 / 9 passed (T07 controller suite).
 - `npx jest --testPathPatterns 'apps/api/__tests__/e2e/
-  sources-admin'` — 13 / 13 passed (T07 e2e suite; three Nest
+sources-admin'` — 13 / 13 passed (T07 e2e suite; three Nest
   bootstraps with different `process.env`).
 - `npx jest --testPathPatterns 'apps/api/__tests__/(e2e/sources-(health|
-  admin)|e2e/metrics-circuit-state|integration/circuit-breaker|integration/
-  plugin-policy|health\.e2e)|packages/plugin/src/circuit-breaker|
-  apps/api/src/jobs/__tests__/(plugin-policy|sources-admin)|
-  apps/api/src/auth/__tests__/api-key|apps/api/src/metrics/
-  __tests__/metrics.service'` — 89 / 89 passed across 12 suites
+admin)|e2e/metrics-circuit-state|integration/circuit-breaker|integration/
+plugin-policy|health\.e2e)|packages/plugin/src/circuit-breaker|
+apps/api/src/jobs/__tests__/(plugin-policy|sources-admin)|
+apps/api/src/auth/__tests__/api-key|apps/api/src/metrics/
+__tests__/metrics.service'` — 89 / 89 passed across 12 suites
   (regression: T01–T08 all green plus legacy `/health` + `/ping`).
 - `npx tsc --project apps/api/tsconfig.build.json --noEmit` — clean.
 - `npx nest build` — `webpack 5.97.1 compiled successfully`. Confirms
@@ -31664,7 +31725,7 @@ latent design choices weren't called out in `tasks.md`:
    §0.2's "every plugin replaceable" invariant: a custom breaker
    plugged in via `CIRCUIT_BREAKER_TOKEN` would silently lose policy
    overrides. We instead add a small `PluginPolicyBootstrapper`
-   provider in `apps/api/src/jobs/` that owns *both* dependencies
+   provider in `apps/api/src/jobs/` that owns _both_ dependencies
    (`PluginRegistry` is global; `CIRCUIT_BREAKER_TOKEN` is bound by
    `CircuitBreakerModule` imported from `JobsModule`).
 2. **When does it run?** `OnApplicationBootstrap` — fires after every
@@ -31739,7 +31800,7 @@ latent design choices weren't called out in `tasks.md`:
 - `.specify/specs/005-source-health-circuit-breaker/spec.md` —
   `Status` flipped from `Phase 1+2+3 done (T01–T06); Phase 4+ pending`
   to `Phase 1+2+3 done (T01–T06); Phase 4 partial (T08 done; T07
-  pending); Phase 5 pending`; §10 records the run #15 / Q-016
+pending); Phase 5 pending`; §10 records the run #15 / Q-016
   decision.
 - `docs/questions.md` — adds **Q-016** at the top (above Q-015):
   Options A/B/C with trade-offs, Default = Option A (proceeding),
@@ -31754,16 +31815,16 @@ latent design choices weren't called out in `tasks.md`:
 **Verification (local, against this commit):**
 
 - `npx jest --testPathPatterns 'apps/api/src/jobs/__tests__/
-  plugin-policy.bootstrapper'` — 8 / 8 passed (T08 unit acceptance
+plugin-policy.bootstrapper'` — 8 / 8 passed (T08 unit acceptance
   suite).
 - `npx jest --testPathPatterns 'apps/api/__tests__/integration/
-  plugin-policy.bootstrapper'` — 3 / 3 passed (T08 integration suite,
+plugin-policy.bootstrapper'` — 3 / 3 passed (T08 integration suite,
   exercises the real breaker state machine).
 - `npx jest --testPathPatterns 'apps/api/__tests__/(e2e/sources-health|
-  e2e/metrics-circuit-state|integration/circuit-breaker|integration/
-  plugin-policy|health\.e2e)|packages/plugin/src/circuit-breaker|
-  apps/api/src/jobs/__tests__/plugin-policy|apps/api/src/metrics/
-  __tests__/metrics.service'` — 56 / 56 passed across 9 suites
+e2e/metrics-circuit-state|integration/circuit-breaker|integration/
+plugin-policy|health\.e2e)|packages/plugin/src/circuit-breaker|
+apps/api/src/jobs/__tests__/plugin-policy|apps/api/src/metrics/
+__tests__/metrics.service'` — 56 / 56 passed across 9 suites
   (regression: T01–T08 all green plus legacy `/health` + `/ping`).
 - `npx tsc --project apps/api/tsconfig.build.json --noEmit` — clean.
 - `npx nest build` — `webpack 5.97.1 compiled successfully`. Confirms
@@ -31797,7 +31858,7 @@ latent design choices weren't called out in `tasks.md`:
   pivot to T09 (60 s health-snapshot cron) but that depends on
   Spec 004 Phase 5 which has not yet shipped.
 - `applyPluginPolicies()` is a one-shot pass at bootstrap. If a
-  future startup self-test needs the override applied *before* the
+  future startup self-test needs the override applied _before_ the
   very first call (currently the first call may briefly use the
   default if it lands before `OnApplicationBootstrap`), the fix is
   to move the wiring into `register`/`registerExternal` directly —
@@ -31826,14 +31887,14 @@ acceptance is just "`curl /metrics` includes
 called out in `tasks.md`:
 
 1. **Wiring point.** `MetricsModule` is `@Global()`;
-   `CircuitBreakerModule` is *not* (it's pluggable per FR-3, imported
+   `CircuitBreakerModule` is _not_ (it's pluggable per FR-3, imported
    once at the application boundary by `JobsModule`). So
    `MetricsService` cannot inject `CIRCUIT_BREAKER_TOKEN` directly
    without either making `CircuitBreakerModule` global (wide blast
    radius — every test bootstrap that imports `MetricsModule` would
    suddenly own a breaker) or violating AGENTS.md §5's "no peer-plugin
    imports" rule. We instead add a small `MetricsCircuitBreakerBridge`
-   provider in `JobsModule` that owns *both* dependencies and wires the
+   provider in `JobsModule` that owns _both_ dependencies and wires the
    breaker into the Gauge's `collect()` callback at
    `OnApplicationBootstrap`. When the breaker isn't bound, the bridge
    is a no-op and the Gauge stays absent from `/metrics` (back-compat
@@ -31861,14 +31922,14 @@ called out in `tasks.md`:
   type for re-use.
 - `apps/api/src/metrics/metrics.controller.ts` — switched from
   `@Res() res` + `res.end(metrics)` to `@Res({ passthrough: true })`
-  + `return this.metricsService.getMetrics()`. The previous shape
-  closed the response *before* the global `LoggingInterceptor`'s
-  `tap.next` callback ran, and `setHeader('X-Process-Time', …)`
-  on a closed response throws "Cannot set headers after they are
-  sent" → 500 on every `/metrics` scrape. The bug was latent
-  because there was no pre-existing `/metrics` e2e suite to
-  exercise the path. The new T06 e2e suite makes the regression
-  un-fixable without re-introducing the failure.
+  - `return this.metricsService.getMetrics()`. The previous shape
+    closed the response _before_ the global `LoggingInterceptor`'s
+    `tap.next` callback ran, and `setHeader('X-Process-Time', …)`
+    on a closed response throws "Cannot set headers after they are
+    sent" → 500 on every `/metrics` scrape. The bug was latent
+    because there was no pre-existing `/metrics` e2e suite to
+    exercise the path. The new T06 e2e suite makes the regression
+    un-fixable without re-introducing the failure.
 - `apps/api/src/jobs/metrics-circuit-breaker.bridge.ts` — new
   ~50-LOC `MetricsCircuitBreakerBridge` provider with
   `OnApplicationBootstrap`. `@Optional() @Inject(CIRCUIT_BREAKER_TOKEN)`
@@ -31887,8 +31948,8 @@ called out in `tasks.md`:
 - `apps/api/src/metrics/__tests__/metrics.service.spec.ts` — new
   ~150-LOC unit suite (7 cases). No Nest bootstrap, no breaker — drives
   the Gauge's `collect()` hook directly via `bindCircuitBreakerSource`
-  + `getMetrics()` and asserts the wire-level Prometheus exposition.
-  Cases:
+  - `getMetrics()` and asserts the wire-level Prometheus exposition.
+    Cases:
   1. **Encoding** — `closed=0, half-open=1, open=2`.
   2. **Without bind** — Gauge metadata present, no sample lines.
   3. **With bind** — one sample per `Site` with the right encoding.
@@ -31906,15 +31967,15 @@ called out in `tasks.md`:
   the breaker via `forceOpen` / `forceReset` and asserts the actual
   `/metrics` text response. Cases:
   1. **Gauge metadata always present** — `# TYPE
-     ever_jobs_source_circuit_state gauge` with the encoding
+ever_jobs_source_circuit_state gauge` with the encoding
      documented in the HELP line.
   2. **`forceOpen` → value 2** — the literal acceptance criterion
      `source_circuit_state{site="linkedin"} 2`.
   3. **`forceReset` → value 0** — round-trip through both states.
   4. **Cardinality** — sample-line count equals `breaker.list().length`.
-  Uses sequential `forceReset` in `afterAll` to prevent breaker state
-  leaking into `sources-health.e2e-spec.ts` (Jest is `maxWorkers: 1`,
-  but defensive-reset is cheap and explicit).
+     Uses sequential `forceReset` in `afterAll` to prevent breaker state
+     leaking into `sources-health.e2e-spec.ts` (Jest is `maxWorkers: 1`,
+     but defensive-reset is cheap and explicit).
 
 **Changes — docs / specs:**
 
@@ -31924,8 +31985,8 @@ called out in `tasks.md`:
   `LoggingInterceptor`/`/metrics` side-fix so the rationale survives.
 - `.specify/specs/005-source-health-circuit-breaker/spec.md` —
   `Status` flipped from `Phase 1+2 done; Phase 3 partial (T05 done,
-  T06 pending); Phase 4+ pending` to `Phase 1+2+3 done (T01–T06);
-  Phase 4+ pending`; §10 records the run #14 / Q-015 decision.
+T06 pending); Phase 4+ pending` to `Phase 1+2+3 done (T01–T06);
+Phase 4+ pending`; §10 records the run #14 / Q-015 decision.
 - `docs/questions.md` — adds **Q-015** at the top (above Q-014):
   Options A/B/C with trade-offs, Default = Option A (proceeding),
   Resolution _pending_. Cross-links to T06, FR-3, and FR-6.
@@ -31939,12 +32000,12 @@ called out in `tasks.md`:
 
 - `npm run lint:docs` — `✓ Doc-lint passed — no issues.`
 - `npx jest --testPathPatterns 'apps/api/src/metrics/__tests__/
-  metrics.service'` — 7 / 7 passed (T06 unit acceptance suite).
+metrics.service'` — 7 / 7 passed (T06 unit acceptance suite).
 - `npx jest --testPathPatterns 'apps/api/__tests__/e2e/
-  metrics-circuit-state'` — 4 / 4 passed (T06 e2e acceptance suite).
+metrics-circuit-state'` — 4 / 4 passed (T06 e2e acceptance suite).
 - `npx jest --testPathPatterns 'apps/api/__tests__/(e2e/sources-health|
-  integration/circuit-breaker|health\.e2e)|packages/plugin/src/
-  circuit-breaker'` — 34 / 34 passed (regression: T03 / T04 / T05 +
+integration/circuit-breaker|health\.e2e)|packages/plugin/src/
+circuit-breaker'` — 34 / 34 passed (regression: T03 / T04 / T05 +
   legacy `/health` + `/ping` + breaker units, all green).
 - `npx tsc --project apps/api/tsconfig.build.json --noEmit` — clean.
 - `npx nest build` — `webpack 5.97.1 compiled successfully`. Confirms
@@ -32028,7 +32089,7 @@ the spec or plan:
   `SourcesHealthController`:
   - `@Controller('api/sources')`, single `@Get('health')` route.
   - Constructor injects `@Optional() @Inject(CIRCUIT_BREAKER_TOKEN)
-    breaker?: ICircuitBreakerService` and
+breaker?: ICircuitBreakerService` and
     `@Optional() registry?: PluginRegistry`. The double-`@Optional()`
     means the controller degrades to an empty list when neither is
     bound — same back-compat pattern T04 chose for `JobsService`.
@@ -32065,7 +32126,7 @@ the spec or plan:
      (the T05 acceptance criterion verbatim).
   2. **Reflects forceOpen** — `breaker.forceOpen(Site.LINKEDIN)`,
      then asserts the response includes a `{ site: 'linkedin',
-     state: 'open' }` row with `successRate`, `p95LatencyMs`, and
+state: 'open' }` row with `successRate`, `p95LatencyMs`, and
      `windowMs: 60_000` populated.
   3. **Alphabetical sort stability** — opens two sites and confirms
      the response is monotonically sorted by `site` (a regression
@@ -32075,9 +32136,9 @@ the spec or plan:
      the synthetic rows all carry `windowMs: 60_000`.
   5. **Overlay doesn't mask forceOpen** — re-opens LinkedIn and
      confirms its row stays `state: 'open'` even with `?include=all`.
-  Uses sequential `forceReset` in `afterAll` so a leaked open breaker
-  doesn't bleed into `search.e2e-spec.ts` (Jest runs serially per
-  `maxWorkers: 1`, but defensive-reset is cheap and explicit).
+     Uses sequential `forceReset` in `afterAll` so a leaked open breaker
+     doesn't bleed into `search.e2e-spec.ts` (Jest runs serially per
+     `maxWorkers: 1`, but defensive-reset is cheap and explicit).
 - The legacy `apps/api/__tests__/health.e2e-spec.ts` (which tests
   `/health` and `/ping`) is untouched. The new file is named
   `sources-health.e2e-spec.ts` and lives under `e2e/` so the two
@@ -32090,20 +32151,20 @@ the spec or plan:
 - `.specify/specs/005-source-health-circuit-breaker/tasks.md` — T05
   graduates from "pending" to "done" with a `Done:` note recording
   the actual files touched, the Q-014 reasoning, and a `Files
-  (planned)` vs `Files (actual)` annotation so the file-name
+(planned)` vs `Files (actual)` annotation so the file-name
   divergence (`sources-health.e2e-spec.ts` vs the planned
   `health.e2e-spec.ts`) is visible at a glance.
 - `.specify/specs/005-source-health-circuit-breaker/spec.md` —
   `Status` flipped from `Phase 1+2 done (T01–T04); Phase 3+ pending`
   to `Phase 1+2 done; Phase 3 partial (T05 done, T06 pending);
-  Phase 4+ pending`; §10 records the run #13 / Q-014 decision.
+Phase 4+ pending`; §10 records the run #13 / Q-014 decision.
 - `docs/questions.md` — adds **Q-014** at the top (above Q-013):
   Options A/B/C with trade-offs, Default = Option A (proceeding),
   Resolution = Option A (run #13). Cross-links to T05, FR-5, FR-7,
   and NFR-3.
 - `docs/index.md` — Spec 005 row updated to
   `Phase 1+2 done; Phase 3 partial (T05 shipped run #13, T06
-  pending); Phase 4+ pending`. Run-tag bumped to #13.
+pending); Phase 4+ pending`. Run-tag bumped to #13.
 - `CLAUDE.md` — run-tag bumped to #13 in the footer.
 - `docs/log.md` — this entry.
 - `/competitor-watch.md` — run #13 sync line; no upstream commits in
@@ -32113,9 +32174,9 @@ the spec or plan:
 
 - `npm run lint:docs` — `✓ Doc-lint passed — no issues.`
 - `npx jest --testPathPatterns 'apps/api/__tests__/e2e/
-  sources-health'` — 5 / 5 passed (the new T05 acceptance suite).
+sources-health'` — 5 / 5 passed (the new T05 acceptance suite).
 - `npx jest --testPathPatterns 'apps/api/__tests__/integration/
-  circuit-breaker'` — 4 / 4 passed (T04 regression check).
+circuit-breaker'` — 4 / 4 passed (T04 regression check).
 - `npx jest --testPathPatterns 'apps/api/__tests__/health'` —
   2 / 2 passed (legacy `/health` + `/ping` regression check).
 - `npx jest --testPathPatterns 'packages/plugin/src/circuit-breaker'`
@@ -32193,7 +32254,7 @@ unchanged; the breaker takes effect through the delegation chain.
   - Inside the `Promise.allSettled(selectedScrapers.map(...))` loop,
     the per-site call is now
     `circuitBreaker ? await circuitBreaker.wrap(site, () =>
-    scraper.scrape(scraperInput)) : await scraper.scrape(scraperInput)`.
+scraper.scrape(scraperInput)) : await scraper.scrape(scraperInput)`.
     When the breaker has tripped open the wrap() short-circuits with
     a thrown `Error` whose `code === ERR_SOURCE_CIRCUIT_OPEN` —
     `Promise.allSettled` swallows the rejection and the source is
@@ -32231,7 +32292,7 @@ unchanged; the breaker takes effect through the delegation chain.
      source's breaker trips, then asserts the 6th call returns 2
      jobs **and** the bad scraper's `scrape()` mock was NOT invoked
      a 6th time (proving the short-circuit, not just `Promise.
-     allSettled` swallowing). Also asserts the two healthy sources
+allSettled` swallowing). Also asserts the two healthy sources
      went through 6 successful calls.
   3. **`forceOpen` isolates per-site** — manually opens the LinkedIn
      breaker, then verifies the LinkedIn scraper is never called and
@@ -32240,20 +32301,20 @@ unchanged; the breaker takes effect through the delegation chain.
      `JobsService` without the optional 4th param; verifies the
      prior pass-through behaviour (Promise.allSettled swallows the
      bad source's rejection, aggregator returns the healthy job).
-  All 4 use the **real** `CircuitBreakerService` +
-  `CircuitBreakerInterceptor` + `JobsService` + `JobsAggregator` +
-  `PluginRegistry` — no mocks of breaker internals — so the test
-  exercises FR-1, FR-2, FR-4, and FR-7 end-to-end. Bypasses NestJS DI
-  bootstrap (would otherwise pull in 200+ source modules and a
-  Postgres connection); each case finishes in single-digit
-  milliseconds.
+     All 4 use the **real** `CircuitBreakerService` +
+     `CircuitBreakerInterceptor` + `JobsService` + `JobsAggregator` +
+     `PluginRegistry` — no mocks of breaker internals — so the test
+     exercises FR-1, FR-2, FR-4, and FR-7 end-to-end. Bypasses NestJS DI
+     bootstrap (would otherwise pull in 200+ source modules and a
+     Postgres connection); each case finishes in single-digit
+     milliseconds.
 
 **Changes — docs / specs:**
 
 - `.specify/specs/005-source-health-circuit-breaker/tasks.md` — T04
   graduates from "pending" to "DONE" with a `Done:` note recording
   the actual files touched, the FR-1 reasoning, and a `Files
-  (planned)` vs `Files (actual)` annotation so the deviation from
+(planned)` vs `Files (actual)` annotation so the deviation from
   the spec's named file is visible at-a-glance.
 - `.specify/specs/005-source-health-circuit-breaker/spec.md` —
   `Status` flipped from `Phase 1 done (T01–T03); Phase 2+ pending`
@@ -32273,17 +32334,17 @@ unchanged; the breaker takes effect through the delegation chain.
 
 - `npm run lint:docs` — `✓ Doc-lint passed — no issues.`
 - `npx jest --testPathPatterns 'apps/api/__tests__/integration/
-  circuit-breaker'` — 4 / 4 passed.
+circuit-breaker'` — 4 / 4 passed.
 - `npx jest --testPathPatterns 'apps/api/__tests__/health'` —
   2 / 2 passed (`test-fast` job).
 - `npx jest --testPathPatterns 'packages/plugin/src/circuit-breaker'`
   — 23 / 23 passed (Phase 1 service + interceptor unit suites).
 - `npx jest --testPathPatterns 'apps/api/src/jobs/__tests__/
-  jobs.aggregator'` — 13 / 13 passed (dedup integration + aggregator
+jobs.aggregator'` — 13 / 13 passed (dedup integration + aggregator
   unit).
 - `npx tsc --project apps/api/tsconfig.build.json --noEmit` — clean.
 - `npx nest build` — `webpack 5.97.1 compiled successfully in 19694
-  ms`. Confirms the Docker image will boot with the breaker wired in.
+ms`. Confirms the Docker image will boot with the breaker wired in.
 
 **Notes & follow-ups:**
 
@@ -32297,7 +32358,7 @@ unchanged; the breaker takes effect through the delegation chain.
   ups still open: relax LSH bands or perturbation, and benchmark the
   500 ms NFR-1 target on Ubuntu CI.
 - Default for run #13 is **Spec 005 Phase 3 (T05) — `/api/sources/
-  health` controller + `health.e2e-spec.ts`**, now that Phase 2
+health` controller + `health.e2e-spec.ts`**, now that Phase 2
   proves the breaker is observable end-to-end. T06 (Prometheus
   exposition) follows in the same phase.
 - The `metrics.service.ts` label-comment update is the only Prom
@@ -32342,7 +32403,7 @@ build/test plumbing.
    `design:paramtypes` metadata. NestJS DI then looked for a provider
    for `Object` and failed with
    `Nest can't resolve dependencies of the MergeDefaultService (?). …
-    Please make sure that the argument Object at index [0] is available`.
+Please make sure that the argument Object at index [0] is available`.
    The earlier `[PackageLoader] The "cache-manager" package is missing`
    message was a misleading downstream symptom — the same bootstrap
    chain prints both errors when the test app fails to compile.
@@ -32376,7 +32437,7 @@ build/test plumbing.
     falling back to `process.argv[1].endsWith('docs-lint.{ts,js}')`.
     Works under both Node 20 ts-node-CJS (CI) and Node 24 ts-node-ESM
     (local dev). `__dirname` is also gated with `typeof !==
-    'undefined'`; the script falls back to `process.cwd()` and a
+'undefined'`; the script falls back to `process.cwd()` and a
     `here.endsWith('scripts')` heuristic when running pure-ESM.
 - `package.json` — `lint:docs` script now passes
   `--project tsconfig.base.json` so ts-node picks the explicit
@@ -32389,7 +32450,7 @@ build/test plumbing.
 - `packages/plugins/merge-default/src/merge-default.service.ts` —
   `MergeDefaultService` constructor parameter is now
   `@Optional() @Inject(MERGE_DEFAULT_OPTIONS_TOKEN) options?:
-  MergeDefaultOptions`. `MERGE_DEFAULT_OPTIONS_TOKEN` is exported so a
+MergeDefaultOptions`. `MERGE_DEFAULT_OPTIONS_TOKEN` is exported so a
   parent module can supply a `useValue` to override the default
   configuration; existing direct instantiation in tests
   (`new MergeDefaultService({...})`) keeps working because the
@@ -32400,7 +32461,7 @@ build/test plumbing.
 - `scripts/__tests__/docs-lint.spec.ts` — updated the
   "flags spec files missing the H1+table frontmatter" case: renamed
   to `flags spec.md and plan.md missing the H1+table frontmatter
-  (tasks.md is exempt)`, dropped `tasks.md` from the expected list,
+(tasks.md is exempt)`, dropped `tasks.md` from the expected list,
   added an inline comment explaining the exemption.
 - `packages/plugins/dedup-hybrid/__tests__/minhash-strategy.spec.ts`
   — fixed a TypeScript compile error
@@ -32462,9 +32523,9 @@ build/test plumbing.
      ubuntu-latest runner, but the 500 ms target needs benchmarking
      under the real CI shape before we commit to it. **Out of scope**
      for this CI green-up.
-  Neither test is wired into any CI job today, so they don't block the
-  pipeline. Adding the dedup-hybrid suite to CI is itself a future
-  follow-up.
+     Neither test is wired into any CI job today, so they don't block the
+     pipeline. Adding the dedup-hybrid suite to CI is itself a future
+     follow-up.
 - The `MergeDefaultService` DI fix exposes a small public-surface
   improvement: `MERGE_DEFAULT_OPTIONS_TOKEN` lets a parent module
   inject a `useValue` to override defaults at the application
@@ -32501,7 +32562,7 @@ resolved in favour of the hand-rolled state machine.
     type guard).
   - **Constants:** `DEFAULT_CIRCUIT_POLICY` (Q-003 option A — 5 fails,
     30 s cooldown, 1 probe, 60 s window) and the `ERR_SOURCE_CIRCUIT_OPEN`
-    + `CIRCUIT_BREAKER_TOKEN` strings.
+    - `CIRCUIT_BREAKER_TOKEN` strings.
 - `packages/models/src/interfaces/index.ts` — barrel re-export for the
   new circuit-breaker module.
 - `packages/plugin/src/circuit-breaker/circuit-breaker.service.ts` —
@@ -32514,7 +32575,7 @@ resolved in favour of the hand-rolled state machine.
     `forceReset`, `setPolicy`, `list`. Plus a `setClock(fn)` test seam
     that defaults to `Date.now`.
   - **State machine:** `closed → 5 fail → open`; `open → cooldownMs
-    elapsed → half-open` (lazy: `state(site)` reports `half-open`
+elapsed → half-open` (lazy: `state(site)` reports `half-open`
     even without an `exec()` call so health snapshots stay live);
     `half-open → success → closed`; `half-open → fail → open` with a
     fresh cooldown window. Successful calls in `closed` reset the
@@ -32558,7 +32619,7 @@ resolved in favour of the hand-rolled state machine.
   - **open → half-open → closed:** stays open before cooldown,
     reports `half-open` lazily once cooldown elapses, closes on a
     successful probe.
-  - **half-open → open:** probe failure reopens with a *new*
+  - **half-open → open:** probe failure reopens with a _new_
     cooldown window (verified by checking the second cooldown is
     measured from the new `openedAt`).
   - **forceOpen / forceReset:** force-open blocks; force-reset clears
@@ -32656,7 +32717,7 @@ zero-dep regex parser.
     (`` `code` ``) so docstring examples don't trip the checker.
   - **Unindexed docs** — every doc under `docs/` and `.specify/` must
     be reachable from `docs/index.md`. Exemptions: `docs/{index,log,
-    questions}.md`, `.specify/README.md`,
+questions}.md`, `.specify/README.md`,
     `.specify/memory/constitution.md`, plus everything under
     `.specify/templates/` (still indexed but skipped to avoid
     template-vs-real-spec conflation).
@@ -32672,9 +32733,7 @@ zero-dep regex parser.
     clean, 1 on lint issues, 2 on internal error. Programmatic mode
     returns the full `DocLintResult` envelope so consumers can render
     custom output (e.g. a future GitHub annotation step).
-- `docs/DEPLOYMENT.md` — fixed a stale `[\`.env.example\`](.env.example)`
-  link that resolved to `docs/.env.example` (non-existent). Now
-  `(../.env.example)` and resolves to repo-root `.env.example`. This
+- `docs/DEPLOYMENT.md` — fixed a stale `[\`.env.example\`](.env.example)`link that resolved to`docs/.env.example`(non-existent). Now`(../.env.example)`and resolves to repo-root`.env.example`. This
   was the only broken link surfaced when running the new lint against
   the live repo.
 
@@ -32703,13 +32762,13 @@ zero-dep regex parser.
 
 - `package.json` — two new scripts:
   - `lint:docs` → `ts-node -r tsconfig-paths/register
-    scripts/docs-lint.ts` (CLI mode against the repo).
+scripts/docs-lint.ts` (CLI mode against the repo).
   - `test:scripts` → `jest --testPathPatterns scripts/__tests__`
     (focused on the lint suite).
 - `.github/workflows/ci.yml` — new `docs-lint` job runs first on every
   push/PR. Two steps: `npm run lint:docs` (exits non-zero on any of
   the five lint checks) followed by `npx jest --testPathPatterns
-  'scripts/__tests__/docs-lint'` (executes the unit suite). Both
+'scripts/__tests__/docs-lint'` (executes the unit suite). Both
   steps required — no `continue-on-error` since doc rot should block
   merges per Spec 002 §FR-10.
 
@@ -32778,7 +32837,7 @@ to "T01–T15" with REST + GraphQL parity end to end.
   breaking change for existing consumers).
 - `apps/api/src/jobs/jobs.resolver.ts` — `JobsResolver` now injects
   `JobsAggregator` and runs the same `cache → fan-out → cache write
-  (raw) → dedup` pipeline as the REST controller. Dedup defaults to
+(raw) → dedup` pipeline as the REST controller. Dedup defaults to
   `true`; `dedup: false` opts out. The cache key is bumped to
   `endpoint=graphql-search-v2` so v1 entries (which were written when
   the resolver bypassed the aggregator and didn't include the dedup
@@ -32810,7 +32869,7 @@ to "T01–T15" with REST + GraphQL parity end to end.
   T15 marked done; per-task notes reference the new files.
 - `docs/questions.md` — Q-010 resolved (option A, mirror REST adopted).
 - `docs/index.md` — Spec 003 row updated to `All phases done
-  (T01–T15); GraphQL parity shipped run #8`. Run-tag bumped to #8.
+(T01–T15); GraphQL parity shipped run #8`. Run-tag bumped to #8.
 - `docs/log.md` — this entry.
 - `/competitor-watch.md` — run #8 sync line; no upstream commits in any
   of the three tracked repos.
@@ -32832,7 +32891,7 @@ to "T01–T15" with REST + GraphQL parity end to end.
   pre-dedup and others post-dedup. The next deploy will see one cache
   miss per (input, endpoint) pair, then steady-state.
 - The dedup flag is intentionally stripped from the cache key. If we
-  *kept* it in the key we'd double the cache footprint for no benefit
+  _kept_ it in the key we'd double the cache footprint for no benefit
   (the underlying raw fan-out is identical regardless of the
   post-process).
 - `JobsAggregator.aggregateRaw` already returns `outputCount` separately
@@ -32842,9 +32901,9 @@ to "T01–T15" with REST + GraphQL parity end to end.
 - Spec 003 is now end-to-end shippable on both wire formats. The next
   pending block is Spec 002 Phase 3 (`scripts/docs-lint.ts` + CI hook,
   T11/T12), Spec 004 (persistence plugins), or Spec 005 (source health
-  + circuit breaker). Default for run #9 is **Spec 002 Phase 3** — the
-  doc-lint script is the cheapest infrastructure win and protects every
-  future run from broken-link rot.
+  - circuit breaker). Default for run #9 is **Spec 002 Phase 3** — the
+    doc-lint script is the cheapest infrastructure win and protects every
+    future run from broken-link rot.
 
 ---
 
@@ -33079,7 +33138,7 @@ benchmark suite). Q-009 resolved (in-tree MinHash per the run #4 default).
   marked done with per-task notes referencing the new files.
 - `docs/questions.md` — Q-009 resolved (in-tree MinHash adopted).
 - `docs/index.md` — Spec 003 status flipped to `Phases 1–3 + perf gate
-  done (T01–T10); merge resolver (Phase 4) next`.
+done (T01–T10); merge resolver (Phase 4) next`.
 - `docs/log.md` — this entry.
 - `/competitor-watch.md` — run #5 sync line; no upstream commits in any
   of the three tracked repos.
@@ -33160,7 +33219,7 @@ perf-suite waits on T08.
 - `docs/questions.md` — added **Q-009** (MinHash library choice for T08;
   default = **in-tree implementation** to keep Phase 3 zero-dep).
 - `docs/index.md` — Spec 003 status flipped to `Phase 1, 2, and Phase 3
-  hash-path done (T01–T07); MinHash (T08) next`.
+hash-path done (T01–T07); MinHash (T08) next`.
 - `docs/log.md` — this entry.
 
 **Notes:**
@@ -33339,17 +33398,16 @@ ATS-scrapers project tracked outside this repo.
 - Added `docs/questions.md` — open-questions ledger.
 - Drafted foundational specs (under `.specify/specs/`):
   - `001-plugin-architecture-foundation` — retroactively documents existing plugin infra.
-  - `002-docs-and-spec-kit-bootstrap` — *this run*.
+  - `002-docs-and-spec-kit-bootstrap` — _this run_.
   - `003-deduplication-engine` — cross-source job dedup.
   - `004-persistence-storage-plugins` — pluggable storage adaptors.
   - `005-source-health-circuit-breaker` — per-plugin reliability.
 
-
 **Notes:**
 
 - SSH `git pull` blocked in this sandbox (no agent SSH key); used HTTPS fetch instead.
-  Recorded in `docs/questions.md` as Q-001 with default *"keep using https fetch in
-  scheduled runs."*
+  Recorded in `docs/questions.md` as Q-001 with default _"keep using https fetch in
+  scheduled runs."_
 - No source-code changes this run — focus is foundation only.
 - Next run will pick up Spec 003 (dedup engine) Phase 1 once human reviews defaults.
 

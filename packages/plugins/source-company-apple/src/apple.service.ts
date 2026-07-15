@@ -1,21 +1,30 @@
-﻿import { SourcePlugin } from '@ever-jobs/plugin';
+﻿import { SourcePlugin } from "@ever-jobs/plugin";
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from "@nestjs/common";
 import {
-  IScraper, ScraperInputDto, JobResponseDto, JobPostDto, Site, LocationDto,
-} from '@ever-jobs/models';
-import { createHttpClient } from '@ever-jobs/common';
-import { stripHtmlTags } from '@ever-jobs/common';
+  IScraper,
+  ScraperInputDto,
+  JobResponseDto,
+  JobPostDto,
+  Site,
+  LocationDto,
+} from "@ever-jobs/models";
+import { createHttpClient } from "@ever-jobs/common";
+import { stripHtmlTags } from "@ever-jobs/common";
 import {
-  APPLE_CSRF_ENDPOINT, APPLE_SEARCH_ENDPOINT, APPLE_HEADERS,
-  APPLE_PAGE_SIZE, APPLE_REQUEST_DELAY_MS, APPLE_BASE_URL,
-} from './apple.constants';
-import { AppleSearchResponse, AppleJobResult } from './apple.types';
+  APPLE_CSRF_ENDPOINT,
+  APPLE_SEARCH_ENDPOINT,
+  APPLE_HEADERS,
+  APPLE_PAGE_SIZE,
+  APPLE_REQUEST_DELAY_MS,
+  APPLE_BASE_URL,
+} from "./apple.constants";
+import { AppleSearchResponse, AppleJobResult } from "./apple.types";
 
 @SourcePlugin({
   site: Site.APPLE,
-  name: 'Apple',
-  category: 'company',
+  name: "Apple",
+  category: "company",
 })
 @Injectable()
 export class AppleService implements IScraper {
@@ -34,21 +43,21 @@ export class AppleService implements IScraper {
 
       // Step 1: Get CSRF token
       const csrfRes = await client.get(APPLE_CSRF_ENDPOINT);
-      const csrfToken = csrfRes.headers['x-apple-csrf-token'];
+      const csrfToken = csrfRes.headers["x-apple-csrf-token"];
       if (csrfToken) {
-        client.setHeaders({ 'x-apple-csrf-token': csrfToken as string });
+        client.setHeaders({ "x-apple-csrf-token": csrfToken as string });
       }
 
       // Step 2: Paginate through search results
       let page = 1;
       while (jobs.length < maxResults) {
         const payload = {
-          query: input.searchTerm ?? '',
+          query: input.searchTerm ?? "",
           filters: {},
           page,
-          locale: 'en-us',
-          sort: '',
-          format: { longDate: 'MMMM D, YYYY', mediumDate: 'MMM D, YYYY' },
+          locale: "en-us",
+          sort: "",
+          format: { longDate: "MMMM D, YYYY", mediumDate: "MMM D, YYYY" },
         };
 
         const { data } = await client.post<AppleSearchResponse>(
@@ -56,13 +65,24 @@ export class AppleService implements IScraper {
           payload,
         );
 
-        const results = data?.res?.searchResults ?? [];
-        if (!results.length) break;
+        const results = data?.res?.searchResults;
+        if (!Array.isArray(results)) {
+          throw new Error(
+            "Apple returned an invalid response: expected res.searchResults[]",
+          );
+        }
+        if (results.length === 0) break;
 
         for (const r of results) {
           if (jobs.length >= maxResults) break;
-          const job = this.mapToJobPost(r);
-          if (job) jobs.push(job);
+          try {
+            const job = this.mapToJobPost(r);
+            if (job) jobs.push(job);
+          } catch (err: any) {
+            this.logger.warn(
+              `Apple: failed to map search result: ${err.message}`,
+            );
+          }
         }
 
         const total = data?.res?.totalRecords ?? 0;
@@ -74,25 +94,32 @@ export class AppleService implements IScraper {
       this.logger.log(`Apple: scraped ${jobs.length} jobs`);
     } catch (err: any) {
       this.logger.error(`Apple scrape failed: ${err.message}`);
+      throw err;
     }
 
     return { jobs };
   }
 
   private mapToJobPost(r: AppleJobResult): JobPostDto | null {
-    if (!r.postingTitle) return null;
+    if (typeof r.postingTitle !== "string" || !r.postingTitle.trim())
+      return null;
 
     const loc = r.locations?.[0];
-    const slug = r.transformedPostingTitle ?? '';
+    const slug = r.transformedPostingTitle ?? "";
     const url = r.positionId
       ? `${APPLE_BASE_URL}/en-us/details/${r.positionId}/${slug}`
       : undefined;
 
     return new JobPostDto({
-      id: r.positionId ?? r.id ?? undefined,
+      id:
+        r.positionId !== null && r.positionId !== undefined
+          ? String(r.positionId)
+          : r.id !== null && r.id !== undefined
+            ? String(r.id)
+            : undefined,
       site: Site.APPLE,
       title: r.postingTitle,
-      companyName: 'Apple',
+      companyName: "Apple",
       jobUrl: url,
       location: loc
         ? new LocationDto({

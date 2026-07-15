@@ -1,14 +1,14 @@
-import 'reflect-metadata';
-import * as fs from 'fs';
-import * as path from 'path';
-import { Test } from '@nestjs/testing';
-import { JobResponseDto, ScraperInputDto, Site } from '@ever-jobs/models';
+import "reflect-metadata";
+import * as fs from "fs";
+import * as path from "path";
+import { Test } from "@nestjs/testing";
+import { JobResponseDto, ScraperInputDto, Site } from "@ever-jobs/models";
 
 // Mock createHttpClient so the scraper hits a controlled fixture
 // rather than the live Greenhouse public API.
 const mockGet = jest.fn();
-jest.mock('@ever-jobs/common', () => {
-  const actual = jest.requireActual('@ever-jobs/common');
+jest.mock("@ever-jobs/common", () => {
+  const actual = jest.requireActual("@ever-jobs/common");
   return {
     ...actual,
     createHttpClient: jest.fn(() => ({
@@ -18,11 +18,11 @@ jest.mock('@ever-jobs/common', () => {
   };
 });
 
-import { VercelModule, VercelService } from '../src';
+import { VercelModule, VercelService } from "../src";
 
-const FIXTURE_DIR = path.join(__dirname, 'fixtures');
+const FIXTURE_DIR = path.join(__dirname, "fixtures");
 const JOBS_PAGE_RAW = JSON.parse(
-  fs.readFileSync(path.join(FIXTURE_DIR, 'vercel-jobs.json'), 'utf8'),
+  fs.readFileSync(path.join(FIXTURE_DIR, "vercel-jobs.json"), "utf8"),
 );
 
 function clone<T>(v: T): T {
@@ -41,16 +41,16 @@ function clone<T>(v: T): T {
  *   4. `resultsWanted = 1` against a two-listing fixture caps response.
  *   5. `searchTerm` filters listings by title (case-insensitive).
  *   6. `searchTerm` filters listings by department name (case-insensitive).
- *   7. HTTP 500 → `scrape` resolves to `{ jobs: [] }`, never throws.
+ *   7. HTTP 500 → `scrape` rejects so orchestration records the failure.
  *   8. Empty `data.jobs` → `{ jobs: [] }`.
  */
-describe('VercelService — Spec 043 / T04', () => {
+describe("VercelService — Spec 043 / T04", () => {
   beforeEach(() => {
     mockGet.mockReset();
   });
 
-  describe('registration scaffolding', () => {
-    it('resolves through VercelModule via NestJS DI', async () => {
+  describe("registration scaffolding", () => {
+    it("resolves through VercelModule via NestJS DI", async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [VercelModule],
       }).compile();
@@ -60,12 +60,12 @@ describe('VercelService — Spec 043 / T04', () => {
     });
 
     it('exports the Site.VERCEL = "vercel" enum value', () => {
-      expect(Site.VERCEL).toBe('vercel');
+      expect(Site.VERCEL).toBe("vercel");
     });
   });
 
-  describe('happy path — 2 listings mapped to JobPostDto', () => {
-    it('maps both fixture listings to JobPostDto with expected fields', async () => {
+  describe("happy path — 2 listings mapped to JobPostDto", () => {
+    it("maps both fixture listings to JobPostDto with expected fields", async () => {
       mockGet.mockResolvedValueOnce({ data: clone(JOBS_PAGE_RAW) });
 
       const service = new VercelService();
@@ -79,39 +79,39 @@ describe('VercelService — Spec 043 / T04', () => {
       const dto = result as JobResponseDto;
       expect(dto.jobs).toHaveLength(2);
 
-      const eng = dto.jobs.find((j) => j.id === 'vercel-5624231004');
+      const eng = dto.jobs.find((j) => j.id === "vercel-5624231004");
       expect(eng).toBeDefined();
       expect(eng?.site).toBe(Site.VERCEL);
-      expect(eng?.companyName).toBe('Vercel');
-      expect(eng?.title).toBe('Senior Software Engineer, Edge Network');
+      expect(eng?.companyName).toBe("Vercel");
+      expect(eng?.title).toBe("Senior Software Engineer, Edge Network");
       // Wire shape: Greenhouse stores the new permalink subdomain
       // `job-boards.greenhouse.io` for this tenant.
       expect(eng?.jobUrl).toBe(
-        'https://job-boards.greenhouse.io/vercel/jobs/5624231004',
+        "https://job-boards.greenhouse.io/vercel/jobs/5624231004",
       );
       expect(eng?.location?.city).toBe(
-        'Hybrid - San Francisco, New York City, Austin',
+        "Hybrid - San Francisco, New York City, Austin",
       );
-      expect(eng?.department).toBe('Engineering');
+      expect(eng?.department).toBe("Engineering");
       expect(eng?.isRemote).toBe(false);
       // The HTML stripper removes tags but preserves text content.
-      expect(eng?.description).not.toContain('<p>');
-      expect(eng?.description).toContain('edge network forwarding plane');
+      expect(eng?.description).not.toContain("<p>");
+      expect(eng?.description).toContain("edge network forwarding plane");
 
-      const dr = dto.jobs.find((j) => j.id === 'vercel-5624442004');
+      const dr = dto.jobs.find((j) => j.id === "vercel-5624442004");
       expect(dr?.isRemote).toBe(true);
-      expect(dr?.department).toBe('Developer Relations');
+      expect(dr?.department).toBe("Developer Relations");
 
       // Regression guard: the slug must be `vercel` exactly.
       const calledUrls = mockGet.mock.calls.map((c) => c[0] as string);
       expect(calledUrls[0]).toBe(
-        'https://api.greenhouse.io/v1/boards/vercel/jobs?content=true',
+        "https://api.greenhouse.io/v1/boards/vercel/jobs?content=true",
       );
     });
   });
 
-  describe('resultsWanted cap', () => {
-    it('honours resultsWanted=1 against a 2-item page', async () => {
+  describe("resultsWanted cap", () => {
+    it("honours resultsWanted=1 against a 2-item page", async () => {
       mockGet.mockResolvedValueOnce({ data: clone(JOBS_PAGE_RAW) });
 
       const service = new VercelService();
@@ -125,48 +125,49 @@ describe('VercelService — Spec 043 / T04', () => {
     });
   });
 
-  describe('searchTerm filter', () => {
-    it('filters by case-insensitive substring of title', async () => {
+  describe("searchTerm filter", () => {
+    it("filters by case-insensitive substring of title", async () => {
       mockGet.mockResolvedValueOnce({ data: clone(JOBS_PAGE_RAW) });
 
       const service = new VercelService();
       const result = await service.scrape({
         siteType: [Site.VERCEL],
-        searchTerm: 'EDGE NETWORK',
+        searchTerm: "EDGE NETWORK",
       } as ScraperInputDto);
 
       expect(result.jobs).toHaveLength(1);
-      expect(result.jobs[0].id).toBe('vercel-5624231004');
+      expect(result.jobs[0].id).toBe("vercel-5624231004");
     });
 
-    it('filters by case-insensitive substring of department name', async () => {
+    it("filters by case-insensitive substring of department name", async () => {
       mockGet.mockResolvedValueOnce({ data: clone(JOBS_PAGE_RAW) });
 
       const service = new VercelService();
       const result = await service.scrape({
         siteType: [Site.VERCEL],
-        searchTerm: 'developer relations',
+        searchTerm: "developer relations",
       } as ScraperInputDto);
 
       expect(result.jobs).toHaveLength(1);
-      expect(result.jobs[0].id).toBe('vercel-5624442004');
+      expect(result.jobs[0].id).toBe("vercel-5624442004");
     });
   });
 
-  describe('error handling', () => {
-    it('catches an HTTP 500 → empty JobResponseDto, never throws', async () => {
-      mockGet.mockRejectedValueOnce(new Error('Request failed with status 500'));
+  describe("error handling", () => {
+    it("rejects an HTTP 500 so JobsService can report the source failure", async () => {
+      mockGet.mockRejectedValueOnce(
+        new Error("Request failed with status 500"),
+      );
 
       const service = new VercelService();
-      const result = await service.scrape({
-        siteType: [Site.VERCEL],
-      } as ScraperInputDto);
+      await expect(
+        service.scrape({ siteType: [Site.VERCEL] } as ScraperInputDto),
+      ).rejects.toThrow("Request failed with status 500");
 
-      expect(result.jobs).toEqual([]);
       expect(mockGet).toHaveBeenCalledTimes(1);
     });
 
-    it('returns empty when the response payload has no jobs', async () => {
+    it("returns empty when the response payload has no jobs", async () => {
       mockGet.mockResolvedValueOnce({ data: { jobs: [] } });
 
       const service = new VercelService();

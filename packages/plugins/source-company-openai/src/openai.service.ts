@@ -1,18 +1,23 @@
-﻿import { SourcePlugin } from '@ever-jobs/plugin';
+﻿import { SourcePlugin } from "@ever-jobs/plugin";
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from "@nestjs/common";
 import {
-  IScraper, ScraperInputDto, JobResponseDto, JobPostDto, Site, LocationDto,
-} from '@ever-jobs/models';
-import { createHttpClient, stripHtmlTags } from '@ever-jobs/common';
+  IScraper,
+  ScraperInputDto,
+  JobResponseDto,
+  JobPostDto,
+  Site,
+  LocationDto,
+} from "@ever-jobs/models";
+import { createHttpClient, stripHtmlTags } from "@ever-jobs/common";
 
 /** OpenAI uses Ashby for their careers page */
-const API_URL = 'https://api.ashbyhq.com/posting-api/job-board/openai';
+const API_URL = "https://api.ashbyhq.com/posting-api/job-board/openai";
 
 @SourcePlugin({
   site: Site.OPENAI,
-  name: 'OpenAI',
-  category: 'company',
+  name: "OpenAI",
+  category: "company",
 })
 @Injectable()
 export class OpenAIService implements IScraper {
@@ -31,57 +36,75 @@ export class OpenAIService implements IScraper {
       this.logger.log(`OpenAI: fetching ${API_URL}`);
 
       const { data } = await client.get<any>(API_URL);
-      const listings = data?.jobs ?? [];
+      if (!data || !Array.isArray(data.jobs)) {
+        throw new Error("OpenAI returned an invalid response: expected jobs[]");
+      }
+      const listings = data.jobs;
 
       for (const listing of listings) {
         if (jobs.length >= resultsWanted) break;
+        try {
+          const title = listing.title ?? "";
+          if (!title) continue;
 
-        const title = listing.title ?? '';
-        if (!title) continue;
-
-        // Filter by search term if provided
-        if (input.searchTerm) {
-          const term = input.searchTerm.toLowerCase();
-          if (!title.toLowerCase().includes(term) &&
-              !(listing.departmentName ?? '').toLowerCase().includes(term)) {
-            continue;
+          // Filter by search term if provided
+          if (input.searchTerm) {
+            const term = input.searchTerm.toLowerCase();
+            if (
+              !title.toLowerCase().includes(term) &&
+              !(listing.departmentName ?? "").toLowerCase().includes(term)
+            ) {
+              continue;
+            }
           }
+
+          const jobId = listing.id ?? "";
+          const id = `openai-${jobId}`;
+
+          const locationStr = listing.locationName ?? listing.location ?? null;
+          const location = locationStr
+            ? new LocationDto({ city: locationStr })
+            : null;
+
+          // Filter by location if provided
+          if (input.location && locationStr) {
+            if (
+              !locationStr.toLowerCase().includes(input.location.toLowerCase())
+            )
+              continue;
+          }
+
+          jobs.push(
+            new JobPostDto({
+              id,
+              site: Site.OPENAI,
+              title,
+              companyName: "OpenAI",
+              jobUrl:
+                listing.jobUrl ?? `https://openai.com/careers/${listing.id}`,
+              location,
+              description: listing.descriptionHtml
+                ? stripHtmlTags(listing.descriptionHtml)
+                : (listing.descriptionPlain ?? null),
+              datePosted: listing.publishedAt ?? null,
+              isRemote:
+                listing.isRemote ??
+                locationStr?.toLowerCase().includes("remote") ??
+                false,
+              department: listing.departmentName ?? listing.team ?? null,
+            }),
+          );
+        } catch (err: any) {
+          this.logger.warn(
+            `OpenAI: failed to map job ${String(listing?.id ?? "unknown")}: ${err.message}`,
+          );
         }
-
-        const jobId = listing.id ?? '';
-        const id = `openai-${jobId}`;
-
-        const locationStr = listing.locationName ?? listing.location ?? null;
-        const location = locationStr
-          ? new LocationDto({ city: locationStr })
-          : null;
-
-        // Filter by location if provided
-        if (input.location && locationStr) {
-          if (!locationStr.toLowerCase().includes(input.location.toLowerCase())) continue;
-        }
-
-        jobs.push(
-          new JobPostDto({
-            id,
-            site: Site.OPENAI,
-            title,
-            companyName: 'OpenAI',
-            jobUrl: listing.jobUrl ?? `https://openai.com/careers/${listing.id}`,
-            location,
-            description: listing.descriptionHtml
-              ? stripHtmlTags(listing.descriptionHtml)
-              : listing.descriptionPlain ?? null,
-            datePosted: listing.publishedAt ?? null,
-            isRemote: listing.isRemote ?? (locationStr?.toLowerCase().includes('remote') ?? false),
-            department: listing.departmentName ?? listing.team ?? null,
-          }),
-        );
       }
 
       this.logger.log(`OpenAI: scraped ${jobs.length} jobs`);
     } catch (err: any) {
       this.logger.error(`OpenAI scrape failed: ${err.message}`);
+      throw err;
     }
 
     return { jobs };
