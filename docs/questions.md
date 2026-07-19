@@ -10,6 +10,95 @@
 
 ---
 
+## Q-075 — What recent window should LinkedIn public guest search use?
+
+**Context:** Spec 6000 requires newest-first LinkedIn public guest searches in a
+bounded recent window. The window must overlap enough cycles to tolerate a
+temporary outage or delayed indexing without turning the unauthenticated Tier 3
+query into an unbounded historical crawl.
+
+**Options:**
+
+- **A — 72 hours.** Covers three days of delayed indexing and recovery while
+  remaining bounded; canonical episodes and observation idempotency absorb the
+  intentional overlap.
+- **B — 24 hours.** Minimizes results and request work, but a one-day source
+  outage or delayed listing can create a permanent gap.
+- **C — 168 hours.** Provides a full week of recovery overlap, but increases
+  repeated result/detail processing and blocking exposure.
+
+**Default (proceeding):** **A — 72 hours.** The preset keeps LinkedIn at Tier 3
+with an eight-request rotating budget, newest-first ordering, and coarse
+internship filtering before any detail request.
+
+**Implementation status (2026-07-19):** Implemented and covered by the passing
+LinkedIn deterministic/live-public validation; the target is enabled only inside
+the globally paused/uninitialized watch pending baseline and two observation
+cycles.
+
+**Resolution:** _(pending human review — default A continues.)_
+
+---
+
+## Q-074 — What request budgets should the v2 query targets use?
+
+**Context:** Spec 6000 requires each query target to rotate through the complete
+software-internship search-term × location matrix without issuing the entire
+matrix in one poll. The contract makes `maxRequestsPerRun` configurable but does
+not choose concrete preset values. Google Careers and Google Jobs use public
+search surfaces; LinkedIn's unauthenticated guest surface is more restrictive
+and should receive the smallest default budget.
+
+**Options:**
+
+- **A — Google Careers 12, Google Jobs 12, LinkedIn 8 requests per run.** This
+  gives the official/public Google surfaces moderate coverage while keeping the
+  fragile LinkedIn target more conservative. Deterministic rotation eventually
+  covers every matrix entry.
+- **B — Google surfaces 8 and LinkedIn 6.** Reduces request cost and blocking
+  exposure, but lengthens the rotation needed to cover the complete matrix.
+- **C — Google surfaces 16 and LinkedIn 12.** Covers the matrix faster, but
+  increases per-cycle request cost and raises the risk of throttling on public
+  unauthenticated surfaces.
+
+**Default (proceeding):** **A** — `12`, `12`, and `8`, respectively. Operators
+may lower these per target; configured source/global concurrency and result caps
+still apply.
+
+**Implementation status (2026-07-19):** Implemented as 12 for Google Careers,
+12 for Canada Job Bank, 12 for Google Jobs, and 8 for LinkedIn. Google Jobs
+remains target-disabled after its live smoke was classified blocked.
+
+**Resolution:** _(pending human review — default A continues.)_
+
+---
+
+## Q-073 — Which reserved Spec Kit range should this fork use?
+
+**Context:** The Prestige Internship Coverage Expansion requires the next
+repository-specific feature number, but `npm run spec:next` reported that the
+current `RadmehrVafadar/ever-jobs` origin had no row in `.specify/ranges.json`.
+The existing append-only registry reserves `1–4999` for upstream and `5000–5999`
+for the MakeDeeply fork, so allocating from either band would make future merges
+collision-prone.
+
+**Options:**
+
+- **A — Reserve `6000–6999` for `RadmehrVafadar/ever-jobs`.** This is the first
+  contiguous, non-overlapping 1,000-number band and follows the existing fork
+  convention.
+- **B — Continue using upstream's `1–4999` band.** Avoids a registry edit, but
+  violates the allocator's per-origin isolation contract and risks collisions.
+- **C — Reserve a smaller or more distant band.** Also avoids overlap, but adds
+  an arbitrary sizing or numbering policy with no demonstrated benefit.
+
+**Default (proceeding):** **A** — append the `6000–6999` reservation and allocate
+this feature as Spec `6000`.
+
+**Resolution:** _(pending human review — default A continues.)_
+
+---
+
 ## Q-WORKABLE-1 — Workable board-name anchor + empty-but-real accounts
 
 **Context:** Spec 1677. The public Workable widget API

@@ -5,7 +5,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { GoogleModule, GoogleService } from '@ever-jobs/source-google';
 import { ScraperInputDto, Site, Country, DescriptionFormat } from '@ever-jobs/models';
 
-describe('GoogleService (E2E)', () => {
+const describeNetwork = process.env.RUN_NETWORK_E2E === 'true' ? describe : describe.skip;
+
+describeNetwork('GoogleService (network E2E)', () => {
   let service: GoogleService;
 
   beforeAll(async () => {
@@ -31,10 +33,7 @@ describe('GoogleService (E2E)', () => {
     expect(response).toBeDefined();
     expect(response.jobs).toBeDefined();
     expect(Array.isArray(response.jobs)).toBe(true);
-    if (response.jobs.length > 0) {
-      const job = response.jobs[0];
-      expect(job.title).toBeDefined();
-      expect(typeof job.title).toBe('string');
-    }
+    expect(response.jobs.length).toBeGreaterThan(0);
+    expect(typeof response.jobs[0].title).toBe('string');
   });
 });

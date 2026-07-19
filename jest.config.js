@@ -52,6 +52,7 @@ module.exports = {
     '^@ever-jobs/source-company-spreadgroup$': '<rootDir>/packages/plugins/source-company-spreadgroup/src/index.ts',
     '^@ever-jobs/source-company-simvia$': '<rootDir>/packages/plugins/source-company-simvia/src/index.ts',
     '^@ever-jobs/source-company-shopmanufaktur$': '<rootDir>/packages/plugins/source-company-shopmanufaktur/src/index.ts',
+    '^@ever-jobs/source-company-shopify$': '<rootDir>/packages/plugins/source-company-shopify/src/index.ts',
     '^@ever-jobs/source-company-solutions4delivery$': '<rootDir>/packages/plugins/source-company-solutions4delivery/src/index.ts',
     '^@ever-jobs/source-company-qualifyze$': '<rootDir>/packages/plugins/source-company-qualifyze/src/index.ts',
     '^@ever-jobs/source-company-qlfbrandslampenlichtnl$': '<rootDir>/packages/plugins/source-company-qlfbrandslampenlichtnl/src/index.ts',

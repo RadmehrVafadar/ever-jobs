@@ -80,9 +80,6 @@ const ACTIVE_STORE = resolveStoreBootstrap();
     // Global cache (Redis or in-memory)
     AppCacheModule,
 
-    // Health endpoints
-    HealthModule,
-
     // Spec 004 / T12 — `EVER_JOBS_STORE` env-var resolved into the
     // active `IJobStore` + `IJobObservationStore` bindings before
     // `JobsModule` imports. Importing `StoreModule.forActive(...)` here
@@ -102,7 +99,8 @@ const ACTIVE_STORE = resolveStoreBootstrap();
     // Persistent job watches
     WatchesModule,
 
-
+    // Health endpoints (after WatchesModule so watcher coverage is injectable)
+    HealthModule,
   ],
   providers: [
     // Global API key guard

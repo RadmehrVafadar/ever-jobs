@@ -7,9 +7,10 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { WATCH_REPOSITORY, WatchRepository } from "../interfaces/watch.types";
-import { defaultInternshipWatch } from "./default-watch";
-
-const DEFAULT_WATCH_NAME = "Toronto and Canada Software Internships";
+import {
+  prestigeInternshipsV2Watch,
+  PRESTIGE_INTERNSHIPS_V2_NAME,
+} from "./prestige-internships-v2.preset";
 
 /**
  * Creates the safe, disabled baseline watch on a fresh deployment.
@@ -29,14 +30,16 @@ export class DefaultWatchSeederService implements OnApplicationBootstrap {
   async onApplicationBootstrap(): Promise<void> {
     if (this.config?.get<boolean>("watcher.seedDefault", true) === false)
       return;
-    const existing = (await this.repository.listWatches()).some(
-      (watch) => watch.name === DEFAULT_WATCH_NAME,
-    );
-    if (existing) return;
+    // This is a fresh-install seed only. An existing legacy, custom, or v2
+    // watch is operator-owned and must never be duplicated or upgraded during
+    // application bootstrap.
+    if ((await this.repository.listWatches()).length > 0) return;
 
-    const watch = await this.repository.createWatch(defaultInternshipWatch());
+    const watch = await this.repository.createWatch(
+      prestigeInternshipsV2Watch(),
+    );
     this.logger.log(
-      `Created disabled baseline watch watchId=${watch.id}; initialize then resume it to enable alerts`,
+      `Created disabled ${PRESTIGE_INTERNSHIPS_V2_NAME} watch watchId=${watch.id}; initialize targets then resume it to enable alerts`,
     );
   }
 }

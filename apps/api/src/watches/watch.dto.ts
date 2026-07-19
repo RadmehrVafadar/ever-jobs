@@ -2,6 +2,7 @@ import { Type } from "class-transformer";
 import {
   ArrayMaxSize,
   ArrayMinSize,
+  ArrayUnique,
   IsArray,
   IsBoolean,
   IsIn,
@@ -12,6 +13,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Length,
   Max,
   MaxLength,
   Min,
@@ -41,6 +43,41 @@ const WATCH_RUN_STATUSES = [
   "partial",
 ] as const;
 
+export class WatchSearchScopeDto {
+  @ApiProperty({ type: [String], example: ["CA", "US"] })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(25)
+  @IsString({ each: true })
+  @Length(2, 2, { each: true })
+  countryCodes!: string[];
+
+  @ApiProperty({
+    type: [String],
+    example: ["Canada", "Toronto, Ontario", "United States"],
+  })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(100)
+  @IsString({ each: true })
+  locations!: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(100)
+  @IsString({ each: true })
+  searchTerms?: string[];
+
+  @ApiPropertyOptional({ minimum: 1, maximum: 1000, example: 20 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(1_000)
+  maxRequestsPerRun?: number;
+}
+
 export class WatchSourceTargetDto {
   @ApiProperty({ example: "google_careers" })
   @IsString()
@@ -66,10 +103,38 @@ export class WatchSourceTargetDto {
   @MaxLength(200)
   companySlug?: string;
 
+  @ApiPropertyOptional({ example: "Wealthsimple" })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  companyName?: string;
+
+  @ApiPropertyOptional({ type: () => WatchSearchScopeDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => WatchSearchScopeDto)
+  searchScope?: WatchSearchScopeDto;
+
   @ApiPropertyOptional({ default: true })
   @IsOptional()
   @IsBoolean()
   enabled?: boolean;
+
+  @ApiPropertyOptional({ format: "date-time", nullable: true })
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  initializedAt?: string | null;
+
+  @ApiPropertyOptional({ format: "date-time", nullable: true })
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  lastRunAt?: string | null;
+
+  @ApiPropertyOptional({ format: "date-time", nullable: true })
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  nextRunAt?: string | null;
 }
 
 export class NotificationDestinationDto {
@@ -277,6 +342,22 @@ export class CreateWatchDto {
 }
 
 export class UpdateWatchDto extends PartialType(CreateWatchDto) {}
+
+export class InitializeWatchDto {
+  @ApiPropertyOptional({
+    type: [String],
+    description:
+      "Target keys to baseline. Omit or pass an empty array to initialize all enabled targets.",
+    example: ["ashby:wealthsimple", "google_careers"],
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(250)
+  @ArrayUnique()
+  @IsString({ each: true })
+  @IsNotEmpty({ each: true })
+  targetKeys?: string[];
+}
 
 export class PaginationQueryDto {
   @ApiPropertyOptional({ minimum: 0, default: 0 })

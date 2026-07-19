@@ -1,8 +1,8 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "name": "ever-jobs",
   "display_name": "Ever Jobs",
-  "description": "Multi-source job search tool. Searches 65+ job boards, ATS platforms, and company career pages (LinkedIn, Indeed, Glassdoor, Greenhouse, Lever, Amazon, Apple, Microsoft, etc.) concurrently and returns normalized, structured job posting data via REST API, CLI, or MCP server.",
+  "description": "Multi-source job search and persistent watcher. Searches job boards, ATS platforms, and company career pages concurrently, returns normalized multi-location job postings, and can monitor target-scoped internship coverage through REST API and CLI.",
   "version": "0.1.0",
   "author": "Ever Co",
   "license": "MIT",
@@ -15,7 +15,7 @@
         "job_boards": ["linkedin", "indeed", "glassdoor", "zip_recruiter", "google", "bayt", "naukri", "bdjobs", "internshala", "exa", "upwork", "dice", "simplyhired", "wellfound", "stepstone", "monster", "careerbuilder", "builtin", "snagajob", "dribbble", "solidjobs"],
         "remote_boards": ["remoteok", "remotive", "weworkremotely", "jobicy", "himalayas", "arbeitnow"],
         "ats_platforms": ["greenhouse", "lever", "ashby", "workable", "smartrecruiters", "jobvite", "workday", "successfactors", "taleo", "icims", "adp", "ukg", "rippling", "recruitee", "teamtailor", "bamboohr", "personio", "jazzhr"],
-        "company_pages": ["amazon", "apple", "microsoft", "nvidia", "tiktok", "uber", "cursor", "google_careers", "meta", "netflix", "stripe", "openai"],
+        "company_pages": ["amazon", "apple", "microsoft", "nvidia", "tiktok", "uber", "cursor", "google_careers", "shopify", "meta", "netflix", "stripe", "openai"],
         "aggregators": ["usajobs", "adzuna", "reed", "jooble", "careerjet"]
       },
       "output_formats": ["json", "csv", "table", "summary"],
@@ -35,6 +35,63 @@
         "Analytics (summary stats, company intelligence, site comparison)",
         "MCP server for AI assistant integration"
       ]
+    },
+    "watch_management": {
+      "description": "Persist, baseline, schedule, inspect, and safely update target-aware job watches",
+      "preset": "prestige-internships-v2",
+      "preset_apply": {
+        "dry_run_command": "npm run cli -- watch preset apply prestige-internships-v2 --watch <watch-id>",
+        "apply_command": "npm run cli -- watch preset apply prestige-internships-v2 --watch <watch-id> --apply",
+        "mutation_requires_paused_watch": true
+      },
+      "targeted_initialize": {
+        "rest": "POST /api/watches/:id/initialize with optional { targetKeys: string[] }",
+        "cli": "npm run cli -- watch initialize <watch-id> --target <target-key>",
+        "target_option_repeatable": true,
+        "omitted_targets_initialize_all": true
+      },
+      "geography": {
+        "tier_1": ["CA"],
+        "tier_2": ["CA", "US"],
+        "tier_3": ["CA", "US"]
+      },
+      "shipped_preset_state": {
+        "watch_enabled": false,
+        "watch_initialized": false,
+        "target_enabled_does_not_poll_or_notify_while_watch_disabled": true,
+        "enabled_target_keys": ["google_careers", "shopify", "ashby:wealthsimple", "ashby:plaid", "canadajobbank", "linkedin"],
+        "disabled_target_keys": ["amazon", "microsoft", "apple", "nvidia", "stripe", "openai", "datadog", "doordash", "coinbase", "figma", "vercel", "meta", "wellfound", "google"]
+      },
+      "query_matrices": {
+        "google_careers": { "entries": 76, "max_requests_per_run": 12 },
+        "canadajobbank": { "entries": 76, "max_requests_per_run": 12 },
+        "google": { "entries": 95, "max_requests_per_run": 12 },
+        "linkedin": { "entries": 95, "max_requests_per_run": 8, "recent_window_hours": 72 }
+      },
+      "activation_policy": "Keep the watch paused; targeted-baseline every target-enabled source and complete two additional no-notification observation cycles before resume",
+      "canonical_identity": {
+        "delivery_key": ["watch", "canonical_episode", "channel", "destination"],
+        "notification_type_in_key": false,
+        "fallback_episode": "First-observation-anchored rolling 14-day episode; not a UTC calendar bucket",
+        "stable_source_repost": "Preserve the prior observation and create an episode-scoped observation snapshot after rollover",
+        "suppression_promotion": "Eligibility suppression may promote once; baseline and sent states are terminal"
+      },
+      "target_health": {
+        "outcomes": ["success", "empty", "partial", "hard_failure"],
+        "consecutive_hard_failures_reset_on": ["success", "empty", "partial"],
+        "tier_1_degraded_at": 3
+      },
+      "validation_evidence": {
+        "deterministic_suites": 6,
+        "deterministic_tests": 59,
+        "google_careers": "Live pass: 2 Canadian roles",
+        "shopify": "Live pass: marker-validated valid empty board",
+        "wealthsimple": "Live pass: 37 roles with capped mapped sample",
+        "linkedin": "Unauthenticated public listing/detail live pass",
+        "microsoft": "Live timeout; target disabled",
+        "google": "SOURCE_BLOCKED enable-JavaScript shell; target disabled"
+      },
+      "linkedin_policy": "Unauthenticated public guest search only; newest-first 72-hour window; no login, personal cookies, CAPTCHA bypass, or personalized-alert parity claim"
     }
   },
 
@@ -47,6 +104,12 @@
     "api": {
       "endpoint": "POST /api/jobs/search",
       "docs": "http://localhost:3001/api/docs"
+    },
+    "watcher": {
+      "initialize_endpoint": "POST /api/watches/:id/initialize",
+      "initialize_body": { "targetKeys": ["google_careers", "shopify", "ashby:wealthsimple", "ashby:plaid", "canadajobbank", "linkedin"] },
+      "health_endpoint": "GET /health",
+      "metrics_endpoint": "GET /metrics"
     }
   },
 
@@ -151,10 +214,23 @@
             "jobUrlDirect": { "type": "string" },
             "location": {
               "type": "object",
+              "description": "Primary compatibility location; when locations is present this is its first entry",
               "properties": {
                 "city": { "type": "string" },
                 "state": { "type": "string" },
                 "country": { "type": "string" }
+              }
+            },
+            "locations": {
+              "type": "array",
+              "description": "All normalized advertised locations in stable source order",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "city": { "type": "string" },
+                  "state": { "type": "string" },
+                  "country": { "type": "string" }
+                }
               }
             },
             "description": { "type": "string" },

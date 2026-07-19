@@ -5,12 +5,15 @@ import {
   JobPostDto,
   ScraperInputDto,
 } from "@ever-jobs/models";
+import { parseLocationGeography } from "@ever-jobs/common";
 import { JobWatch, WatchSourceExecutor } from "../interfaces/watch.types";
 import {
   WatchSourcePlan,
   WatchSourcePlanIssue,
   WatchSourcePlanner,
+  WatchSourceMetadata,
   WatchSourceRequest,
+  WatchSourceTarget,
 } from "./watch-source-planner.service";
 
 /**
@@ -36,6 +39,7 @@ export interface WatchJobsService {
     input: ScraperInputDto,
   ): Promise<WatchJobsSearchDetailedResult>;
   listRegisteredSources?(): string[];
+  listSourceMetadata?(): WatchSourceMetadata[];
 }
 
 export interface WatchSourceExecutionOptions {
@@ -88,6 +92,11 @@ export interface WatchSourceFailure {
 export interface WatchSourceRequestResult {
   requestId: string;
   source: string;
+  target?: WatchSourceTarget;
+  searchTerm?: string;
+  location?: string;
+  countryCodes?: string[];
+  matrixIndex?: number;
   status: "succeeded" | "failed";
   jobsFetched: number;
   durationMs: number;
@@ -106,7 +115,7 @@ export interface WatchSourceSummary {
 
 export interface WatchSourcesExecutionResult {
   status: "completed" | "partial" | "failed";
-  jobs: JobPostDto[];
+  jobs: WatchSourceJob[];
   sourcesRequested: string[];
   sourcesSucceeded: string[];
   sourcesFailed: string[];
@@ -114,6 +123,17 @@ export interface WatchSourcesExecutionResult {
   requestResults: WatchSourceRequestResult[];
   sourceResults: WatchSourceSummary[];
   plan: WatchSourcePlan;
+}
+
+/** A normalized source result with the exact target/request that produced it. */
+export interface WatchSourceJob {
+  job: JobPostDto;
+  target: WatchSourceTarget;
+  requestId: string;
+  searchTerm?: string;
+  location?: string;
+  countryCodes: string[];
+  matrixIndex: number;
 }
 
 export interface ExecuteWatchSourcesInput {
@@ -196,6 +216,7 @@ export class JobsServiceWatchExecutor implements WatchSourceExecutor {
       lastRunAt: input.lastRunAt,
       force: input.force,
       maxQueryTermsPerSource: this.options.maxQueryTermsPerSource,
+      sourceMetadata: this.jobsService.listSourceMetadata?.(),
     });
     const planningFailures = this.planningFailures(plan.issues);
     const registeredSources = this.registeredSourceKeys();
@@ -225,7 +246,7 @@ export class JobsServiceWatchExecutor implements WatchSourceExecutor {
       ),
     );
 
-    const jobs: JobPostDto[] = [];
+    const jobs: WatchSourceJob[] = [];
     const requestResults: WatchSourceRequestResult[] = planningFailures.map(
       (failure) => ({
         requestId: failure.requestId,
@@ -244,6 +265,7 @@ export class JobsServiceWatchExecutor implements WatchSourceExecutor {
         requestResults.push({
           requestId: request.id,
           source: request.target.key,
+          ...requestResultContext(request),
           status: "failed",
           jobsFetched: 0,
           durationMs: sourceFailureDuration(result.reason),
@@ -252,7 +274,17 @@ export class JobsServiceWatchExecutor implements WatchSourceExecutor {
         continue;
       }
 
-      jobs.push(...result.value.jobs);
+      jobs.push(
+        ...result.value.jobs.map((job) => ({
+          job: brandedTargetJob(job, request.target),
+          target: request.target,
+          requestId: request.id,
+          searchTerm: request.searchTerm,
+          location: request.location,
+          countryCodes: [...request.countryCodes],
+          matrixIndex: request.matrixIndex,
+        })),
+      );
       if (result.value.reportedFailure) {
         const failure: WatchSourceFailure = {
           source: request.target.key,
@@ -264,6 +296,7 @@ export class JobsServiceWatchExecutor implements WatchSourceExecutor {
         requestResults.push({
           requestId: request.id,
           source: request.target.key,
+          ...requestResultContext(request),
           status: "failed",
           jobsFetched: result.value.jobs.length,
           durationMs: result.value.durationMs,
@@ -275,6 +308,7 @@ export class JobsServiceWatchExecutor implements WatchSourceExecutor {
       requestResults.push({
         requestId: request.id,
         source: request.target.key,
+        ...requestResultContext(request),
         status: "succeeded",
         jobsFetched: result.value.jobs.length,
         durationMs: result.value.durationMs,
@@ -335,7 +369,7 @@ export class JobsServiceWatchExecutor implements WatchSourceExecutor {
         result.failures.map((failure) => failure.error).join("; "),
       );
     }
-    return result.jobs;
+    return result.jobs.map(({ job }) => job);
   }
 
   private async executeWithJitter(
@@ -421,8 +455,12 @@ export class JobsServiceWatchExecutor implements WatchSourceExecutor {
       companySlug: request.target.companySlug,
       searchTerm: request.searchTerm,
       googleSearchTerm: request.searchTerm,
-      location: watch.locations[0] ?? "Canada",
-      country: countryForWatch(watch),
+      location:
+        request.location ??
+        request.target.searchScope.locations[0] ??
+        watch.locations[0] ??
+        "Canada",
+      country: countryForRequest(request, watch),
       resultsWanted: this.options.resultsWanted,
       descriptionFormat: DescriptionFormat.MARKDOWN,
       requestTimeout: Math.max(1, Math.ceil(this.options.timeoutMs / 1_000)),
@@ -554,15 +592,45 @@ async function withTimeout<T>(
   }
 }
 
-function countryForWatch(watch: JobWatch): Country {
-  const countryCode = watch.countryCodes[0]?.trim().toUpperCase();
+function countryForRequest(
+  request: WatchSourceRequest,
+  watch: JobWatch,
+): Country {
+  const configuredCodes =
+    request.countryCodes.length > 0
+      ? request.countryCodes
+      : request.target.searchScope.countryCodes.length > 0
+        ? request.target.searchScope.countryCodes
+        : watch.countryCodes;
+  const available = new Set(
+    configuredCodes.map((countryCode) => countryCode.trim().toUpperCase()),
+  );
+  const parsedCountry = parseLocationGeography(request.location).countryCode;
+  const locationCountry =
+    parsedCountry === "US" && (available.has("US") || available.has("USA"))
+      ? "US"
+      : parsedCountry === "CA" &&
+          (available.has("CA") || available.has("CAN"))
+        ? "CA"
+        : undefined;
+  const countryCode =
+    locationCountry ?? configuredCodes[0]?.trim().toUpperCase();
   if (!countryCode || countryCode === "CA" || countryCode === "CAN") {
     return Country.CANADA;
   }
-  if (countryCode === "US") return Country.USA;
+  if (countryCode === "US" || countryCode === "USA") return Country.USA;
   return (Object.values(Country) as string[]).includes(countryCode)
     ? (countryCode as Country)
     : Country.CANADA;
+}
+
+function brandedTargetJob(
+  job: JobPostDto,
+  target: WatchSourceTarget,
+): JobPostDto {
+  const companyName =
+    target.kind === "ats" ? target.companyName?.trim() : undefined;
+  return companyName ? new JobPostDto({ ...job, companyName }) : job;
 }
 
 function normalizeSourceKey(source: string): string {
@@ -593,6 +661,21 @@ function sourceFailureDuration(error: unknown): number {
   return typeof duration === "number" && Number.isFinite(duration)
     ? Math.max(0, duration)
     : 0;
+}
+
+function requestResultContext(
+  request: WatchSourceRequest,
+): Pick<
+  WatchSourceRequestResult,
+  "target" | "searchTerm" | "location" | "countryCodes" | "matrixIndex"
+> {
+  return {
+    target: request.target,
+    searchTerm: request.searchTerm,
+    location: request.location,
+    countryCodes: [...request.countryCodes],
+    matrixIndex: request.matrixIndex,
+  };
 }
 
 function positiveInteger(value: number, fallback: number): number {

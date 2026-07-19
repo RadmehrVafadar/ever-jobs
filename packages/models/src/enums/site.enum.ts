@@ -54,6 +54,7 @@ export enum Site {
   UKG = 'ukg',
   // Phase 6: New company scrapers
   GOOGLE_CAREERS = 'google_careers',
+  SHOPIFY = 'shopify',
   META = 'meta',
   NETFLIX = 'netflix',
   STRIPE = 'stripe',

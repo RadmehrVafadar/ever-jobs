@@ -1,196 +1,257 @@
-﻿import { SourcePlugin } from '@ever-jobs/plugin';
-
+import { SourcePlugin } from '@ever-jobs/plugin';
 import { Injectable, Logger } from '@nestjs/common';
 import * as cheerio from 'cheerio';
 import {
-  IScraper,
-  ScraperInputDto,
-  JobResponseDto,
-  JobPostDto,
-  LocationDto,
   CompensationDto,
   CompensationInterval,
-  Country,
   DescriptionFormat,
+  IScraper,
+  JobPostDto,
+  JobResponseDto,
+  ScraperInputDto,
   Site,
 } from '@ever-jobs/models';
 import {
   HttpClient,
-  createHttpClient,
   LinkedInException,
-  markdownConverter,
-  plainConverter,
+  createHttpClient,
   extractEmails,
+  markdownConverter,
+  parseLocationList,
+  plainConverter,
   randomSleep,
 } from '@ever-jobs/common';
+
 import { LINKEDIN_HEADERS } from './linkedin.constants';
-import { jobTypeCode, parseJobType, parseJobLevel, parseCompanyIndustry, isJobRemote } from './linkedin.utils';
+import {
+  isJobRemote,
+  jobTypeCode,
+  parseCompanyIndustry,
+  parseJobLevel,
+  parseJobType,
+} from './linkedin.utils';
+
+const LINKEDIN_PAGE_SIZE = 25;
+const LINKEDIN_MAX_RESULTS = 100;
+const LINKEDIN_DEFAULT_RECENT_HOURS = 72;
+const LINKEDIN_MAX_RECENT_HOURS = 168;
+const LINKEDIN_MAX_DETAIL_FETCHES = 5;
+const COARSE_INTERNSHIP_TITLE = /\b(?:intern(?:ship)?|co[\s-]?op)\b/i;
+const COARSE_ENGINEERING_TITLE =
+  /\b(?:software|developer|development|backend|front[\s-]?end|full[\s-]?stack|mobile|ios|android|platform|cloud|infrastructure|site reliability|sre|devops|security|data engineer(?:ing)?|machine learning|ml|ai|developer experience|dx)\b/i;
+
+interface LinkedInDetail {
+  text: string;
+  jobLevel?: string;
+  industry?: string;
+  jobType?: ReturnType<typeof parseJobType>;
+  applyUrl?: string;
+}
 
 @SourcePlugin({
   site: Site.LINKEDIN,
   name: 'LinkedIn',
   category: 'job-board',
+  watchMode: 'query',
 })
 @Injectable()
 export class LinkedInService implements IScraper {
   private readonly logger = new Logger(LinkedInService.name);
   private readonly baseUrl = 'https://www.linkedin.com';
-  private readonly delay = 3;
-  private readonly bandDelay = 4;
 
   async scrape(input: ScraperInputDto): Promise<JobResponseDto> {
     const client = createHttpClient(input);
     client.setHeaders(LINKEDIN_HEADERS);
 
-    const jobList: JobPostDto[] = [];
-    const resultsWanted = input.resultsWanted ?? 15;
-    let start = input.offset ?? 0;
+    const resultsWanted = Math.max(
+      0,
+      Math.min(input.resultsWanted ?? 15, LINKEDIN_MAX_RESULTS),
+    );
+    if (resultsWanted === 0) return new JobResponseDto([]);
+
+    const jobs: JobPostDto[] = [];
     const seenIds = new Set<string>();
+    let start = Math.max(0, input.offset ?? 0);
+    const maximumPages = Math.ceil(resultsWanted / LINKEDIN_PAGE_SIZE) + 1;
 
-    while (jobList.length < resultsWanted) {
-      this.logger.log(`Fetching LinkedIn jobs, offset ${start}`);
+    for (let page = 0; page < maximumPages && jobs.length < resultsWanted; page++) {
+      this.logger.log(`Fetching LinkedIn public guest jobs, offset ${start}`);
 
+      let raw: unknown;
       try {
-        const params = this.buildSearchParams(input, start);
-        const response = await client.get(`${this.baseUrl}/jobs-guest/jobs/api/seeMoreJobPostings/search`, {
-          params,
-        });
-
-        const $ = cheerio.load(response.data);
-        const jobCards = $('li').has('.base-search-card');
-
-        if (jobCards.length === 0) {
-          this.logger.log('No more LinkedIn job results');
-          break;
-        }
-
-        let newJobsFound = false;
-        for (let i = 0; i < jobCards.length && jobList.length < resultsWanted; i++) {
-          try {
-            const card = jobCards.eq(i);
-            const jobPost = this.extractJobFromCard($, card, input);
-            if (jobPost && !seenIds.has(jobPost.id!)) {
-              seenIds.add(jobPost.id!);
-              jobList.push(jobPost);
-              newJobsFound = true;
-            }
-          } catch (err: any) {
-            this.logger.warn(`Error extracting LinkedIn job: ${err.message}`);
-          }
-        }
-
-        if (!newJobsFound) break;
-
-        start += 25;
-        await randomSleep(this.delay * 1000, (this.delay + this.bandDelay) * 1000);
-      } catch (err: any) {
-        this.logger.error(`LinkedIn scrape error: ${err.message}`);
-        break;
+        const response = await client.get(
+          `${this.baseUrl}/jobs-guest/jobs/api/seeMoreJobPostings/search`,
+          { params: this.buildSearchParams(input, start) },
+        );
+        raw = response.data;
+      } catch (error) {
+        throw this.failure('SOURCE_HTTP_FAILURE', error);
       }
+
+      const pageJobs = this.parseSearchPage(raw, input);
+      if (pageJobs.length === 0) break;
+
+      let added = 0;
+      for (const job of pageJobs) {
+        if (!job.id || seenIds.has(job.id)) continue;
+        seenIds.add(job.id);
+        jobs.push(job);
+        added++;
+        if (jobs.length >= resultsWanted) break;
+      }
+      if (added === 0 || pageJobs.length < LINKEDIN_PAGE_SIZE) break;
+
+      start += LINKEDIN_PAGE_SIZE;
+      await randomSleep(750, 1_750);
     }
 
-    // Fetch descriptions if requested
-    if (input.linkedinFetchDescription) {
-      for (const job of jobList) {
-        try {
-          const description = await this.fetchDescription(client, job.jobUrl, input.descriptionFormat);
-          if (description) {
-            job.description = description.text;
-            job.jobLevel = description.jobLevel ?? job.jobLevel;
-            job.companyIndustry = description.industry ?? job.companyIndustry;
-            job.jobType = description.jobType ?? job.jobType;
-            job.emails = extractEmails(description.text);
-          }
-          await randomSleep(this.delay * 1000, (this.delay + this.bandDelay) * 1000);
-        } catch (err: any) {
-          this.logger.warn(`Error fetching description for ${job.jobUrl}: ${err.message}`);
-        }
+    // Detail requests are the most expensive and rate-sensitive part of the
+    // public guest surface. Keep them bounded inside the watcher's 12-second
+    // source budget; the remaining listing cards are still retained.
+    const detailCandidates = jobs
+      .filter((job) => this.isCoarseInternshipCandidate(job.title))
+      .slice(0, LINKEDIN_MAX_DETAIL_FETCHES);
+    for (const [index, job] of detailCandidates.entries()) {
+      const detail = await this.fetchDescription(client, job.jobUrl, input.descriptionFormat);
+      job.description = detail.text;
+      job.jobLevel = detail.jobLevel ?? job.jobLevel;
+      job.companyIndustry = detail.industry ?? job.companyIndustry;
+      job.jobType = detail.jobType ?? job.jobType;
+      job.emails = extractEmails(detail.text);
+      if (detail.applyUrl) {
+        job.applyUrl = detail.applyUrl;
+        job.jobUrlDirect = detail.applyUrl;
       }
+      if (index + 1 < detailCandidates.length) await randomSleep(750, 1_750);
     }
 
-    return new JobResponseDto(jobList);
+    return new JobResponseDto(jobs.slice(0, resultsWanted));
   }
 
-  private buildSearchParams(input: ScraperInputDto, start: number): Record<string, string | number> {
+  private buildSearchParams(
+    input: ScraperInputDto,
+    start: number,
+  ): Record<string, string | number> {
+    const hoursOld = Math.max(
+      1,
+      Math.min(input.hoursOld ?? LINKEDIN_DEFAULT_RECENT_HOURS, LINKEDIN_MAX_RECENT_HOURS),
+    );
     const params: Record<string, string | number> = {
       keywords: input.searchTerm ?? '',
       location: input.location ?? '',
       distance: input.distance ?? 50,
       start,
       sortBy: 'DD',
+      f_TPR: `r${Math.round(hoursOld * 3600)}`,
     };
 
-    if (input.easyApply) {
-      params['f_AL'] = 'true';
-    }
+    if (input.easyApply) params.f_AL = 'true';
     if (input.jobType) {
       const code = jobTypeCode(input.jobType);
-      if (code) params['f_JT'] = code;
+      if (code) params.f_JT = code;
     }
-    if (input.isRemote) {
-      params['f_WT'] = '2';
+    if (input.isRemote) params.f_WT = '2';
+    if (input.linkedinCompanyIds?.length) params.f_C = input.linkedinCompanyIds.join(',');
+    return params;
+  }
+
+  private parseSearchPage(raw: unknown, input: ScraperInputDto): JobPostDto[] {
+    if (typeof raw !== 'string') {
+      throw new LinkedInException('SOURCE_SCHEMA_INVALID: LinkedIn guest response was not HTML');
     }
-    if (input.hoursOld) {
-      params['f_TPR'] = `r${input.hoursOld * 3600}`;
+    const html = raw.trim();
+    if (!html) {
+      throw new LinkedInException(
+        'SOURCE_MARKUP_CHANGED: LinkedIn guest search returned an empty HTML body',
+      );
     }
-    if (input.linkedinCompanyIds && input.linkedinCompanyIds.length > 0) {
-      params['f_C'] = input.linkedinCompanyIds.join(',');
+    this.assertNotBlocked(html, 'search');
+
+    const $ = cheerio.load(html);
+    const cards = $('li').has('.base-search-card');
+    if (cards.length === 0) {
+      const validEmpty =
+        $('.jobs-search-no-results-banner, [data-test-id="no-results"]').length > 0 ||
+        /\bno (?:matching )?jobs (?:were )?found\b/i.test($.text());
+      if (validEmpty) return [];
+      throw new LinkedInException(
+        'SOURCE_MARKUP_CHANGED: LinkedIn guest response contained no recognized cards or empty state',
+      );
     }
 
-    return params;
+    const jobs: JobPostDto[] = [];
+    cards.each((_, element) => {
+      const job = this.extractJobFromCard($, $(element), input);
+      if (!job) {
+        throw new LinkedInException(
+          'SOURCE_MARKUP_CHANGED: LinkedIn guest card omitted a stable ID, URL, or title',
+        );
+      }
+      jobs.push(job);
+    });
+    return jobs;
   }
 
   private extractJobFromCard(
     $: cheerio.CheerioAPI,
     card: cheerio.Cheerio<any>,
-    input: ScraperInputDto,
+    _input: ScraperInputDto,
   ): JobPostDto | null {
-    const linkEl = card.find('.base-search-card__full-link, a.base-card__full-link');
-    const jobUrl = linkEl.attr('href')?.split('?')[0];
-    if (!jobUrl) return null;
+    const root = card.find('.base-search-card').first();
+    const link = root.find('.base-search-card__full-link, a.base-card__full-link').first();
+    const rawUrl = link.attr('href');
+    if (!rawUrl) return null;
 
-    const entityUrn = jobUrl.match(/view\/([^/]+)/)?.[1] ?? '';
-    const jobId = `li-${entityUrn}`;
-
-    const title = card.find('.base-search-card__title').text().trim();
-    if (!title) return null;
-
-    const companyName = card.find('.base-search-card__subtitle a').text().trim() || null;
-    const companyUrl = card.find('.base-search-card__subtitle a').attr('href') || null;
-    const locationStr = card.find('.job-search-card__location').text().trim();
-    const datePosted = card.find('time').attr('datetime') || null;
-
-    // Salary range from metadata
-    const salaryEl = card.find('.job-search-card__salary-info');
-    let compensation: CompensationDto | null = null;
-    if (salaryEl.length) {
-      const salaryText = salaryEl.text().trim();
-      const match = salaryText.match(/\$?([\d,]+(?:\.\d+)?)\s*[-/]\s*\$?([\d,]+(?:\.\d+)?)/);
-      if (match) {
-        compensation = new CompensationDto({
-          minAmount: parseFloat(match[1].replace(/,/g, '')),
-          maxAmount: parseFloat(match[2].replace(/,/g, '')),
-          currency: 'USD',
-          interval: salaryText.toLowerCase().includes('hr')
-            ? CompensationInterval.HOURLY
-            : CompensationInterval.YEARLY,
-        });
-      }
+    let jobUrl: string;
+    try {
+      const parsed = new URL(rawUrl, this.baseUrl);
+      parsed.search = '';
+      parsed.hash = '';
+      jobUrl = parsed.toString().replace(/\/$/, '');
+    } catch {
+      return null;
     }
 
-    const location = new LocationDto({ city: locationStr || null });
-    const remote = isJobRemote(title, '', locationStr);
+    const urn = root.attr('data-entity-urn') ?? card.attr('data-entity-urn') ?? '';
+    const jobId = urn.match(/jobPosting:(\d+)/i)?.[1] ?? jobUrl.match(/-(\d+)(?:\/)?$/)?.[1];
+    const title = root.find('.base-search-card__title').text().trim();
+    if (!jobId || !title) return null;
+
+    const companyAnchor = root.find('.base-search-card__subtitle a').first();
+    const companyName = companyAnchor.text().trim() || null;
+    const companyUrl = companyAnchor.attr('href') || null;
+    const locationText = root.find('.job-search-card__location').text().trim();
+    const parsedLocations = parseLocationList([locationText]);
+    const locations = parsedLocations.locations;
+    const datePosted = root.find('time').attr('datetime') || null;
+
+    let compensation: CompensationDto | null = null;
+    const salaryText = root.find('.job-search-card__salary-info').text().trim();
+    const salaryMatch = salaryText.match(
+      /\$?([\d,]+(?:\.\d+)?)\s*(?:-|–|to)\s*\$?([\d,]+(?:\.\d+)?)/i,
+    );
+    if (salaryMatch) {
+      compensation = new CompensationDto({
+        minAmount: Number(salaryMatch[1].replace(/,/g, '')),
+        maxAmount: Number(salaryMatch[2].replace(/,/g, '')),
+        currency: 'USD',
+        interval: /(?:hour|hr)\b/i.test(salaryText)
+          ? CompensationInterval.HOURLY
+          : CompensationInterval.YEARLY,
+      });
+    }
 
     return new JobPostDto({
-      id: jobId,
+      id: `li-${jobId}`,
       title,
       companyName,
       companyUrl,
       jobUrl,
-      location,
+      location: locations[0] ?? parsedLocations.location,
+      locations,
       compensation,
-      datePosted: datePosted ? new Date(datePosted).toISOString().split('T')[0] : null,
-      isRemote: remote,
+      datePosted,
+      isRemote: isJobRemote(title, '', locationText),
       site: Site.LINKEDIN,
     });
   }
@@ -199,28 +260,101 @@ export class LinkedInService implements IScraper {
     client: HttpClient,
     jobUrl: string,
     format?: DescriptionFormat,
-  ): Promise<{ text: string; jobLevel?: string; industry?: string; jobType?: any } | null> {
-    const response = await client.get(jobUrl);
-    const $ = cheerio.load(response.data);
+  ): Promise<LinkedInDetail> {
+    let raw: unknown;
+    try {
+      const response = await client.get(jobUrl);
+      raw = response.data;
+    } catch (error) {
+      throw this.failure('SOURCE_HTTP_FAILURE', error);
+    }
+    if (typeof raw !== 'string') {
+      throw new LinkedInException('SOURCE_SCHEMA_INVALID: LinkedIn detail response was not HTML');
+    }
+    this.assertNotBlocked(raw, 'detail');
 
-    const descriptionEl = $('.show-more-less-html__markup, .description__text');
-    if (!descriptionEl.length) return null;
-
-    const rawHtml = descriptionEl.html() ?? '';
-    let text: string;
-    if (format === DescriptionFormat.MARKDOWN) {
-      text = markdownConverter(rawHtml) ?? rawHtml;
-    } else if (format === DescriptionFormat.PLAIN) {
-      text = plainConverter(rawHtml) ?? rawHtml;
-    } else {
-      text = rawHtml;
+    const $ = cheerio.load(raw);
+    const description = $('.show-more-less-html__markup, .description__text').first();
+    if (!description.length) {
+      throw new LinkedInException(
+        'SOURCE_MARKUP_CHANGED: LinkedIn detail response omitted the job description',
+      );
     }
 
-    const criteriaSection = $('.description__job-criteria-list');
-    const jobLevel = parseJobLevel($, criteriaSection);
-    const industry = parseCompanyIndustry($, criteriaSection);
-    const jobType = parseJobType($, criteriaSection);
+    const rawHtml = description.html() ?? '';
+    const text =
+      format === DescriptionFormat.PLAIN
+        ? plainConverter(rawHtml) ?? rawHtml
+        : format === DescriptionFormat.MARKDOWN
+          ? markdownConverter(rawHtml) ?? rawHtml
+          : rawHtml;
+    const criteria = $('.description__job-criteria-list').first();
 
-    return { text, jobLevel: jobLevel ?? undefined, industry: industry ?? undefined, jobType };
+    return {
+      text,
+      jobLevel: parseJobLevel($, criteria) ?? undefined,
+      industry: parseCompanyIndustry($, criteria) ?? undefined,
+      jobType: parseJobType($, criteria),
+      applyUrl: this.extractExternalApplyUrl($) ?? undefined,
+    };
+  }
+
+  private extractExternalApplyUrl($: cheerio.CheerioAPI): string | null {
+    const selectors = [
+      'a[data-tracking-control-name="public_jobs_apply-link-offsite"]',
+      'a[data-apply-url]',
+      'a.apply-button[href]',
+      'a[data-tracking-control-name*="apply"][href]',
+    ];
+    for (const selector of selectors) {
+      for (const element of $(selector).toArray()) {
+        const candidate = $(element).attr('data-apply-url') ?? $(element).attr('href');
+        const external = this.toExternalUrl(candidate);
+        if (external) return external;
+      }
+    }
+    return null;
+  }
+
+  private toExternalUrl(value?: string): string | null {
+    if (!value) return null;
+    try {
+      const url = new URL(value, this.baseUrl);
+      if (/(^|\.)linkedin\.com$|(^|\.)linkedin\.cn$/i.test(url.hostname)) {
+        if (/\/(?:redir|redirect)/i.test(url.pathname)) {
+          const redirected = url.searchParams.get('url');
+          return redirected ? this.toExternalUrl(decodeURIComponent(redirected)) : null;
+        }
+        return null;
+      }
+      if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
+      url.hash = '';
+      return url.toString();
+    } catch {
+      return null;
+    }
+  }
+
+  private assertNotBlocked(html: string, page: 'search' | 'detail'): void {
+    const normalized = html.toLowerCase();
+    const blocked =
+      normalized.includes('/checkpoint/challenge') ||
+      normalized.includes('security verification') ||
+      normalized.includes('class="challenge-dialog') ||
+      normalized.includes('id="captcha-internal"') ||
+      normalized.includes('authwall-join-form') ||
+      normalized.includes('data-test-id="authwall"');
+    if (blocked) {
+      throw new LinkedInException(`SOURCE_BLOCKED: LinkedIn public ${page} page was blocked`);
+    }
+  }
+
+  private isCoarseInternshipCandidate(title: string): boolean {
+    return COARSE_INTERNSHIP_TITLE.test(title) && COARSE_ENGINEERING_TITLE.test(title);
+  }
+
+  private failure(code: string, error: unknown): LinkedInException {
+    const message = error instanceof Error ? error.message : String(error);
+    return new LinkedInException(`${code}: ${message}`);
   }
 }

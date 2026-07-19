@@ -18,6 +18,7 @@ model JobWatch {
   sources                Json
   sourceTiers            Json
   sourceTargets          Json         @default("[]")
+  targetHealth           Json         @default("{}")
   companySlugs           Json
   companies              Json
   searchTerms            Json
@@ -52,57 +53,70 @@ model JobWatch {
 }
 
 model ObservedJob {
-  id                 String       @id @default(uuid())
-  fingerprint        String       @unique
-  source             String
-  sourceType         String?
-  externalJobId      String?
-  company            String?
-  normalizedCompany  String?
-  title              String
-  normalizedTitle    String
-  location           String?
-  normalizedLocation String?
-  workplaceType      String?
-  employmentType     String?
-  description        String?
-  descriptionHash    String?
-  jobUrl             String?
-  applicationUrl     String?
-  sourcePublishedAt  DateTime?
-  firstSeenAt        DateTime     @default(now())
-  lastSeenAt         DateTime     @default(now())
-  closedAt           DateTime?
-  rawPayload         Json?
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
-  matches            WatchMatch[]
+  id                        String       @id @default(uuid())
+  fingerprint               String       @unique
+  source                    String
+  sourceTargetKey           String?
+  sourceType                String?
+  externalJobId             String?
+  company                   String?
+  normalizedCompany         String?
+  title                     String
+  normalizedTitle           String
+  location                  String?
+  normalizedLocation        String?
+  locations                 Json         @default("[]")
+  canonicalKey              String?
+  canonicalEpisodeKey       String?
+  canonicalEpisodeStartedAt DateTime?
+  workplaceType             String?
+  employmentType            String?
+  description               String?
+  descriptionHash           String?
+  jobUrl                    String?
+  applicationUrl            String?
+  sourcePublishedAt         DateTime?
+  firstSeenAt               DateTime     @default(now())
+  lastSeenAt                DateTime     @default(now())
+  closedAt                  DateTime?
+  rawPayload                Json?
+  createdAt                 DateTime     @default(now())
+  updatedAt                 DateTime     @updatedAt
+  matches                   WatchMatch[]
 
   @@index([source, externalJobId])
+  @@index([sourceTargetKey])
+  @@index([canonicalKey, lastSeenAt])
+  @@index([canonicalEpisodeKey])
+  @@index([canonicalKey, canonicalEpisodeStartedAt])
   @@index([normalizedCompany])
   @@index([sourcePublishedAt])
   @@index([firstSeenAt])
 }
 
 model WatchMatch {
-  id                String                 @id @default(uuid())
-  watchId           String
-  observedJobId     String
-  score             Int
-  scoreBreakdown    Json
-  matchedTerms      Json
-  excludedReason    String?
-  status            String                 @default("new")
-  firstMatchedAt    DateTime               @default(now())
-  lastMatchedAt     DateTime               @default(now())
-  notificationState String                 @default("pending")
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
-  watch             JobWatch               @relation(fields: [watchId], references: [id], onDelete: Cascade)
-  observedJob       ObservedJob            @relation(fields: [observedJobId], references: [id], onDelete: Cascade)
-  deliveries        NotificationDelivery[]
+  id                            String                 @id @default(uuid())
+  watchId                       String
+  observedJobId                 String
+  canonicalEpisodeKey           String?
+  sourceTargetKey               String?
+  score                         Int
+  scoreBreakdown                Json
+  matchedTerms                  Json
+  excludedReason                String?
+  status                        String                 @default("new")
+  firstMatchedAt                DateTime               @default(now())
+  lastMatchedAt                 DateTime               @default(now())
+  notificationState             String                 @default("pending")
+  notificationSuppressionReason String?
+  createdAt                     DateTime               @default(now())
+  updatedAt                     DateTime               @updatedAt
+  watch                         JobWatch               @relation(fields: [watchId], references: [id], onDelete: Cascade)
+  observedJob                   ObservedJob            @relation(fields: [observedJobId], references: [id], onDelete: Cascade)
+  deliveries                    NotificationDelivery[]
 
   @@unique([watchId, observedJobId])
+  @@unique([watchId, canonicalEpisodeKey])
   @@index([watchId, score])
   @@index([status])
   @@index([firstMatchedAt])
@@ -146,6 +160,8 @@ model WatchRun {
   sourcesRequested  Json
   sourcesSucceeded  Json
   sourcesFailed     Json
+  targetResults     Json      @default("[]")
+  coverageDegraded  Boolean   @default(false)
   jobsFetched       Int       @default(0)
   jobsNormalized    Int       @default(0)
   newJobsDetected   Int       @default(0)

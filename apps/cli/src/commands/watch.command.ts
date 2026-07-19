@@ -8,8 +8,11 @@ import {
   WATCH_REPOSITORY,
   WatchExecutionService,
   WatchMatchStatus,
+  WatchPresetApplyResult,
+  WatchPresetService,
   WatchRepository,
   WatchValidationService,
+  validateWatchTargetKeys,
 } from "@ever-jobs/watcher";
 import {
   createDiscordTestMessage,
@@ -32,6 +35,9 @@ interface WatchOptions {
   employmentType?: string;
   workplaceType?: string;
   destinationRef?: string;
+  target?: string[];
+  watch?: string;
+  apply?: boolean;
 }
 
 const MATCH_STATUSES = new Set<WatchMatchStatus>([
@@ -56,6 +62,7 @@ export class WatchCommand extends CommandRunner {
     @Inject(WATCH_REPOSITORY)
     private readonly repository: WatchRepository,
     private readonly execution: WatchExecutionService,
+    private readonly presets: WatchPresetService,
   ) {
     super();
   }
@@ -96,8 +103,26 @@ export class WatchCommand extends CommandRunner {
         break;
       case "initialize": {
         const watchId = requireArgument(id, "watch id");
-        await this.requireWatch(watchId);
-        result = await this.execution.runWatch(watchId, "baseline");
+        const watch = await this.requireWatch(watchId);
+        const targetKeys = validateWatchTargetKeys(watch, options.target);
+        result = await this.execution.runWatch(watchId, "baseline", {
+          trigger: "initialize",
+          forceSources: true,
+          ...(targetKeys.length > 0 ? { targetKeys } : {}),
+        });
+        break;
+      }
+      case "preset": {
+        if (id !== "apply") {
+          throw new Error(`Unknown preset action: ${id ?? ""}. ${usage()}`);
+        }
+        const presetId = requireArgument(value, "preset id");
+        const watchId = requireArgument(options.watch, "--watch <id>");
+        result = publicPresetResult(
+          await this.presets.apply(presetId, watchId, {
+            apply: options.apply === true,
+          }),
+        );
         break;
       }
       case "pause":
@@ -283,6 +308,30 @@ export class WatchCommand extends CommandRunner {
     return value;
   }
 
+  @Option({
+    flags: "--target <key>",
+    description: "Initialize one target key; repeat for additional targets",
+  })
+  parseTarget(value: string, previous: string[] | undefined): string[] {
+    return [...(previous ?? []), value];
+  }
+
+  @Option({
+    flags: "--watch <id>",
+    description: "Watch ID used by preset apply",
+  })
+  parseWatch(value: string): string {
+    return value;
+  }
+
+  @Option({
+    flags: "--apply",
+    description: "Apply a preset diff to a paused watch (default: dry-run)",
+  })
+  parseApply(): boolean {
+    return true;
+  }
+
   private async create(configPath: string | undefined) {
     const raw = configPath
       ? readJsonFile(configPath)
@@ -366,11 +415,22 @@ function notificationStatus(value: string | undefined) {
   return value as (typeof statuses)[number];
 }
 
+function publicPresetResult(result: WatchPresetApplyResult): Omit<
+  WatchPresetApplyResult,
+  "watch"
+> & {
+  watch?: Record<string, unknown>;
+} {
+  const { watch, ...publicResult } = result;
+  return watch ? { ...publicResult, watch: publicWatch(watch) } : publicResult;
+}
+
 function usage(): string {
   return [
     "Usage: watch create|update <id>|list|show <id>|delete <id>|run <id>",
     "|initialize <id>|pause <id>|resume <id>|runs <id>|matches <id>",
     "|match-status <match-id> <status>|metrics <id>|observed-jobs",
     "|deliveries [watch-id]|notifications-test <watch-id>",
+    "|preset apply <preset-id> --watch <id> [--apply]",
   ].join(" ");
 }

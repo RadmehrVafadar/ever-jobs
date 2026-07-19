@@ -8,6 +8,7 @@ import {
   WatcherPrismaService,
 } from "./persistence/watcher-prisma.service";
 import { JobFingerprintService } from "./services/job-fingerprint.service";
+import { GeographyClassificationService } from "./services/geography-classification.service";
 import { JobScoringService } from "./services/job-scoring.service";
 import {
   NOTIFICATION_DISPATCH_OPTIONS,
@@ -35,6 +36,7 @@ import { WatchValidationService } from "./services/watch-validation.service";
 import { WatcherMetricsService } from "./services/watcher-metrics.service";
 import { WatcherSchedulerService } from "./services/watcher-scheduler.service";
 import { DefaultWatchSeederService } from "./services/default-watch-seeder.service";
+import { WatchPresetService } from "./services/watch-preset.service";
 
 export interface WatcherModuleOptions {
   imports?: DynamicModule["imports"];
@@ -70,9 +72,11 @@ export class WatcherModule {
           useValue: Boolean(options.enableScheduler),
         },
         JobFingerprintService,
+        GeographyClassificationService,
         JobScoringService,
         WatchSourcePlanner,
         WatchValidationService,
+        WatchPresetService,
         WatcherMetricsService,
         WebhookNotificationProvider,
         DiscordNotificationProvider,
@@ -145,9 +149,11 @@ export class WatcherModule {
       exports: [
         WATCH_REPOSITORY,
         JobFingerprintService,
+        GeographyClassificationService,
         JobScoringService,
         WatchSourcePlanner,
         WatchValidationService,
+        WatchPresetService,
         WatcherMetricsService,
         JobsServiceWatchExecutor,
         NotificationDispatcher,

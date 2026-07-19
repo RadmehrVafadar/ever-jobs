@@ -67,19 +67,77 @@ describe("watcher primitives", () => {
       site: "google_careers",
       title: "Software Intern",
       companyName: "Google",
-      jobUrl: "https://careers.google.com/jobs/1?utm_source=x",
+      jobUrl: "https://careers.google.com/jobs/1?utm_source=direct",
       location: { city: "Toronto", state: "ON", country: "Canada" } as any,
     });
     const aggregate = new JobPostDto({
       site: "google",
       title: " software intern ",
       companyName: "GOOGLE",
-      jobUrl: "https://careers.google.com/jobs/1",
+      jobUrl: "https://www.google.com/search?q=software+intern",
+      applyUrl: "https://careers.google.com/jobs/1?utm_source=aggregate",
       location: { city: "Toronto", state: "Ontario", country: "Canada" } as any,
     });
     expect(fp.fingerprint(direct)).not.toBe(fp.fingerprint(aggregate));
-    expect(fp.canonicalFingerprint(direct)).toBe(
-      fp.canonicalFingerprint(aggregate),
+    expect(
+      fp.canonicalFingerprint(direct, { employerOwnedListing: true }),
+    ).toBe(fp.canonicalFingerprint(aggregate));
+
+    const aggregateListingOnly = new JobPostDto({
+      ...aggregate,
+      applyUrl: null,
+      atsType: "greenhouse",
+    });
+    const otherAggregateListing = new JobPostDto({
+      ...aggregateListingOnly,
+      jobUrl: "https://www.linkedin.com/jobs/view/999",
+    });
+    expect(fp.canonicalFingerprint(aggregateListingOnly)).toBe(
+      fp.canonicalFingerprint(otherAggregateListing),
+    );
+    expect(fp.usesObservationEpisodeAnchor(aggregateListingOnly)).toBe(true);
+  });
+  it("canonicalizes Canadian provinces and US states across name/code variants", () => {
+    const base = {
+      site: "google",
+      title: "Software Intern",
+      companyName: "Example",
+      jobUrl: "https://aggregator.example/jobs/1",
+    };
+    const vancouverName = new JobPostDto({
+      ...base,
+      locations: [
+        {
+          city: "Vancouver",
+          state: "British Columbia",
+          country: "Canada",
+        } as any,
+      ],
+    });
+    const vancouverCode = new JobPostDto({
+      ...base,
+      locations: [{ city: "Vancouver", state: "BC", country: "CA" } as any],
+    });
+    const newYorkName = new JobPostDto({
+      ...base,
+      locations: [
+        {
+          city: "New York",
+          state: "New York",
+          country: "United States",
+        } as any,
+      ],
+    });
+    const newYorkCode = new JobPostDto({
+      ...base,
+      locations: [{ city: "New York", state: "NY", country: "US" } as any],
+    });
+
+    expect(fp.canonicalFingerprint(vancouverName)).toBe(
+      fp.canonicalFingerprint(vancouverCode),
+    );
+    expect(fp.canonicalFingerprint(newYorkName)).toBe(
+      fp.canonicalFingerprint(newYorkCode),
     );
   });
   it("scores a Toronto software internship as urgent with explainable buckets", () => {

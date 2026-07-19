@@ -145,6 +145,12 @@ function sourceResult(): WatchSourcesExecutionResult {
     tier: 1 as const,
     kind: "direct" as const,
     mode: "board" as const,
+    intervalMinutes: 3,
+    searchScope: {
+      countryCodes: ["CA"],
+      locations: ["Toronto"],
+      searchTerms: ["software developer intern"],
+    },
   };
   return {
     status: "completed",

@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { randomUUID } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import {
   AcquireWatchLeaseInput,
   ClaimNotificationDeliveryInput,
@@ -158,6 +158,7 @@ export class InMemoryWatchRepository implements WatchRepository {
       sources: input.sources ?? [],
       sourceTiers: input.sourceTiers ?? {},
       sourceTargets: input.sourceTargets ?? [],
+      targetHealth: input.targetHealth ?? {},
       companySlugs: input.companySlugs ?? [],
       companies: input.companies ?? [],
       searchTerms: input.searchTerms ?? [],
@@ -241,6 +242,8 @@ export class InMemoryWatchRepository implements WatchRepository {
       sourcesRequested: input.sourcesRequested ?? [],
       sourcesSucceeded: input.sourcesSucceeded ?? [],
       sourcesFailed: input.sourcesFailed ?? [],
+      targetResults: input.targetResults ?? [],
+      coverageDegraded: input.coverageDegraded ?? false,
       jobsFetched: input.jobsFetched ?? 0,
       jobsNormalized: input.jobsNormalized ?? 0,
       newJobsDetected: input.newJobsDetected ?? 0,
@@ -308,7 +311,17 @@ export class InMemoryWatchRepository implements WatchRepository {
     isNew: boolean;
     descriptionChanged: boolean;
   }> {
-    const existing = this.jobs.get(input.fingerprint);
+    const baseExisting = this.jobs.get(input.fingerprint);
+    const storageFingerprint = requiresEpisodeScopedObservation(
+      baseExisting,
+      input,
+    )
+      ? episodeObservationFingerprint(
+          input.fingerprint,
+          input.canonicalEpisodeKey!,
+        )
+      : input.fingerprint;
+    const existing = this.jobs.get(storageFingerprint);
     const now = new Date();
     if (existing) {
       const descriptionChanged =
@@ -317,20 +330,22 @@ export class InMemoryWatchRepository implements WatchRepository {
         ...existing,
         ...input,
         id: existing.id,
+        fingerprint: existing.fingerprint,
         firstSeenAt: existing.firstSeenAt,
         createdAt: existing.createdAt,
         updatedAt: now,
       };
-      this.jobs.set(input.fingerprint, job);
+      this.jobs.set(storageFingerprint, job);
       return { job, isNew: false, descriptionChanged };
     }
     const job: ObservedJob = {
       ...input,
+      fingerprint: storageFingerprint,
       id: randomUUID(),
       createdAt: now,
       updatedAt: now,
     };
-    this.jobs.set(input.fingerprint, job);
+    this.jobs.set(storageFingerprint, job);
     return { job, isNew: true, descriptionChanged: false };
   }
 
@@ -338,19 +353,65 @@ export class InMemoryWatchRepository implements WatchRepository {
     match: WatchMatch;
     isNew: boolean;
   }> {
-    const key = matchKey(input.watchId, input.observedJobId);
-    const existing = this.matches.get(key);
+    const key = matchKey(
+      input.watchId,
+      input.observedJobId,
+      input.canonicalEpisodeKey,
+    );
+    let existingKey = key;
+    let existing = this.matches.get(key);
+    if (!existing && input.canonicalEpisodeKey) {
+      const legacy = [...this.matches.entries()].find(
+        ([, match]) =>
+          match.watchId === input.watchId &&
+          match.observedJobId === input.observedJobId &&
+          !match.canonicalEpisodeKey,
+      );
+      if (legacy) {
+        [existingKey, existing] = legacy;
+      }
+    }
     const now = new Date();
     if (existing) {
+      const currentObservation = await this.getObservedJob(
+        existing.observedJobId,
+      );
+      const incomingObservation = await this.getObservedJob(
+        input.observedJobId,
+      );
+      const promotesEligibilitySuppression =
+        existing.notificationState === "suppressed" &&
+        existing.notificationSuppressionReason === "eligibility" &&
+        input.notificationState === "pending";
+      const useIncomingObservation =
+        existing.observedJobId === input.observedJobId ||
+        input.score > existing.score ||
+        promotesEligibilitySuppression ||
+        observationRichness(incomingObservation) >
+          observationRichness(currentObservation);
       const match: WatchMatch = {
         ...existing,
-        score: input.score,
-        scoreBreakdown: input.scoreBreakdown,
-        matchedTerms: input.matchedTerms,
-        excludedReason: input.excludedReason,
+        ...(useIncomingObservation
+          ? {
+              observedJobId: input.observedJobId,
+              canonicalEpisodeKey: input.canonicalEpisodeKey,
+              sourceTargetKey: input.sourceTargetKey,
+              score: input.score,
+              scoreBreakdown: input.scoreBreakdown,
+              matchedTerms: input.matchedTerms,
+              excludedReason: input.excludedReason,
+            }
+          : {}),
+        ...(promotesEligibilitySuppression
+          ? {
+              notificationState: "pending" as const,
+              notificationSuppressionReason: null,
+            }
+          : {}),
         lastMatchedAt: input.lastMatchedAt,
         updatedAt: now,
       };
+      if (existingKey !== key) this.matches.delete(existingKey);
       this.matches.set(key, match);
       return { match, isNew: false };
     }
@@ -367,10 +428,16 @@ export class InMemoryWatchRepository implements WatchRepository {
   async persistObservationAndMatch(
     input: PersistObservationAndMatchInput,
   ): Promise<PersistObservationAndMatchResult> {
-    const observation = await this.upsertObservedJob(input.observedJob);
+    const observedJob = this.resolveAnchoredCanonicalEpisode(
+      input.observedJob,
+      input.canonicalEpisodeAnchorWindowMs,
+    );
+    const observation = await this.upsertObservedJob(observedJob);
     const match = await this.upsertMatch({
       ...input.match,
       observedJobId: observation.job.id,
+      canonicalEpisodeKey:
+        observation.job.canonicalEpisodeKey ?? input.match.canonicalEpisodeKey,
     });
     return {
       job: observation.job,
@@ -379,6 +446,45 @@ export class InMemoryWatchRepository implements WatchRepository {
       isNewMatch: match.isNew,
       descriptionChanged: observation.descriptionChanged,
     };
+  }
+
+  private resolveAnchoredCanonicalEpisode(
+    input: ObservedJobInput,
+    windowMs: number | undefined,
+  ): ObservedJobInput {
+    const anchor = input.canonicalEpisodeStartedAt;
+    if (
+      !windowMs ||
+      windowMs <= 0 ||
+      !input.canonicalKey ||
+      !input.canonicalEpisodeKey ||
+      !anchor ||
+      !Number.isFinite(anchor.getTime())
+    ) {
+      return input;
+    }
+    const minimumAnchor = anchor.getTime() - windowMs;
+    const recent = [...this.jobs.values()]
+      .filter(
+        (job) =>
+          job.canonicalKey === input.canonicalKey &&
+          Boolean(job.canonicalEpisodeKey) &&
+          Boolean(job.canonicalEpisodeStartedAt) &&
+          (job.canonicalEpisodeStartedAt?.getTime() ?? 0) >= minimumAnchor &&
+          (job.canonicalEpisodeStartedAt?.getTime() ?? 0) <= anchor.getTime(),
+      )
+      .sort(
+        (left, right) =>
+          (right.canonicalEpisodeStartedAt?.getTime() ?? 0) -
+          (left.canonicalEpisodeStartedAt?.getTime() ?? 0),
+      )[0];
+    return recent?.canonicalEpisodeKey && recent.canonicalEpisodeStartedAt
+      ? {
+          ...input,
+          canonicalEpisodeKey: recent.canonicalEpisodeKey,
+          canonicalEpisodeStartedAt: recent.canonicalEpisodeStartedAt,
+        }
+      : input;
   }
 
   async getMatch(id: string): Promise<WatchMatch | null> {
@@ -399,7 +505,7 @@ export class InMemoryWatchRepository implements WatchRepository {
       ...patch,
       id: current.id,
       watchId: current.watchId,
-      observedJobId: current.observedJobId,
+      observedJobId: patch.observedJobId ?? current.observedJobId,
       firstMatchedAt: current.firstMatchedAt,
       createdAt: current.createdAt,
       updatedAt: new Date(),
@@ -689,8 +795,47 @@ function contains(value?: string | null, expected?: string): boolean {
   );
 }
 
-function matchKey(watchId: string, observedJobId: string): string {
-  return `${watchId}:${observedJobId}`;
+function matchKey(
+  watchId: string,
+  observedJobId: string,
+  canonicalEpisodeKey?: string | null,
+): string {
+  return canonicalEpisodeKey
+    ? `${watchId}:canonical:${canonicalEpisodeKey}`
+    : `${watchId}:observation:${observedJobId}`;
+}
+
+function requiresEpisodeScopedObservation(
+  existing: ObservedJob | undefined,
+  input: ObservedJobInput,
+): boolean {
+  return Boolean(
+    existing?.canonicalEpisodeKey &&
+    input.canonicalEpisodeKey &&
+    existing.canonicalEpisodeKey !== input.canonicalEpisodeKey,
+  );
+}
+
+function episodeObservationFingerprint(
+  sourceFingerprint: string,
+  canonicalEpisodeKey: string,
+): string {
+  return createHash("sha256")
+    .update(
+      ["observation-episode", sourceFingerprint, canonicalEpisodeKey].join("|"),
+    )
+    .digest("hex");
+}
+
+function observationRichness(job: ObservedJob | null): number {
+  if (!job) return -1;
+  return (
+    (job.applicationUrl ? 100 : 0) +
+    (job.sourcePublishedAt ? 30 : 0) +
+    Math.min(50, (job.locations?.length ?? 0) * 10) +
+    (job.jobUrl ? 10 : 0) +
+    Math.min(40, Math.floor((job.description?.length ?? 0) / 500))
+  );
 }
 
 function pageBounds(query: PageRequest): { offset: number; limit: number } {

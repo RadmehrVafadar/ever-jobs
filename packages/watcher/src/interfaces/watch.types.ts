@@ -1,4 +1,4 @@
-import { JobPostDto, Site } from "@ever-jobs/models";
+import { JobPostDto, LocationDto, Site } from "@ever-jobs/models";
 
 export const WATCH_REPOSITORY = Symbol.for(
   "@ever-jobs/watcher/WatchRepository",
@@ -14,17 +14,66 @@ export type WatchMatchStatus =
   | "rejected"
   | "offer";
 export type NotificationStatus = "pending" | "sent" | "failed" | "suppressed";
+export type NotificationSuppressionReason = "baseline" | "eligibility";
 export type NotificationType = "urgent" | "standard" | "digest";
 export type WatchRunStatus = "running" | "completed" | "failed" | "partial";
+
+export interface WatchSearchScope {
+  countryCodes: string[];
+  locations: string[];
+  searchTerms?: string[];
+  maxRequestsPerRun?: number;
+}
 
 export interface WatchSourceTarget {
   site: Site | string;
   tier: 1 | 2 | 3;
   intervalMinutes: number;
   companySlug?: string;
+  companyName?: string;
+  searchScope?: WatchSearchScope;
   enabled: boolean;
+  initializedAt?: Date | null;
   lastRunAt?: Date | null;
   nextRunAt?: Date | null;
+}
+
+export interface WatchTargetHealth {
+  targetKey: string;
+  tier: 1 | 2 | 3;
+  successCount: number;
+  hardFailureCount: number;
+  emptyRunCount: number;
+  partialRunCount: number;
+  consecutiveHardFailures: number;
+  lastAttemptAt?: Date | null;
+  lastSuccessAt?: Date | null;
+  lastNonEmptyAt?: Date | null;
+  degradedAt?: Date | null;
+}
+
+export type WatchTargetRunOutcome =
+  | "success"
+  | "empty"
+  | "partial"
+  | "hard_failure";
+
+export interface WatchTargetRunResult {
+  targetKey: string;
+  tier: 1 | 2 | 3;
+  status: "succeeded" | "partial" | "failed";
+  outcome: WatchTargetRunOutcome;
+  requests: number;
+  requestsSucceeded: number;
+  requestsFailed: number;
+  jobsFetched: number;
+  durationMs: number;
+  empty: boolean;
+  hardFailure: boolean;
+  consecutiveHardFailures: number;
+  degraded: boolean;
+  lastSuccessAt?: Date | null;
+  lastNonEmptyAt?: Date | null;
 }
 
 export interface JobWatch {
@@ -38,6 +87,7 @@ export interface JobWatch {
   sources: string[];
   sourceTiers: Record<string, number>;
   sourceTargets: WatchSourceTarget[];
+  targetHealth?: Record<string, WatchTargetHealth>;
   companySlugs: string[];
   companies: string[];
   searchTerms: string[];
@@ -69,6 +119,7 @@ export interface ObservedJob {
   id: string;
   fingerprint: string;
   source: string;
+  sourceTargetKey?: string | null;
   sourceType?: string | null;
   externalJobId?: string | null;
   company?: string | null;
@@ -77,6 +128,10 @@ export interface ObservedJob {
   normalizedTitle: string;
   location?: string | null;
   normalizedLocation?: string | null;
+  locations?: LocationDto[];
+  canonicalKey?: string | null;
+  canonicalEpisodeKey?: string | null;
+  canonicalEpisodeStartedAt?: Date | null;
   workplaceType?: string | null;
   employmentType?: string | null;
   description?: string | null;
@@ -96,6 +151,8 @@ export interface WatchMatch {
   id: string;
   watchId: string;
   observedJobId: string;
+  canonicalEpisodeKey?: string | null;
+  sourceTargetKey?: string | null;
   score: number;
   scoreBreakdown: ScoreBreakdown;
   matchedTerms: string[];
@@ -104,6 +161,8 @@ export interface WatchMatch {
   firstMatchedAt: Date;
   lastMatchedAt: Date;
   notificationState: NotificationStatus;
+  /** Why an unsent match is suppressed. Baselines are permanent; eligibility may recover. */
+  notificationSuppressionReason?: NotificationSuppressionReason | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -140,6 +199,8 @@ export interface WatchRun {
   sourcesRequested: string[];
   sourcesSucceeded: string[];
   sourcesFailed: string[];
+  targetResults?: WatchTargetRunResult[];
+  coverageDegraded?: boolean;
   jobsFetched: number;
   jobsNormalized: number;
   newJobsDetected: number;
@@ -162,6 +223,30 @@ export interface ScoreBreakdown {
   missingRequired: string[];
   exclusionReason?: string;
   reasons: string[];
+  /** Optional for compatibility with score explanations persisted pre-6000. */
+  sourceTargetKey?: string;
+  /** Optional for compatibility with score explanations persisted pre-6000. */
+  matchedCountry?: "CA" | "US";
+  /** Optional for compatibility with score explanations persisted pre-6000. */
+  locationConfidence?: LocationConfidence;
+  /** Optional for compatibility with score explanations persisted pre-6000. */
+  geographyDecision?: GeographyDecision;
+}
+
+export type GeographyDecision =
+  | "eligible-canada"
+  | "eligible-united-states"
+  | "eligible-north-america"
+  | "outside-target-scope"
+  | "geography-unknown";
+
+export type LocationConfidence = "high" | "medium" | "low" | "unknown";
+
+export interface GeographyExplanation {
+  sourceTargetKey: string;
+  matchedCountry?: "CA" | "US";
+  locationConfidence: LocationConfidence;
+  geographyDecision: GeographyDecision;
 }
 
 export interface NotificationDestination {
@@ -294,6 +379,8 @@ export type WatchMatchInput = Omit<
 export interface PersistObservationAndMatchInput {
   observedJob: ObservedJobInput;
   match: Omit<WatchMatchInput, "observedJobId">;
+  /** Resolve fallback-only episodes against the persisted observation anchor. */
+  canonicalEpisodeAnchorWindowMs?: number;
 }
 
 export interface PersistObservationAndMatchResult {

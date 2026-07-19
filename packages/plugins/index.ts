@@ -1796,6 +1796,7 @@ import { QLFBrandsLampenlichtNlModule } from './source-company-qlfbrandslampenli
 import { QualifyzeModule } from './source-company-qualifyze';
 import { Solutions4DeliveryModule } from './source-company-solutions4delivery';
 import { ShopManufakturModule } from './source-company-shopmanufaktur';
+import { ShopifyModule } from './source-company-shopify';
 import { SimviaModule } from './source-company-simvia';
 import { SpreadGroupModule } from './source-company-spreadgroup';
 import { StaxxerModule } from './source-company-staxxer';
@@ -3603,6 +3604,7 @@ export const ALL_SOURCE_MODULES = [
   QualifyzeModule,
   Solutions4DeliveryModule,
   ShopManufakturModule,
+  ShopifyModule,
   SimviaModule,
   SpreadGroupModule,
   StaxxerModule,

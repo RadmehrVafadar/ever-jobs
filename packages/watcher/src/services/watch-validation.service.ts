@@ -6,6 +6,24 @@ import { JobWatch } from "../interfaces/watch.types";
 const initializationModes = ["baseline", "recent-only", "notify-all"] as const;
 const workplaceTypes = ["remote", "hybrid", "on-site"] as const;
 
+export const watchSearchScopeSchema = z
+  .object({
+    countryCodes: z
+      .array(
+        z
+          .string()
+          .trim()
+          .length(2)
+          .transform((value) => value.toUpperCase()),
+      )
+      .min(1)
+      .max(25),
+    locations: z.array(z.string().trim().min(1)).min(1).max(100),
+    searchTerms: z.array(z.string().trim().min(1)).min(1).max(100).optional(),
+    maxRequestsPerRun: z.number().int().min(1).max(1_000).optional(),
+  })
+  .strict();
+
 export const watchSourceTargetSchema = z.object({
   site: z.nativeEnum(Site),
   tier: z.union([z.literal(1), z.literal(2), z.literal(3)]),
@@ -15,7 +33,10 @@ export const watchSourceTargetSchema = z.object({
     .min(1)
     .max(24 * 60),
   companySlug: z.string().trim().min(1).max(200).optional(),
+  companyName: z.string().trim().min(1).max(200).optional(),
+  searchScope: watchSearchScopeSchema.optional(),
   enabled: z.boolean().default(true),
+  initializedAt: z.coerce.date().nullable().optional(),
   lastRunAt: z.coerce.date().nullable().optional(),
   nextRunAt: z.coerce.date().nullable().optional(),
 });

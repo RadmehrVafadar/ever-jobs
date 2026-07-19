@@ -1,6 +1,6 @@
-import { JobType } from '../enums/job-type.enum';
-import { LocationDto } from './location.dto';
-import { CompensationDto } from './compensation.dto';
+import { JobType } from "../enums/job-type.enum";
+import { LocationDto } from "./location.dto";
+import { CompensationDto } from "./compensation.dto";
 
 export class JobPostDto {
   id?: string | null;
@@ -9,6 +9,8 @@ export class JobPostDto {
   jobUrl!: string;
   jobUrlDirect?: string | null;
   location?: LocationDto | null;
+  /** All advertised locations in stable source order. */
+  locations?: LocationDto[];
 
   description?: string | null;
   companyUrl?: string | null;
@@ -44,7 +46,7 @@ export class JobPostDto {
   companyRating?: number | null;
   companyReviewsCount?: number | null;
   vacancyCount?: number | null;
-  workFromHomeType?: string | null;  // e.g. for Hybrid
+  workFromHomeType?: string | null; // e.g. for Hybrid
 
   // Salary enrichment metadata (set during post-processing)
   salarySource?: string | null;
@@ -63,11 +65,11 @@ export class JobPostDto {
   // Corpus signals (Spec 740) — opt-in via ?liveness=true / ?legitimacy=true; absent by default.
   // Shapes mirror what the Hust frontend already consumes (forward-compatible).
   liveness?: {
-    state: 'active' | 'expired' | 'uncertain';
+    state: "active" | "expired" | "uncertain";
     checkedAt?: string;
   } | null;
   legitimacy?: {
-    state: 'verified' | 'likely' | 'uncertain';
+    state: "verified" | "likely" | "uncertain";
     reasons?: string[];
   } | null;
 

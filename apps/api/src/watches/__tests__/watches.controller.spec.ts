@@ -107,9 +107,51 @@ describe("watcher management controllers", () => {
     repository.getWatch.mockResolvedValue(watchFixture());
     execution.runWatch.mockResolvedValue({ id: "run-1" });
 
-    await controller.initialize("watch-1");
+    await controller.initialize("watch-1", {});
 
-    expect(execution.runWatch).toHaveBeenCalledWith("watch-1", "baseline");
+    expect(execution.runWatch).toHaveBeenCalledWith("watch-1", "baseline", {
+      trigger: "initialize",
+      forceSources: true,
+    });
+  });
+
+  it("validates selected targets before initialization", async () => {
+    repository.getWatch.mockResolvedValue(
+      watchFixture({
+        sourceTargets: [
+          {
+            site: "ashby",
+            companySlug: "wealthsimple",
+            tier: 1,
+            intervalMinutes: 3,
+            enabled: true,
+          },
+          {
+            site: "google_careers",
+            tier: 1,
+            intervalMinutes: 3,
+            enabled: false,
+          },
+        ],
+      }),
+    );
+    execution.runWatch.mockResolvedValue({ id: "run-1" });
+
+    await controller.initialize("watch-1", {
+      targetKeys: ["ashby:wealthsimple"],
+    });
+
+    expect(execution.runWatch).toHaveBeenCalledWith("watch-1", "baseline", {
+      trigger: "initialize",
+      forceSources: true,
+      targetKeys: ["ashby:wealthsimple"],
+    });
+    await expect(
+      controller.initialize("watch-1", {
+        targetKeys: ["google_careers"],
+      }),
+    ).rejects.toThrow("disabled");
+    expect(execution.runWatch).toHaveBeenCalledTimes(1);
   });
 
   it("returns 404 when deleting an unknown watch", async () => {

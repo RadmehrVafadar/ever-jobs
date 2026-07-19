@@ -21,5 +21,6 @@ import {
     ObservedJobsController,
     NotificationsController,
   ],
+  exports: [WatcherModule],
 })
 export class WatchesModule {}
