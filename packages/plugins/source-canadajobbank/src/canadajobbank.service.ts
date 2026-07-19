@@ -1,6 +1,6 @@
-﻿import { SourcePlugin } from '@ever-jobs/plugin';
+﻿import { SourcePlugin } from "@ever-jobs/plugin";
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from "@nestjs/common";
 import {
   IScraper,
   ScraperInputDto,
@@ -11,24 +11,24 @@ import {
   CompensationInterval,
   DescriptionFormat,
   Site,
-} from '@ever-jobs/models';
-import {
-  createHttpClient,
-  extractEmails,
-} from '@ever-jobs/common';
+} from "@ever-jobs/models";
+import { createHttpClient, extractEmails } from "@ever-jobs/common";
 import {
   CANADAJOBBANK_API_URL,
   CANADAJOBBANK_RESOURCE_ID,
   CANADAJOBBANK_HEADERS,
   CANADAJOBBANK_DEFAULT_RESULTS,
   CANADAJOBBANK_MAX_RESULTS,
-} from './canadajobbank.constants';
-import { CanadaJobBankResponse, CanadaJobBankRecord } from './canadajobbank.types';
+} from "./canadajobbank.constants";
+import {
+  CanadaJobBankResponse,
+  CanadaJobBankRecord,
+} from "./canadajobbank.types";
 
 @SourcePlugin({
   site: Site.CANADAJOBBANK,
-  name: 'CanadaJobBank',
-  category: 'government',
+  name: "CanadaJobBank",
+  category: "government",
 })
 @Injectable()
 export class CanadaJobBankService implements IScraper {
@@ -66,18 +66,24 @@ export class CanadaJobBankService implements IScraper {
       const data = response.data as CanadaJobBankResponse;
 
       if (!data?.success) {
-        this.logger.warn('Canada Job Bank API returned unsuccessful response');
-        return new JobResponseDto([]);
+        throw new Error(
+          "Canada Job Bank API returned an unsuccessful response",
+        );
       }
 
-      const records = data?.result?.records ?? [];
+      const records = data?.result?.records;
+      if (!Array.isArray(records)) {
+        throw new Error(
+          "Canada Job Bank returned an invalid response: expected result.records[]",
+        );
+      }
       if (records.length === 0) {
-        this.logger.log('No Canada Job Bank records available');
+        this.logger.log("No Canada Job Bank records available");
         return new JobResponseDto([]);
       }
 
       this.logger.log(
-        `Canada Job Bank returned ${records.length} records (total: ${data?.result?.total ?? 'unknown'})`,
+        `Canada Job Bank returned ${records.length} records (total: ${data?.result?.total ?? "unknown"})`,
       );
 
       const jobs: JobPostDto[] = [];
@@ -89,7 +95,9 @@ export class CanadaJobBankService implements IScraper {
           const job = this.mapJob(record);
           if (job) jobs.push(job);
         } catch (err: any) {
-          this.logger.warn(`Error mapping Canada Job Bank record ${record._id}: ${err.message}`);
+          this.logger.warn(
+            `Error mapping Canada Job Bank record ${record._id}: ${err.message}`,
+          );
         }
       }
 
@@ -97,51 +105,64 @@ export class CanadaJobBankService implements IScraper {
       return new JobResponseDto(jobs);
     } catch (err: any) {
       this.logger.error(`Canada Job Bank scrape error: ${err.message}`);
-      return new JobResponseDto([]);
+      throw err;
     }
   }
 
   private mapJob(record: CanadaJobBankRecord): JobPostDto | null {
-    const title = record['Job Title'] ?? record['Original Job Title'];
+    const title = record["Job Title"] ?? record["Original Job Title"];
     if (!title) return null;
 
     const jobUrl = `https://www.jobbank.gc.ca/jobsearch/jobposting/${record._id}`;
 
-    const description = [
-      record['NOC21 Code Name'] ? `Occupation: ${record['NOC21 Code Name']}` : null,
-      record['Employment Type'] ? `Type: ${record['Employment Type']}` : null,
-      record['Employment Term'] ? `Term: ${record['Employment Term']}` : null,
-      record['Education LOS'] ? `Education: ${record['Education LOS']}` : null,
-      record['Experience Level'] ? `Experience: ${record['Experience Level']}` : null,
-      record['Vacancy Count'] ? `Vacancies: ${record['Vacancy Count']}` : null,
-    ].filter(Boolean).join('\n') || null;
+    const description =
+      [
+        record["NOC21 Code Name"]
+          ? `Occupation: ${record["NOC21 Code Name"]}`
+          : null,
+        record["Employment Type"] ? `Type: ${record["Employment Type"]}` : null,
+        record["Employment Term"] ? `Term: ${record["Employment Term"]}` : null,
+        record["Education LOS"]
+          ? `Education: ${record["Education LOS"]}`
+          : null,
+        record["Experience Level"]
+          ? `Experience: ${record["Experience Level"]}`
+          : null,
+        record["Vacancy Count"]
+          ? `Vacancies: ${record["Vacancy Count"]}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join("\n") || null;
 
     let compensation: CompensationDto | null = null;
-    if (record['Salary Minimum'] || record['Salary Maximum']) {
-      const salaryPer = (record['Salary Per'] ?? '').toLowerCase();
+    if (record["Salary Minimum"] || record["Salary Maximum"]) {
+      const salaryPer = (record["Salary Per"] ?? "").toLowerCase();
       let interval = CompensationInterval.YEARLY;
-      if (salaryPer === 'hour' || salaryPer === 'hourly') {
+      if (salaryPer === "hour" || salaryPer === "hourly") {
         interval = CompensationInterval.HOURLY;
       }
 
       compensation = new CompensationDto({
         interval,
-        minAmount: record['Salary Minimum'] ?? null,
-        maxAmount: record['Salary Maximum'] ?? null,
-        currency: 'CAD',
+        minAmount: record["Salary Minimum"] ?? null,
+        maxAmount: record["Salary Maximum"] ?? null,
+        currency: "CAD",
       });
     }
 
     const location = new LocationDto({
       city: record.City ?? null,
-      state: record['Province/Territory'] ?? null,
-      country: 'Canada',
+      state: record["Province/Territory"] ?? null,
+      country: "Canada",
     });
 
     let datePosted: string | null = null;
-    if (record['First Posting Date']) {
+    if (record["First Posting Date"]) {
       try {
-        datePosted = new Date(record['First Posting Date']).toISOString().split('T')[0];
+        datePosted = new Date(record["First Posting Date"])
+          .toISOString()
+          .split("T")[0];
       } catch {
         datePosted = null;
       }

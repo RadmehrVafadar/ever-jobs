@@ -1,10 +1,10 @@
 # ── Build stage ────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
 # Native-build toolchain for `better-sqlite3` (and any other node-gyp deps).
-# Alpine's node:20-alpine image ships without python3 / make / g++, so npm ci
+# Alpine's Node image ships without python3 / make / g++, so npm ci
 # fails when node-gyp tries to compile native modules. The toolchain only
 # lives in the builder stage — the runtime stage copies prebuilt
 # node_modules and stays slim.
@@ -12,6 +12,12 @@ RUN apk add --no-cache python3 make g++ libc-dev
 
 # Copy dependency manifests
 COPY package*.json ./
+COPY apps/mcp/package.json ./apps/mcp/package.json
+COPY packages/analytics/package.json ./packages/analytics/package.json
+COPY packages/common/package.json ./packages/common/package.json
+COPY packages/models/package.json ./packages/models/package.json
+COPY packages/plugin/package.json ./packages/plugin/package.json
+COPY packages/watcher/package.json ./packages/watcher/package.json
 
 # Install ALL dependencies (needed for build)
 RUN npm ci
@@ -19,11 +25,12 @@ RUN npm ci
 # Copy full source
 COPY . .
 
-# Build the API application
-RUN npx nest build
+# Generate the PostgreSQL client and build both long-running applications.
+RUN npx prisma generate
+RUN npx nest build api && npx nest build watcher
 
 # ── Runtime stage ──────────────────────────
-FROM node:20-alpine AS runtime
+FROM node:22-alpine AS api-runtime
 
 WORKDIR /app
 
@@ -36,6 +43,7 @@ COPY --from=builder /app/package*.json ./
 
 # Copy built output
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
 
 # Create logs directory
 RUN mkdir -p /app/logs
@@ -83,3 +91,19 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:${PORT}/health || exit 1
 
 CMD ["node", "dist/apps/api/main.js"]
+
+# ── Watcher runtime stage ──────────────────
+FROM api-runtime AS watcher-runtime
+
+ENV WATCHER_ENABLED=true
+ENV WATCHER_HEALTH_PORT=3002
+
+EXPOSE 3002
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost:${WATCHER_HEALTH_PORT}/health || exit 1
+
+CMD ["node", "dist/apps/watcher/main.js"]
+
+# Keep the default image target backward-compatible with the API.
+FROM api-runtime AS final

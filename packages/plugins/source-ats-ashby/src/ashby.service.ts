@@ -1,6 +1,6 @@
-﻿import { SourcePlugin } from '@ever-jobs/plugin';
+﻿import { SourcePlugin } from "@ever-jobs/plugin";
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from "@nestjs/common";
 import {
   IScraper,
   ScraperInputDto,
@@ -10,7 +10,7 @@ import {
   Site,
   DescriptionFormat,
   getCompensationInterval,
-} from '@ever-jobs/models';
+} from "@ever-jobs/models";
 import {
   createHttpClient,
   HttpClient,
@@ -19,25 +19,25 @@ import {
   parseLocationList,
   resolveCompensation,
   aggregateCompensation,
-} from '@ever-jobs/common';
+} from "@ever-jobs/common";
 import {
   ASHBY_API_URL,
   ASHBY_HEADERS,
   ASHBY_INCLUDE_COMPENSATION_QUERY,
   ASHBY_PUBLIC_MAX_RETRIES,
   ASHBY_RETRY_BACKOFF,
-} from './ashby.constants';
+} from "./ashby.constants";
 import {
   AshbyJob,
   AshbyResponse,
   AshbyCompensationTier,
   AshbyFlatCompensationComponent,
-} from './ashby.types';
+} from "./ashby.types";
 
 @SourcePlugin({
   site: Site.ASHBY,
-  name: 'Ashby',
-  category: 'ats',
+  name: "Ashby",
+  category: "ats",
   isAts: true,
 })
 @Injectable()
@@ -47,7 +47,7 @@ export class AshbyService implements IScraper {
   async scrape(input: ScraperInputDto): Promise<JobResponseDto> {
     const companySlug = input.companySlug;
     if (!companySlug) {
-      this.logger.warn('No companySlug provided for Ashby scraper');
+      this.logger.warn("No companySlug provided for Ashby scraper");
       return new JobResponseDto([]);
     }
 
@@ -76,10 +76,15 @@ export class AshbyService implements IScraper {
     try {
       this.logger.log(`Fetching Ashby jobs for company: ${companySlug}`);
       const response = await this.getWithRetry(client, url);
-      const data: AshbyResponse = response.data ?? { jobs: [] };
-      const jobs = data.jobs ?? [];
+      const data = response.data;
+      if (!data || !Array.isArray(data.jobs)) {
+        throw new Error("Ashby returned an invalid response: expected jobs[]");
+      }
+      const jobs = data.jobs;
 
-      this.logger.log(`Ashby: found ${jobs.length} raw jobs for ${companySlug}`);
+      this.logger.log(
+        `Ashby: found ${jobs.length} raw jobs for ${companySlug}`,
+      );
 
       const resultsWanted = input.resultsWanted ?? 100;
       const jobPosts: JobPostDto[] = [];
@@ -89,19 +94,27 @@ export class AshbyService implements IScraper {
         if (job.isListed === false) continue;
 
         try {
-          const post = this.processJob(job, companySlug, input.descriptionFormat);
+          const post = this.processJob(
+            job,
+            companySlug,
+            input.descriptionFormat,
+          );
           if (post) {
             jobPosts.push(post);
           }
         } catch (err: any) {
-          this.logger.warn(`Error processing Ashby job ${job.id}: ${err.message}`);
+          this.logger.warn(
+            `Error processing Ashby job ${job.id}: ${err.message}`,
+          );
         }
       }
 
       return new JobResponseDto(jobPosts);
     } catch (err: any) {
-      this.logger.error(`Ashby scrape error for ${companySlug}: ${err.message}`);
-      return new JobResponseDto([]);
+      this.logger.error(
+        `Ashby scrape error for ${companySlug}: ${err.message}`,
+      );
+      throw err;
     }
   }
 
@@ -125,17 +138,20 @@ export class AshbyService implements IScraper {
     });
 
     const url = this.buildBoardUrl(companySlug);
-    const authToken = Buffer.from(`${apiKey}:`).toString('base64');
+    const authToken = Buffer.from(`${apiKey}:`).toString("base64");
 
     const response = await client.post(url, undefined, {
       headers: {
-        Accept: 'application/json',
+        Accept: "application/json",
         Authorization: `Basic ${authToken}`,
       },
     });
 
-    const data: AshbyResponse = response.data ?? { jobs: [] };
-    const jobs = data.jobs ?? [];
+    const data = response.data as AshbyResponse | undefined;
+    if (!data || !Array.isArray(data.jobs)) {
+      throw new Error("Ashby returned an invalid response: expected jobs[]");
+    }
+    const jobs = data.jobs;
 
     this.logger.log(
       `Ashby (authenticated): found ${jobs.length} jobs for ${companySlug}`,
@@ -181,7 +197,7 @@ export class AshbyService implements IScraper {
    * baseDelayMs * 2^attempt + random(0..jitterMaxMs).
    */
   private async getWithRetry(
-    client: Pick<HttpClient, 'get'>,
+    client: Pick<HttpClient, "get">,
     url: string,
     backoff: { baseDelayMs: number; jitterMaxMs: number } = ASHBY_RETRY_BACKOFF,
   ): Promise<{ data?: AshbyResponse }> {
@@ -251,7 +267,7 @@ export class AshbyService implements IScraper {
     // the authenticated one so both paths populate.
     const publishedRaw = job.publishedAt ?? job.publishedDate;
     const datePosted = publishedRaw
-      ? new Date(publishedRaw).toISOString().split('T')[0]
+      ? new Date(publishedRaw).toISOString().split("T")[0]
       : null;
 
     return new JobPostDto({
@@ -269,7 +285,7 @@ export class AshbyService implements IScraper {
       site: Site.ASHBY,
       // ATS-specific fields
       atsId: job.id ?? null,
-      atsType: 'ashby',
+      atsType: "ashby",
       department: job.department ?? job.departmentName ?? null,
       team: job.team ?? job.teamName ?? null,
       employmentType: job.employmentType ?? null,
@@ -299,7 +315,7 @@ export class AshbyService implements IScraper {
     return labels;
   }
 
-  private postalAddressLabel(address: AshbyJob['address']): string | null {
+  private postalAddressLabel(address: AshbyJob["address"]): string | null {
     const postal = address?.postalAddress;
     if (!postal) return null;
     const parts = [
@@ -307,7 +323,7 @@ export class AshbyService implements IScraper {
       postal.addressRegion,
       postal.addressCountry,
     ].filter((part): part is string => Boolean(part?.trim()));
-    return parts.length > 0 ? parts.join(', ') : null;
+    return parts.length > 0 ? parts.join(", ") : null;
   }
 
   /**
@@ -335,16 +351,18 @@ export class AshbyService implements IScraper {
     const comp = job.compensation!;
 
     // Try compensationComponents first, then summaryComponents
-    const components = comp.compensationComponents ?? comp.summaryComponents ?? [];
+    const components =
+      comp.compensationComponents ?? comp.summaryComponents ?? [];
     if (components.length === 0) return null;
 
     // Find the base salary component (first component or one labeled 'salary'/'base')
-    const salaryComponent = components.find(
-      (c) =>
-        c.compensationType?.toLowerCase().includes('salary') ||
-        c.compensationType?.toLowerCase() === 'base' ||
-        c.label?.toLowerCase().includes('salary'),
-    ) ?? components[0];
+    const salaryComponent =
+      components.find(
+        (c) =>
+          c.compensationType?.toLowerCase().includes("salary") ||
+          c.compensationType?.toLowerCase() === "base" ||
+          c.label?.toLowerCase().includes("salary"),
+      ) ?? components[0];
 
     const tiers = salaryComponent?.tiers ?? [];
     if (tiers.length === 0) return null;
@@ -355,7 +373,7 @@ export class AshbyService implements IScraper {
       tiers.map((tier: AshbyCompensationTier) => ({
         minAmount: tier.tierFloor,
         maxAmount: tier.tierCeiling,
-        currency: tier.currency ?? 'USD',
+        currency: tier.currency ?? "USD",
         interval: this.resolveInterval(tier.interval),
       })),
     );
@@ -375,8 +393,8 @@ export class AshbyService implements IScraper {
     const salaryComponent =
       candidates.find(
         (c) =>
-          c.compensationType?.toLowerCase().includes('salary') ||
-          c.compensationType?.toLowerCase() === 'base',
+          c.compensationType?.toLowerCase().includes("salary") ||
+          c.compensationType?.toLowerCase() === "base",
       ) ?? candidates[0];
 
     // Fold every component sharing the chosen salary's type (e.g. per-location
@@ -392,7 +410,7 @@ export class AshbyService implements IScraper {
       salaryBands.map((c) => ({
         minAmount: c.minValue,
         maxAmount: c.maxValue,
-        currency: c.currencyCode ?? 'USD',
+        currency: c.currencyCode ?? "USD",
         interval: this.resolveInterval(c.interval),
       })),
     );

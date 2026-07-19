@@ -1,0 +1,468 @@
+import { Type } from "class-transformer";
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsISO8601,
+  IsNotEmpty,
+  IsObject,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  MaxLength,
+  Min,
+  ValidateNested,
+} from "class-validator";
+import { ApiProperty, ApiPropertyOptional, PartialType } from "@nestjs/swagger";
+
+const WATCH_MATCH_STATUSES = [
+  "new",
+  "reviewed",
+  "applied",
+  "dismissed",
+  "interview",
+  "rejected",
+  "offer",
+] as const;
+const NOTIFICATION_STATUSES = [
+  "pending",
+  "sent",
+  "failed",
+  "suppressed",
+] as const;
+const WATCH_RUN_STATUSES = [
+  "running",
+  "completed",
+  "failed",
+  "partial",
+] as const;
+
+export class WatchSourceTargetDto {
+  @ApiProperty({ example: "google_careers" })
+  @IsString()
+  @IsNotEmpty()
+  site!: string;
+
+  @ApiProperty({ enum: [1, 2, 3], example: 1 })
+  @IsInt()
+  @Min(1)
+  @Max(3)
+  tier!: 1 | 2 | 3;
+
+  @ApiProperty({ example: 3, minimum: 1, maximum: 1440 })
+  @IsInt()
+  @Min(1)
+  @Max(1_440)
+  intervalMinutes!: number;
+
+  @ApiPropertyOptional({ example: "shopify" })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  companySlug?: string;
+
+  @ApiPropertyOptional({ default: true })
+  @IsOptional()
+  @IsBoolean()
+  enabled?: boolean;
+}
+
+export class NotificationDestinationDto {
+  @ApiProperty({ enum: ["discord", "telegram", "webhook"], example: "discord" })
+  @IsIn(["discord", "telegram", "webhook"])
+  type!: "discord" | "telegram" | "webhook";
+
+  @ApiProperty({
+    example: "default",
+    description: "Non-secret reference resolved from server environment.",
+  })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  destinationRef!: string;
+}
+
+export class CreateWatchDto {
+  @ApiProperty({ example: "Toronto and Canada Software Internships" })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  name!: string;
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  enabled?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(2_000)
+  description?: string | null;
+
+  @ApiPropertyOptional({ example: "*/3 * * * *" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  schedule?: string | null;
+
+  @ApiPropertyOptional({ example: 3, minimum: 1, maximum: 1440 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(1_440)
+  intervalMinutes?: number;
+
+  @ApiPropertyOptional({ example: "America/Toronto" })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  timezone?: string;
+
+  @ApiPropertyOptional({ type: [WatchSourceTargetDto] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(250)
+  @ValidateNested({ each: true })
+  @Type(() => WatchSourceTargetDto)
+  sourceTargets?: WatchSourceTargetDto[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(250)
+  @IsString({ each: true })
+  sources?: string[];
+
+  @ApiPropertyOptional({
+    type: "object",
+    additionalProperties: { type: "number" },
+  })
+  @IsOptional()
+  @IsObject()
+  sourceTiers?: Record<string, number>;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(250)
+  @IsString({ each: true })
+  companySlugs?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(500)
+  @IsString({ each: true })
+  companies?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(100)
+  @IsString({ each: true })
+  searchTerms?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(100)
+  @IsString({ each: true })
+  requiredTerms?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(250)
+  @IsString({ each: true })
+  preferredTerms?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(250)
+  @IsString({ each: true })
+  excludedTerms?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(100)
+  @IsString({ each: true })
+  locations?: string[];
+
+  @ApiPropertyOptional({ type: [String], example: ["CA"] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(25)
+  @IsString({ each: true })
+  countryCodes?: string[];
+
+  @ApiPropertyOptional({
+    type: [String],
+    example: ["remote", "hybrid", "on-site"],
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(3)
+  @IsIn(["remote", "hybrid", "on-site"], { each: true })
+  allowedWorkplaceTypes?: string[];
+
+  @ApiPropertyOptional({ type: [String], example: ["internship", "co-op"] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(25)
+  @IsString({ each: true })
+  allowedEmploymentTypes?: string[];
+
+  @ApiPropertyOptional({ minimum: 0, maximum: 500, example: 60 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(500)
+  minimumScore?: number;
+
+  @ApiPropertyOptional({ minimum: 0, maximum: 500, example: 80 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(500)
+  urgentScore?: number;
+
+  @ApiPropertyOptional({ minimum: 0, maximum: 500, example: 40 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(500)
+  digestScore?: number;
+
+  @ApiPropertyOptional({ type: [NotificationDestinationDto] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(10)
+  @ValidateNested({ each: true })
+  @Type(() => NotificationDestinationDto)
+  notificationChannels?: NotificationDestinationDto[];
+
+  @ApiPropertyOptional({
+    enum: ["baseline", "recent-only", "notify-all"],
+    default: "baseline",
+  })
+  @IsOptional()
+  @IsIn(["baseline", "recent-only", "notify-all"])
+  initializationMode?: "baseline" | "recent-only" | "notify-all";
+
+  @ApiPropertyOptional({ minimum: 1, maximum: 10080, example: 180 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(10_080)
+  recentWindowMinutes?: number;
+
+  @ApiPropertyOptional({
+    type: "object",
+    additionalProperties: { type: "number" },
+  })
+  @IsOptional()
+  @IsObject()
+  weights?: Record<string, number>;
+}
+
+export class UpdateWatchDto extends PartialType(CreateWatchDto) {}
+
+export class PaginationQueryDto {
+  @ApiPropertyOptional({ minimum: 0, default: 0 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  offset?: number;
+
+  @ApiPropertyOptional({ minimum: 1, maximum: 200, default: 50 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(200)
+  limit?: number;
+}
+
+export class WatchRunQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional({ enum: WATCH_RUN_STATUSES })
+  @IsOptional()
+  @IsIn(WATCH_RUN_STATUSES)
+  status?: (typeof WATCH_RUN_STATUSES)[number];
+
+  @ApiPropertyOptional({ format: "date-time" })
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  startedAfter?: string;
+
+  @ApiPropertyOptional({ format: "date-time" })
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  startedBefore?: string;
+}
+
+export class WatchMatchQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional({ enum: WATCH_MATCH_STATUSES })
+  @IsOptional()
+  @IsIn(WATCH_MATCH_STATUSES)
+  status?: (typeof WATCH_MATCH_STATUSES)[number];
+
+  @ApiPropertyOptional({ enum: NOTIFICATION_STATUSES })
+  @IsOptional()
+  @IsIn(NOTIFICATION_STATUSES)
+  notificationState?: (typeof NOTIFICATION_STATUSES)[number];
+
+  @ApiPropertyOptional({ minimum: 0 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  minimumScore?: number;
+
+  @ApiPropertyOptional({ minimum: 0 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  maximumScore?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  company?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  source?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  location?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  employmentType?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  workplaceType?: string;
+
+  @ApiPropertyOptional({ format: "date-time" })
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  matchedAfter?: string;
+
+  @ApiPropertyOptional({ format: "date-time" })
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  matchedBefore?: string;
+}
+
+export class ObservedJobQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  company?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  source?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  location?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  employmentType?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  workplaceType?: string;
+
+  @ApiPropertyOptional({ format: "date-time" })
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  firstSeenAfter?: string;
+
+  @ApiPropertyOptional({ format: "date-time" })
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  firstSeenBefore?: string;
+}
+
+export class NotificationDeliveryQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional({ format: "uuid" })
+  @IsOptional()
+  @IsUUID()
+  watchId?: string;
+
+  @ApiPropertyOptional({ format: "uuid" })
+  @IsOptional()
+  @IsUUID()
+  watchMatchId?: string;
+
+  @ApiPropertyOptional({ enum: NOTIFICATION_STATUSES })
+  @IsOptional()
+  @IsIn(NOTIFICATION_STATUSES)
+  status?: (typeof NOTIFICATION_STATUSES)[number];
+
+  @ApiPropertyOptional({ enum: ["discord", "telegram", "webhook"] })
+  @IsOptional()
+  @IsIn(["discord", "telegram", "webhook"])
+  channel?: string;
+
+  @ApiPropertyOptional({ enum: ["urgent", "standard", "digest"] })
+  @IsOptional()
+  @IsIn(["urgent", "standard", "digest"])
+  notificationType?: "urgent" | "standard" | "digest";
+
+  @ApiPropertyOptional({ format: "date-time" })
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  createdAfter?: string;
+
+  @ApiPropertyOptional({ format: "date-time" })
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  createdBefore?: string;
+}
+
+export class UpdateMatchStatusDto {
+  @ApiProperty({ enum: WATCH_MATCH_STATUSES })
+  @IsIn(WATCH_MATCH_STATUSES)
+  status!: (typeof WATCH_MATCH_STATUSES)[number];
+}
+
+export class DiscordNotificationTestDto {
+  @ApiProperty({ format: "uuid" })
+  @IsUUID()
+  watchId!: string;
+
+  @ApiPropertyOptional({
+    enum: ["default", "DISCORD_WEBHOOK_URL"],
+    default: "default",
+  })
+  @IsOptional()
+  @IsIn(["default", "DISCORD_WEBHOOK_URL"])
+  destinationRef?: "default" | "DISCORD_WEBHOOK_URL";
+}

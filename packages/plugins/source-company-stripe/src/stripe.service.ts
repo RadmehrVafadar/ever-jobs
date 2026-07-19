@@ -1,18 +1,23 @@
-﻿import { SourcePlugin } from '@ever-jobs/plugin';
+﻿import { SourcePlugin } from "@ever-jobs/plugin";
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from "@nestjs/common";
 import {
-  IScraper, ScraperInputDto, JobResponseDto, JobPostDto, Site, LocationDto,
-} from '@ever-jobs/models';
-import { createHttpClient, stripHtmlTags } from '@ever-jobs/common';
+  IScraper,
+  ScraperInputDto,
+  JobResponseDto,
+  JobPostDto,
+  Site,
+  LocationDto,
+} from "@ever-jobs/models";
+import { createHttpClient, stripHtmlTags } from "@ever-jobs/common";
 
 /** Stripe uses Greenhouse for their careers page */
-const API_URL = 'https://api.greenhouse.io/v1/boards/stripe/jobs';
+const API_URL = "https://api.greenhouse.io/v1/boards/stripe/jobs";
 
 @SourcePlugin({
   site: Site.STRIPE,
-  name: 'Stripe',
-  category: 'company',
+  name: "Stripe",
+  category: "company",
 })
 @Injectable()
 export class StripeService implements IScraper {
@@ -32,54 +37,72 @@ export class StripeService implements IScraper {
       this.logger.log(`Stripe: fetching ${url}`);
 
       const { data } = await client.get<any>(url);
-      const listings = data?.jobs ?? [];
+      if (!data || !Array.isArray(data.jobs)) {
+        throw new Error("Stripe returned an invalid response: expected jobs[]");
+      }
+      const listings = data.jobs;
 
       for (const listing of listings) {
         if (jobs.length >= resultsWanted) break;
+        try {
+          const title = listing.title ?? "";
+          if (!title) continue;
 
-        const title = listing.title ?? '';
-        if (!title) continue;
+          // Filter by search term if provided
+          if (input.searchTerm) {
+            const term = input.searchTerm.toLowerCase();
+            const titleMatch = title.toLowerCase().includes(term);
+            const deptMatch = (listing.departments?.[0]?.name ?? "")
+              .toLowerCase()
+              .includes(term);
+            if (!titleMatch && !deptMatch) continue;
+          }
 
-        // Filter by search term if provided
-        if (input.searchTerm) {
-          const term = input.searchTerm.toLowerCase();
-          const titleMatch = title.toLowerCase().includes(term);
-          const deptMatch = (listing.departments?.[0]?.name ?? '').toLowerCase().includes(term);
-          if (!titleMatch && !deptMatch) continue;
+          const jobId = listing.id ?? "";
+          const id = `stripe-${jobId}`;
+
+          const locationStr = listing.location?.name ?? null;
+          const location = locationStr
+            ? new LocationDto({ city: locationStr })
+            : null;
+
+          // Filter by location if provided
+          if (input.location && locationStr) {
+            if (
+              !locationStr.toLowerCase().includes(input.location.toLowerCase())
+            )
+              continue;
+          }
+
+          jobs.push(
+            new JobPostDto({
+              id,
+              site: Site.STRIPE,
+              title,
+              companyName: "Stripe",
+              jobUrl:
+                listing.absolute_url ??
+                `https://stripe.com/jobs/listing/${listing.id}`,
+              location,
+              description: listing.content
+                ? stripHtmlTags(listing.content)
+                : null,
+              datePosted: listing.updated_at ?? null,
+              isRemote: locationStr?.toLowerCase().includes("remote") ?? false,
+              department: listing.departments?.[0]?.name ?? null,
+            }),
+          );
+        } catch (err: any) {
+          this.logger.warn(
+            `Stripe: failed to map job ${String(listing?.id ?? "unknown")}: ${err.message}`,
+          );
         }
-
-        const jobId = listing.id ?? '';
-        const id = `stripe-${jobId}`;
-
-        const locationStr = listing.location?.name ?? null;
-        const location = locationStr
-          ? new LocationDto({ city: locationStr })
-          : null;
-
-        // Filter by location if provided
-        if (input.location && locationStr) {
-          if (!locationStr.toLowerCase().includes(input.location.toLowerCase())) continue;
-        }
-
-        jobs.push(
-          new JobPostDto({
-            id,
-            site: Site.STRIPE,
-            title,
-            companyName: 'Stripe',
-            jobUrl: listing.absolute_url ?? `https://stripe.com/jobs/listing/${listing.id}`,
-            location,
-            description: listing.content ? stripHtmlTags(listing.content) : null,
-            datePosted: listing.updated_at ?? null,
-            isRemote: locationStr?.toLowerCase().includes('remote') ?? false,
-            department: listing.departments?.[0]?.name ?? null,
-          }),
-        );
       }
 
       this.logger.log(`Stripe: scraped ${jobs.length} jobs`);
     } catch (err: any) {
       this.logger.error(`Stripe scrape failed: ${err.message}`);
+      throw err;
     }
 
     return { jobs };

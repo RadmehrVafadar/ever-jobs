@@ -12,6 +12,7 @@ import { MetricsInterceptor } from './metrics/metrics.interceptor';
 
 import { HealthModule } from './health/health.module';
 import { JobsModule } from './jobs/jobs.module';
+import { WatchesModule } from './watches/watches.module';
 import { ApiKeyGuard } from './auth/api-key.guard';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { HttpExceptionFilter } from './filters/http-exception.filter';
@@ -97,6 +98,9 @@ const ACTIVE_STORE = resolveStoreBootstrap();
 
     // Metrics tracking
     MetricsModule,
+
+    // Persistent job watches
+    WatchesModule,
 
 
   ],

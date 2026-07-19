@@ -1,18 +1,24 @@
-import { SourcePlugin } from '@ever-jobs/plugin';
+import { SourcePlugin } from "@ever-jobs/plugin";
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from "@nestjs/common";
 import {
-  IScraper, ScraperInputDto, JobResponseDto, JobPostDto, Site, LocationDto,
-} from '@ever-jobs/models';
-import { createHttpClient, stripHtmlTags } from '@ever-jobs/common';
+  IScraper,
+  ScraperInputDto,
+  JobResponseDto,
+  JobPostDto,
+  Site,
+  LocationDto,
+} from "@ever-jobs/models";
+import { createHttpClient, stripHtmlTags } from "@ever-jobs/common";
 
 /** DoorDash publishes its careers board through Greenhouse. */
-const API_URL = 'https://api.greenhouse.io/v1/boards/doordash/jobs';
+const API_URL =
+  "https://boards-api.greenhouse.io/v1/boards/doordashcanada/jobs";
 
 @SourcePlugin({
   site: Site.DOORDASH,
-  name: 'DoorDash',
-  category: 'company',
+  name: "DoorDash",
+  category: "company",
 })
 @Injectable()
 export class DoorDashService implements IScraper {
@@ -32,56 +38,72 @@ export class DoorDashService implements IScraper {
       this.logger.log(`DoorDash: fetching ${url}`);
 
       const { data } = await client.get<any>(url);
-      const listings = data?.jobs ?? [];
+      if (!data || !Array.isArray(data.jobs)) {
+        throw new Error(
+          "DoorDash returned an invalid response: expected jobs[]",
+        );
+      }
+      const listings = data.jobs;
 
       for (const listing of listings) {
         if (jobs.length >= resultsWanted) break;
+        try {
+          const title = listing.title ?? "";
+          if (!title) continue;
 
-        const title = listing.title ?? '';
-        if (!title) continue;
+          if (input.searchTerm) {
+            const term = input.searchTerm.toLowerCase();
+            const titleMatch = title.toLowerCase().includes(term);
+            const deptMatch = (listing.departments?.[0]?.name ?? "")
+              .toLowerCase()
+              .includes(term);
+            if (!titleMatch && !deptMatch) continue;
+          }
 
-        if (input.searchTerm) {
-          const term = input.searchTerm.toLowerCase();
-          const titleMatch = title.toLowerCase().includes(term);
-          const deptMatch = (listing.departments?.[0]?.name ?? '')
-            .toLowerCase()
-            .includes(term);
-          if (!titleMatch && !deptMatch) continue;
+          const jobId = listing.id ?? "";
+          const id = `doordash-${jobId}`;
+
+          const locationStr = listing.location?.name ?? null;
+          const location = locationStr
+            ? new LocationDto({ city: locationStr })
+            : null;
+
+          if (input.location && locationStr) {
+            if (
+              !locationStr.toLowerCase().includes(input.location.toLowerCase())
+            )
+              continue;
+          }
+
+          jobs.push(
+            new JobPostDto({
+              id,
+              site: Site.DOORDASH,
+              title,
+              companyName: "DoorDash",
+              jobUrl:
+                listing.absolute_url ??
+                `https://careersatdoordash.com/jobs/${listing.id}`,
+              location,
+              description: listing.content
+                ? stripHtmlTags(listing.content)
+                : null,
+              datePosted: listing.updated_at ?? null,
+              isRemote: locationStr?.toLowerCase().includes("remote") ?? false,
+              department: listing.departments?.[0]?.name ?? null,
+            }),
+          );
+        } catch (err: any) {
+          this.logger.warn(
+            `DoorDash: failed to map job ${String(listing?.id ?? "unknown")}: ${err.message}`,
+          );
         }
-
-        const jobId = listing.id ?? '';
-        const id = `doordash-${jobId}`;
-
-        const locationStr = listing.location?.name ?? null;
-        const location = locationStr
-          ? new LocationDto({ city: locationStr })
-          : null;
-
-        if (input.location && locationStr) {
-          if (!locationStr.toLowerCase().includes(input.location.toLowerCase())) continue;
-        }
-
-        jobs.push(
-          new JobPostDto({
-            id,
-            site: Site.DOORDASH,
-            title,
-            companyName: 'DoorDash',
-            jobUrl:
-              listing.absolute_url ??
-              `https://careersatdoordash.com/jobs/${listing.id}`,
-            location,
-            description: listing.content ? stripHtmlTags(listing.content) : null,
-            datePosted: listing.updated_at ?? null,
-            isRemote: locationStr?.toLowerCase().includes('remote') ?? false,
-            department: listing.departments?.[0]?.name ?? null,
-          }),
-        );
       }
 
       this.logger.log(`DoorDash: scraped ${jobs.length} jobs`);
     } catch (err: any) {
       this.logger.error(`DoorDash scrape failed: ${err.message}`);
+      throw err;
     }
 
     return { jobs };
