@@ -4,7 +4,7 @@ import {
   normalizeLocationIdentity,
   parseLocationText,
 } from "@ever-jobs/common";
-import { JobPostDto, LocationDto } from "@ever-jobs/models";
+import { JobPostDto, LocationDto, Site } from "@ever-jobs/models";
 
 export const CANONICAL_EPISODE_WINDOW_MS = 14 * 24 * 60 * 60 * 1_000;
 
@@ -201,6 +201,13 @@ export class JobFingerprintService {
     job: JobPostDto,
     options: CanonicalFingerprintOptions,
   ): string {
+    // Google Careers decorates its Apply URL with the search-matrix query,
+    // location, locale, and page that discovered the job. Those parameters are
+    // not posting identity. The official result URL contains Google's stable
+    // numeric posting ID and remains constant across every matrix request.
+    if (job.site === Site.GOOGLE_CAREERS && job.jobUrl) {
+      return this.canonicalizeUrl(job.jobUrl);
+    }
     const externalEmployerUrl = firstNonEmpty(job.applyUrl, job.jobUrlDirect);
     if (externalEmployerUrl) return this.canonicalizeUrl(externalEmployerUrl);
     if (options.employerOwnedListing) {

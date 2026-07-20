@@ -6,6 +6,7 @@
 > [plan](../../.specify/specs/6000-prestige-internship-coverage-expansion/plan.md),
 > [task ledger](../../.specify/specs/6000-prestige-internship-coverage-expansion/tasks.md)  
 > **Created:** 2026-07-19
+> **Last updated:** 2026-07-20
 
 ## Purpose
 
@@ -21,13 +22,15 @@ The safety boundary stays strict: only software/engineering internships and
 co-ops qualify. New-grad and experienced roles are excluded. Tier 1 is Canada
 only; Tiers 2 and 3 allow Canada and the United States. A source that is blocked,
 malformed, or unexpectedly shaped is a failure, never a successful empty run.
+The production policy additionally requires Summer 2027 evidence and suppresses
+PhD/doctoral internships.
 
 ## Geography policy
 
 | Tier | Default cadence | Eligibility | Default query locations |
 | ---- | --------------- | ----------- | ----------------------- |
-| 1 | 3 minutes | At least one Canadian location | Canada; Toronto, Ontario; Greater Toronto Area; Waterloo, Ontario |
-| 2 | 15 minutes | At least one Canadian or US location | Tier 1 locations plus United States |
+| 1 | 10 minutes (Wellfound: 30) | At least one Canadian location | Canada; Toronto, Ontario; Greater Toronto Area; Waterloo, Ontario |
+| 2 | 30 minutes | At least one Canadian or US location | Tier 1 locations plus United States |
 | 3 | 60 minutes | At least one Canadian or US location | Tier 1 locations plus United States |
 
 `Remote Canada` qualifies every tier. `Remote US` qualifies Tiers 2/3 only.
@@ -47,20 +50,21 @@ eligible and cannot fail solely because they have a lower location preference.
 | Shopify | 1 | Board | **Target-enabled inside the globally disabled/uninitialized watch.** Deterministic validation passed; the official live board returned a marker-validated valid empty result. Target baseline and two observation cycles remain. |
 | Ashby `wealthsimple` | 1 | Board | **Enabled target** inside the disabled preset watch; `companyName: Wealthsimple`; Canada post-filter; target baseline required. |
 | Ashby `plaid` | 1 | Board | **Enabled target** inside the disabled preset watch; Canada post-filter and target baseline required. |
-| Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel, Meta, Wellfound | 1 | Explicit/compatible direct-company mode | **Target-disabled.** Each requires fixture-backed Canada-wide evidence plus its own live/baseline gate; Microsoft live smoke timed out. |
-| Canada Job Bank | 2 | Query | **Enabled target** inside the disabled preset watch; 12 of 76 Canadian matrix entries per run. |
+| Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel, Meta, Wellfound | 1 | Explicit/compatible direct-company mode | **Enabled by operator request.** Each requires its own baseline before resume; Microsoft's earlier live smoke timed out. |
+| Canada Job Bank | 2 | Query | **Enabled target** inside the disabled preset watch; 12 of 76 Canadian matrix entries every 30 minutes. |
 | Google Jobs | 2 | Query | **Disabled.** Fixture and hard-failure behavior pass, but the live endpoint returned an enable-JavaScript shell. |
 | LinkedIn public guest search | 3 | Query | **Target-enabled inside the globally disabled/uninitialized watch.** Canada/US newest-first 72-hour listing/detail smoke passed; no login/cookies/challenge bypass; baseline and operator review remain. |
 
 The final target-enabled inventory is `google_careers`, `shopify`,
-`ashby:wealthsimple`, `ashby:plaid`, `canadajobbank`, and `linkedin`. This does
-not enable polling or notifications while the watch is paused. Google Jobs and
-all unproven legacy direct targets remain target-disabled.
+`ashby:wealthsimple`, `ashby:plaid`, all 13 legacy direct-company targets,
+`canadajobbank`, and `linkedin`. This does not enable polling or notifications
+while the watch is paused. Only Google Jobs remains target-disabled.
 
-The preset defines 19 search terms. Google Careers and Canada Job Bank combine
+The preset defines 19 Summer 2027 search terms. Google Careers and Canada Job Bank combine
 them with four Canadian locations (76 entries each); Google Jobs and LinkedIn
 combine them with five Canada/US locations (95 entries each). Rotating request
-caps are 12, 12, 12, and 8 per run respectively.
+caps are 1, 12, 12, and 8 per run respectively. Google Careers makes one
+rotating request every 10 minutes.
 
 ## Contracts
 
@@ -133,6 +137,28 @@ mentions interns, students, universities, campus recruiting, or early careers.
 Senior, staff, principal, lead, manager, director, architect, and experienced
 full-time positions remain excluded.
 
+The v2 watch requires Summer 2027 evidence in the posting title or description.
+Accepted forms include `Summer 2027`, `Summer of 2027`, `Summer '27`,
+`Summer 27`, and `2027 Summer`. Other and seasonless internships remain persisted
+with `not-summer-2027` suppression. Titles containing PhD/Ph.D./doctoral/
+doctorate terms suppress directly. Description degree terms suppress only when
+connected to explicit student, candidate, enrollment, pursuit, applicant,
+internship, or program eligibility language.
+
+For LinkedIn results, the urgent-score allowlist is derived from company names on
+configured Tier 1 source targets, not from the broader prestige ranking list.
+Non-Tier-1 LinkedIn totals are capped at `urgentScore - 1`; they remain eligible
+for standard/digest delivery. Tier 1 LinkedIn employers and non-LinkedIn source
+observations retain the normal additive total.
+
+Google Careers notification identity is anchored to the stable official result
+URL containing Google's numeric posting ID. The Apply URL remains available to
+the operator but does not participate in identity because its search term,
+location, locale, targeting, and pagination parameters change across matrix
+requests. Reobserving one posting through different queries therefore updates
+one source observation and one match rather than sending another notification;
+distinct Google requisition IDs such as BS and MS roles remain separate.
+
 Geography is a hard eligibility decision. Location preference is a separate
 ranking component. Unknown geography is visible and suppressed rather than
 discarded or treated as successful eligibility.
@@ -202,12 +228,23 @@ The production rollout sequence is:
 5. Run two no-notification observation cycles, including both Tier 1 cycles.
 6. Resume and enable notifications only after operator review.
 
+For an existing v2 watch receiving the 2026-07-20 refinement, preset preview/apply
+marks the changed query scopes as material. Baseline every enabled target key
+reported by the apply result before resuming, preventing the narrowed search
+matrix from surfacing historical postings.
+
+After deploying the Google canonical-identity correction, keep the watch paused,
+rebuild the watcher, initialize only `google_careers`, inspect the no-notification
+baseline, then resume. Historical duplicate rows and delivery records remain as
+an audit trail and do not need destructive cleanup.
+
 Six deterministic source suites passed with 59 tests. Disabled live evidence
 returned two Canadian Google Careers roles, a marker-validated valid empty
 Shopify board, 37 Wealthsimple Ashby roles with a capped mapped sample, and a
 successful unauthenticated LinkedIn listing/detail result. Microsoft timed out;
-Google Jobs returned the classified enable-JavaScript shell. Those two and every
-other unproven legacy direct source remain target-disabled. Target baselines and
+Google Jobs returned the classified enable-JavaScript shell and remains
+target-disabled. The operator subsequently enabled all 13 legacy direct targets,
+including Microsoft, with explicit acceptance of the evidence gap. Target baselines and
 the two observation cycles are still pending; registration, tests, or a smoke
 alone do not enable notifications.
 
@@ -222,5 +259,7 @@ alone do not enable notifications.
   notification.
 - A source hard failure yields a partial/failed run, never successful zero.
 - Per-target baseline creates no historical alerts.
+- Only Summer 2027 roles notify; PhD/doctoral internships suppress; non-Tier-1
+  LinkedIn results remain below the urgent band.
 - Six source fixture suites (59 tests) cover the repaired sources; CI has no
   live-site dependency.

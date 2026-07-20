@@ -1096,20 +1096,21 @@ that produced a job:
 
 | Tier | Cadence | Coverage | Intended source role |
 | ---- | ------- | -------- | -------------------- |
-| 1 | 3 minutes | Canada only | Direct company and complete ATS boards, including Google Careers, Shopify, and Wealthsimple through Ashby after their evidence gates pass |
-| 2 | 15 minutes | Canada and United States | Canada Job Bank plus Google Jobs after a successful operational smoke |
+| 1 | 10 minutes (Wellfound: 30) | Canada only | Direct company and complete ATS boards, including Google Careers, Shopify, and Wealthsimple through Ashby after their evidence gates pass |
+| 2 | 30 minutes | Canada and United States | Canada Job Bank plus Google Jobs after a successful operational smoke |
 | 3 | 60 minutes | Canada and United States | Unauthenticated LinkedIn public guest search, newest-first over 72 hours by default |
 
 The shipped preset target-enables `google_careers`, `shopify`,
 `ashby:wealthsimple`, `ashby:plaid`, `canadajobbank`, and `linkedin`. The watch
 itself remains globally disabled and uninitialized, so target-enabled does not
-start polling or permit notifications. Google Jobs, Microsoft, and every other
-unproven legacy direct-company target remain target-disabled.
+start polling or permit notifications. All 13 legacy direct-company targets are
+enabled by operator request and require baselines; only Google Jobs remains
+target-disabled.
 
 The rotating query scopes contain 19 internship/co-op terms. Google Careers and
 Canada Job Bank combine them with four Canadian locations (76 matrix entries),
 while Google Jobs and LinkedIn combine them with five Canada/US locations (95
-entries). Their per-run request caps are 12, 12, 12, and 8 respectively; the
+entries). Their per-run request caps are 1, 12, 12, and 8 respectively; the
 cursor advances so later entries are not permanently starved.
 
 Toronto, the GTA, and Waterloo are ranking preferences, not eligibility borders.
@@ -1188,6 +1189,7 @@ Final source validation passed six deterministic suites (59 tests). Disabled
 live evidence returned two Canadian Google Careers roles, a marker-validated
 valid empty Shopify board, 37 Wealthsimple Ashby roles with a capped mapped
 sample, and a successful unauthenticated LinkedIn listing/detail result.
-Microsoft timed out and Google Jobs was classified blocked; both remain
-target-disabled. None of this bypasses the required target baselines and two
+Microsoft timed out and Google Jobs was classified blocked. Google Jobs remains
+target-disabled; Microsoft and the other legacy direct targets were subsequently
+enabled by operator request. None of this bypasses the required target baselines and two
 no-notification observation cycles.

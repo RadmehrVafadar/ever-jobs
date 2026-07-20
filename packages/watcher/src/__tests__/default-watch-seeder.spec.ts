@@ -19,7 +19,7 @@ describe("DefaultWatchSeederService", () => {
         name: PRESTIGE_INTERNSHIPS_V2_NAME,
         enabled: false,
         initializationMode: "baseline",
-        intervalMinutes: 3,
+        intervalMinutes: 10,
       }),
     );
     expect(
@@ -31,6 +31,19 @@ describe("DefaultWatchSeederService", () => {
       "shopify",
       "ashby:wealthsimple",
       "ashby:plaid",
+      "amazon",
+      "microsoft",
+      "apple",
+      "nvidia",
+      "stripe",
+      "openai",
+      "datadog",
+      "doordash",
+      "coinbase",
+      "figma",
+      "vercel",
+      "meta",
+      "wellfound",
       "canadajobbank",
       "linkedin",
     ]);

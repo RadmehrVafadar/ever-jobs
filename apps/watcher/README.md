@@ -122,21 +122,22 @@ Source tiers define both cadence and target-specific eligibility geography.
 
 | Tier | Default cadence | Eligible geography | Intended sources |
 | ---- | --------------- | ------------------ | ---------------- |
-| Tier 1 | 3 minutes | Canada only | Fixture-backed direct company sources and complete ATS boards |
-| Tier 2 | 15 minutes | Canada and United States | Canada Job Bank and validated Google Jobs redundancy |
+| Tier 1 | 10 minutes (Wellfound: 30) | Canada only | Fixture-backed direct company sources and complete ATS boards |
+| Tier 2 | 30 minutes | Canada and United States | Canada Job Bank and validated Google Jobs redundancy |
 | Tier 3 | 60 minutes | Canada and United States | Validated unauthenticated LinkedIn public guest search |
 
-The three-minute cadence means a Tier 1 watch becomes due every three minutes. It is not a publication-to-notification service-level guarantee: source runtime, source outages, missing publication timestamps, retries, PostgreSQL availability, and process restarts can add latency. A second run never starts while the same watch still holds its execution lease.
+The ten-minute cadence means a normal Tier 1 target becomes due every ten minutes; Wellfound uses a 30-minute override. It is not a publication-to-notification service-level guarantee: source runtime, source outages, missing publication timestamps, retries, PostgreSQL availability, and process restarts can add latency. A second run never starts while the same watch still holds its execution lease.
 
 The preset selects explicit targets rather than querying every registered plugin.
 Plugin metadata declares whether a source is a complete `board` or a search
 `query`; Google Careers and Microsoft declare their actual behavior explicitly.
-Query targets build the complete configured term × location matrix and process a
+Query targets build the complete configured Summer 2027 term × location matrix and process a
 rotating slice capped by `maxRequestsPerRun`, so a permanently fixed first
 country/location cannot starve the remaining matrix. The preset has 19 terms:
 Google Careers and Canada Job Bank each have 76 Canadian matrix entries, while
 Google Jobs and LinkedIn each have 95 Canada/US entries. Their request caps are
-12, 12, 12, and 8 per run respectively.
+1, 12, 12, and 8 per run respectively. Google Careers therefore makes only one
+rotating search per 10-minute run.
 
 ## Default source readiness
 
@@ -149,14 +150,14 @@ it unattended:
 | Shopify | 1 | Official server-rendered careers listing/detail pages; no guessed Ashby slug | **Target-enabled inside the disabled/uninitialized watch.** Deterministic validation passed and the live board was marker-validated as a legitimate empty result. Baseline and two observation cycles remain. |
 | Wealthsimple | 1 | Generic Ashby target `ashby:wealthsimple`, branded with `companyName` | **Enabled target** inside the disabled preset watch; baseline before resuming. |
 | Plaid | 1 | Generic Ashby target `ashby:plaid` | **Enabled target** inside the disabled preset watch; baseline before resuming. |
-| Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel, Meta, Wellfound | 1 | Legacy direct-company inventory with Canada post-filter scope | **Target-disabled.** Each requires fixture-backed Canada-wide evidence and its own live/baseline gate; Microsoft live smoke timed out. |
-| Canada Job Bank | 2 | Structured Canadian query source | **Enabled target** inside the disabled preset watch; 12 of 76 matrix requests per run. |
+| Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel, Meta, Wellfound | 1 | Legacy direct-company inventory with Canada post-filter scope | **Enabled by operator request.** Baseline every target before resuming; Microsoft's earlier live smoke timed out. |
+| Canada Job Bank | 2 | Structured Canadian query source | **Enabled target** inside the disabled preset watch; 12 of 76 matrix requests every 30 minutes. |
 | Google Jobs | 2 | Canada/US query source with employer application URL extraction | **Disabled.** Fixture/failure gates pass, but the live smoke returned an enable-JavaScript shell; require a successful smoke and baseline. |
 | LinkedIn public guest | 3 | Canada/US newest-first 72-hour public search | **Target-enabled inside the disabled/uninitialized watch.** Listing/detail fixtures and unauthenticated live smoke pass; baseline and operator review remain required. |
 
-The exact target-enabled set is `google_careers`, `shopify`,
-`ashby:wealthsimple`, `ashby:plaid`, `canadajobbank`, and `linkedin`. Google Jobs
-and all legacy direct-company targets remain target-disabled. The final source
+The target-enabled set is `google_careers`, `shopify`, `ashby:wealthsimple`,
+`ashby:plaid`, all 13 legacy direct-company targets listed above,
+`canadajobbank`, and `linkedin`. Only Google Jobs remains target-disabled. The final source
 validation record is six deterministic suites/59 tests, Google Careers two live
 Canadian roles, Shopify valid empty, Wealthsimple 37 live roles with a capped
 mapped sample, LinkedIn public pass, Microsoft timeout, and Google Jobs blocked.
@@ -179,6 +180,28 @@ regardless of numeric score. The match records whether suppression came from a
 target baseline or current eligibility. Baseline suppression is permanent for
 that episode; eligibility suppression may promote to pending if a later richer
 source observation becomes eligible and no delivery exists.
+
+The v2 preset requires explicit Summer 2027 evidence in the title or description.
+It recognizes `Summer 2027`, `Summer of 2027`, `Summer '27`, `Summer 27`, and
+`2027 Summer`; other or seasonless postings persist with `not-summer-2027`
+suppression. PhD/doctoral terms in titles suppress immediately. Descriptions
+suppress only when degree language is tied to student, candidate, enrollment,
+pursuit, applicant, internship, or program eligibility, so incidental mentions
+of PhD colleagues do not remove otherwise eligible roles.
+
+LinkedIn remains Tier 3. A LinkedIn employer matches the Tier 1 company set only
+when it matches a `companyName` on a configured Tier 1 source target. Other
+LinkedIn totals are capped at one point below the watch's `urgentScore`; those
+jobs can still be standard or digest matches but cannot be urgent or display as
+`100/100` under the default thresholds. Direct/ATS observations and LinkedIn
+observations for Tier 1 companies keep normal scoring.
+
+Google Careers uses the stable official results URL (including Google's numeric
+posting ID) for canonical job and notification identity. Its Apply URL is kept
+for the notification button but is not identity-bearing because Google decorates
+it with the rotating search term, location, locale, and page. After deploying a
+canonical-identity change, pause the watch and baseline `google_careers` before
+resuming so the corrected identity cannot generate a migration-time alert.
 
 Toronto, the GTA, and Waterloo add preference points only. Vancouver, Calgary,
 Montréal, Ottawa, remote Canada, and every other confidently Canadian location
@@ -272,6 +295,26 @@ Use `watch run` for a manual post-initialization run. Use `watch initialize`
 for a no-notification baseline; repeat `--target` to select several target keys,
 or omit it for all enabled targets. Preset apply is a dry-run JSON diff unless
 `--apply` is present, and mutation rejects an enabled watch.
+
+The Summer 2027 query-term change is material target configuration. When
+upgrading an existing watch, pause it, preview/apply the preset, and baseline the
+enabled target keys reported in `targetKeysRequiringInitialization` before
+resuming. The current preset reports the changed enabled query targets rather
+than silently reusing their old baseline.
+
+To roll out the complete operator-enabled direct-company inventory, keep the
+watch paused through preview, apply, and a no-notification baseline of every
+enabled target:
+
+```bash
+node dist/apps/cli/main.js watch pause <watch-id> --json
+node dist/apps/cli/main.js watch preset apply prestige-internships-v2 --watch <watch-id>
+node dist/apps/cli/main.js watch preset apply prestige-internships-v2 --watch <watch-id> --apply
+node dist/apps/cli/main.js watch initialize <watch-id> --json
+```
+
+Inspect every target result. Retry failures or disable a failing target before
+running `watch resume`; do not treat a partial baseline as complete.
 
 The current example is
 [Prestige Internships v2 for Canada/USA](../../examples/prestige-internships-v2-canada-usa.watch.json).

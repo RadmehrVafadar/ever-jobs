@@ -27,10 +27,10 @@ describe("prestige-internships-v2 preset", () => {
       expect.objectContaining({
         name: PRESTIGE_INTERNSHIPS_V2_NAME,
         enabled: false,
-        intervalMinutes: 3,
+        intervalMinutes: 10,
         initializationMode: "baseline",
         countryCodes: ["CA", "US"],
-        requiredTerms: ["intern", "internship", "co-op", "coop"],
+        requiredTerms: ["intern", "internship", "co-op", "coop", "summer 2027"],
       }),
     );
     expect([...byKey]).toHaveLength(targets.length);
@@ -41,24 +41,44 @@ describe("prestige-internships-v2 preset", () => {
       "shopify",
       "ashby:wealthsimple",
       "ashby:plaid",
+      "amazon",
+      "microsoft",
+      "apple",
+      "nvidia",
+      "stripe",
+      "openai",
+      "datadog",
+      "doordash",
+      "coinbase",
+      "figma",
+      "vercel",
+      "meta",
+      "wellfound",
       "canadajobbank",
       "linkedin",
     ]);
     expect(targets.every((target) => target.initializedAt === null)).toBe(true);
+    expect(watch.searchTerms).toHaveLength(19);
+    expect(
+      watch.searchTerms?.every((term) => term.startsWith("summer 2027 ")),
+    ).toBe(true);
+    expect(watch.excludedTerms).toEqual(
+      expect.arrayContaining(["phd", "ph.d", "ph.d.", "doctoral", "doctorate"]),
+    );
 
     expect(byKey.get("google_careers")).toEqual(
       expect.objectContaining({
         tier: 1,
-        intervalMinutes: 3,
+        intervalMinutes: 10,
         enabled: true,
         searchScope: expect.objectContaining({
           countryCodes: ["CA"],
-          maxRequestsPerRun: 12,
+          maxRequestsPerRun: 1,
         }),
       }),
     );
     expect(byKey.get("canadajobbank")).toEqual(
-      expect.objectContaining({ tier: 2, intervalMinutes: 15, enabled: true }),
+      expect.objectContaining({ tier: 2, intervalMinutes: 30, enabled: true }),
     );
     expect(byKey.get("google")?.searchScope).toEqual(
       expect.objectContaining({
@@ -74,8 +94,12 @@ describe("prestige-internships-v2 preset", () => {
         searchScope: expect.objectContaining({ maxRequestsPerRun: 8 }),
       }),
     );
-    expect(byKey.get("meta")?.enabled).toBe(false);
-    expect(byKey.get("wellfound")?.enabled).toBe(false);
+    expect(byKey.get("meta")?.enabled).toBe(true);
+    expect(byKey.get("meta")?.intervalMinutes).toBe(10);
+    expect(byKey.get("wellfound")).toEqual(
+      expect.objectContaining({ enabled: true, intervalMinutes: 30 }),
+    );
+    expect(byKey.get("google")?.enabled).toBe(false);
   });
 
   it("keeps the Canada/USA JSON example aligned with the factory", () => {
@@ -190,13 +214,10 @@ describe("WatchPresetService", () => {
           "internship",
           "co-op",
           "coop",
+          "summer 2027",
         ],
         allowedWorkplaceTypes: ["remote", "flexible", "hybrid", "on-site"],
-        allowedEmploymentTypes: [
-          "internship",
-          "research placement",
-          "co-op",
-        ],
+        allowedEmploymentTypes: ["internship", "research placement", "co-op"],
       }),
     );
     const updatedByKey = new Map(

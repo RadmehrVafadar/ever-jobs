@@ -11,10 +11,10 @@ Complete and validate the [local watcher runbook](watcher-local.md) first. The w
 The cloud deployment does not change source readiness. Registration and fixtures
 alone never authorize unattended polling. The shipped preset target-enables
 `google_careers`, `shopify`, `ashby:wealthsimple`, `ashby:plaid`,
-`canadajobbank`, and `linkedin` inside a globally disabled, uninitialized watch.
-Target-enabled does not poll or notify while the watch is paused. Google Jobs,
-Microsoft, Meta, Wellfound, and every other unproven legacy direct source remain
-target-disabled. The preset preview is authoritative for the installed revision.
+`canadajobbank`, `linkedin`, and all 13 legacy direct-company targets inside a
+globally disabled, uninitialized watch. Target-enabled does not poll or notify
+while the watch is paused. Only Google Jobs remains target-disabled. The preset
+preview is authoritative for the installed revision.
 
 Recorded evidence is six deterministic source suites/59 tests; Google Careers
 two live Canadian roles; Shopify marker-validated valid empty; Wealthsimple 37
@@ -381,7 +381,7 @@ The present watcher still starts an HTTP server, so a worker pool would run that
 
 ## 14. Honest limitations
 
-- Tier 1's three-minute interval is a scheduling target, not a guarantee. The 15-second scheduler poll, jitter, a previous long run, source latency, retries, Cloud Run restarts, database events, and Discord outages can add time.
+- Tier 1's ten-minute interval (30 minutes for Wellfound) is a scheduling target, not a guarantee. The 15-second scheduler poll, jitter, a previous long run, source latency, retries, Cloud Run restarts, database events, and Discord outages can add time.
 - Cloud Run does not guarantee a particular minimum instance will live forever; durable state makes restarts safe but cannot eliminate the pause.
 - Source publication times may be delayed or missing. The watcher records first observation rather than fabricating a publication timestamp.
 - Live source schemas, availability, IP policies, and rate limits are outside Ever Jobs' control.

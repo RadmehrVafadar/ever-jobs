@@ -197,3 +197,73 @@
   TypeScript checks passed, and the independent re-review found no remaining
   high/medium issue in rollover or suppression-promotion behavior.
 - Update `docs/log.md` newest-first and mark tasks accurately as work completes.
+
+## Phase 9 — Summer 2027 and LinkedIn priority refinement
+
+- [x] T33 — Amend the policy specification before code
+  - **Files:** Spec 6000 `spec.md`, `plan.md`, `tasks.md`, mirror, `docs/questions.md`
+  - **Acceptance:** Summer 2027, contextual PhD suppression, Tier 1 company derivation, LinkedIn cap, non-goals, risks, and test plan are explicit before implementation.
+  - **Estimate:** 0.25 day
+
+- [x] T34 — Implement season and degree eligibility
+  - **Files:** `job-scoring.service.ts`, `job-scoring.service.spec.ts`
+  - **Acceptance:** Summer 2027 spellings qualify; other/missing terms suppress; PhD titles and explicit degree enrollment requirements suppress; incidental PhD colleague text remains eligible.
+  - **Estimate:** 0.5 day
+
+- [x] T35 — Implement Tier 1-aware LinkedIn score cap
+  - **Files:** `job-scoring.service.ts`, `job-scoring.service.spec.ts`
+  - **Acceptance:** non-Tier-1 LinkedIn totals are at most `urgentScore - 1`; Tier 1 LinkedIn and non-LinkedIn results retain uncapped totals; explanations identify the cap.
+  - **Estimate:** 0.5 day
+
+- [x] T36 — Narrow and mirror the v2 preset
+  - **Files:** `prestige-internships-v2.preset.ts`, preset tests, Canada/USA example
+  - **Acceptance:** all 19 query families explicitly target Summer 2027, PhD exclusions are visible, and parsed example equals the factory.
+  - **Estimate:** 0.25 day
+
+- [x] T37 — Update operator documentation and validate
+  - **Files:** watcher README, Spec 6000 mirror, docs index/log/questions, focused tests/build/diff
+  - **Acceptance:** deployment/baseline behavior is documented; focused suites and TypeScript checks pass; remaining external/pre-existing blockers are recorded.
+  - **Estimate:** 0.5 day
+
+## Phase 10 — Google Careers duplicate-delivery correction
+
+- [x] T38 — Amend the canonical identity contract before code
+  - **Files:** Spec 6000 `spec.md`, `plan.md`, and `tasks.md`
+  - **Acceptance:** stable Google result identity, variable Apply parameters, distinct requisitions, tests, and targeted-baseline rollout are explicit.
+  - **Estimate:** 0.25 day
+
+- [x] T39 — Implement and test stable Google canonical identity
+  - **Files:** `job-fingerprint.service.ts`, watcher fingerprint/execution tests
+  - **Acceptance:** one Google posting survives changing query/location parameters as one observation/match/delivery while separate posting IDs remain distinct.
+  - **Estimate:** 0.5 day
+
+- [x] T40 — Document, validate, and prepare safe rollout
+  - **Files:** watcher README, Spec 6000 mirror, docs index/log, focused/full watcher validation
+  - **Acceptance:** the production watch remains paused until the fixed Google target is baselined; validation evidence and exact deployment commands are recorded.
+  - **Estimate:** 0.5 day
+
+## Phase 11 — Enable complete legacy direct-company inventory
+
+- [x] T41 — Amend the target enablement policy before code
+  - **Files:** Spec 6000 `spec.md`, `plan.md`, `tasks.md`, `docs/questions.md`
+  - **Acceptance:** all 13 requested legacy targets are named; Google Jobs remains separately disabled; baseline and failure-inspection gates are explicit.
+  - **Estimate:** 0.25 day
+
+- [x] T42 — Enable and mirror every legacy direct target
+  - **Files:** v2 preset, aligned JSON example, preset/seeder tests
+  - **Acceptance:** factory and JSON enable all 13 targets without changing tier, cadence, or Canada scope; Google Jobs stays disabled.
+  - **Estimate:** 0.25 day
+
+- [~] T43 — Update operations docs and validate rollout
+  - **Files:** watcher README, Spec 6000 mirror, docs index/log, watcher tests/build
+  - **Acceptance:** exact preview/apply/baseline commands and failure handling are documented; tests and TypeScript compilation pass.
+  - **Estimate:** 0.5 day
+
+## Phase 12 — Reduce unattended polling volume
+
+- [x] T44 — Specify the reduced polling contract
+  - **Acceptance:** exact per-target intervals and Google Careers request cap are recorded before code.
+- [x] T45 — Update the preset, JSON example, and expectations
+  - **Acceptance:** Google Careers uses one request per 10-minute run; direct/ATS boards use 10 minutes; Wellfound and Tier 2 use 30; LinkedIn uses 60.
+- [~] T46 — Update operations documentation and validate
+  - **Acceptance:** rollout/baseline effects are documented and focused validation passes.

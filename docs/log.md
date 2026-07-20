@@ -3,6 +3,82 @@
 > Append-only log of every doc/spec edit. **Newest entry at the top.** This is a
 > human-readable audit trail; for source-code history, see `git log`.
 
+## 2026-07-20 — Spec 6000 — Reduced production polling cadence
+
+Google Careers now processes one rotating matrix request every 10 minutes.
+Direct-company and ATS board targets use 10 minutes, Wellfound and Canada Job
+Bank use 30 minutes, and LinkedIn remains at 60 minutes. Disabled Google Jobs is
+configured at 30 minutes. The watch-level scheduling interval is 10 minutes.
+
+This reduces scheduled request pressure while retaining timely direct-company
+alerts. Preset apply treats the cadence/request-cap changes as material, so the
+watch must remain paused until the reported targets are initialized without
+notifications and their results are inspected.
+
+## 2026-07-20 — Spec 6000 — Complete direct-company target enablement
+
+**Operator decision:** All 13 legacy direct-company targets—Amazon, Microsoft,
+Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel, Meta,
+and Wellfound—are now enabled in the Prestige Internships v2 preset and its JSON
+example. LinkedIn and the previously enabled direct/ATS targets remain enabled.
+Only the separate Google Jobs aggregator remains target-disabled.
+
+**Safety boundary:** The watch remains globally disabled by default. Applying the
+preset to an existing watch marks newly enabled targets for initialization. The
+operator must pause, apply, baseline every reported target without notifications,
+inspect partial/failure results, and only then resume. Microsoft's earlier live
+smoke timeout remains documented and is not treated as evidence of readiness.
+
+---
+
+## 2026-07-20 — Spec 6000 — Google Careers duplicate-delivery correction
+
+**Production evidence:** The rotating Google Careers query matrix returned the
+same BS and MS posting IDs through different terms and locations. Although the
+source IDs and result URLs were stable, Google decorated each Apply URL with
+request-specific `q`, `location`, locale, targeting, and pagination parameters.
+Those parameters created distinct canonical episodes and 49 successful Discord
+deliveries instead of one delivery per requisition.
+
+**Correction:** Google Careers canonical identity now uses the official stable
+result URL containing Google's numeric posting ID. The full Apply URL is retained
+for user navigation but no longer affects job, episode, or delivery identity.
+Distinct Google posting IDs remain distinct. Regression coverage runs the same
+posting through two matrix-specific Apply URLs and asserts one observation, one
+match, and one delivery.
+
+**Rollout:** Keep the production watch paused during deployment, rebuild the
+watcher and CLI without stale cache, baseline only `google_careers`, inspect the
+no-notification result, and resume. Historical duplicate records remain intact as
+an audit trail. Validation passed the focused fingerprint/execution suites (27
+tests), all 10 watcher suites (126 tests), watcher TypeScript compilation,
+affected TypeScript formatting, and diff hygiene.
+
+---
+
+## 2026-07-20 — Spec 6000 — Summer 2027 filtering refinement
+
+**Specification:** Amended the existing prestige-internship contract, plan, task
+ledger, human-readable mirror, and ambiguity ledger before code. The v2 watch now
+requires explicit Summer 2027 evidence, contextually suppresses PhD/doctoral
+internships, and derives LinkedIn maximum-priority eligibility from configured
+Tier 1 target company names rather than the broader prestige ranking list.
+
+**Implementation:** Narrowed all 19 query families to Summer 2027 while retaining
+the bounded rotating matrix. Added configurable season and degree eligibility
+gates, exact/prefix-normalized company matching, and a final LinkedIn cap of
+`urgentScore - 1` for employers outside the Tier 1 target-company set. Component
+score explanations remain intact and capped jobs remain eligible for lower bands.
+
+**Operations and tests:** Updated the aligned JSON example, watcher guide, preset
+tests, and scoring tests. Existing watches must pause, preview/apply the changed
+preset, baseline the materially changed enabled query targets reported by the
+apply result, and resume only after inspection. Final validation passed all 10
+watcher suites (124 tests), the watcher TypeScript no-emit check, affected
+TypeScript/JSON Prettier checks, and `git diff --check`. Documentation lint still
+reports only the two pre-existing Spec 5024 H1/metadata defects recorded in the
+earlier validation ledger.
+
 ---
 
 ## 2026-07-19 — Spec 6000 — Prestige Internship Coverage Expansion

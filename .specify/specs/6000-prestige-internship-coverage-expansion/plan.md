@@ -6,7 +6,7 @@
 | Status       | in-progress      |
 | Owner        | Ever Jobs maintainers |
 | Created      | 2026-07-19       |
-| Last updated | 2026-07-19       |
+| Last updated | 2026-07-20       |
 
 ## 1. Approach
 
@@ -57,6 +57,13 @@ target-enabled inventory; Google Jobs, Microsoft, and the remaining unproven
 legacy direct sources are target-disabled. Target-enabled does not enable polling
 or notifications while the watch is paused. Targeted baselines and two
 no-notification observation cycles remain required before resume.
+
+The 2026-07-20 policy refinement stays inside the existing watcher package and
+does not add a new source or runtime dependency. The preset narrows query terms
+to Summer 2027. The scoring eligibility phase adds deterministic season and
+degree gates, then applies a post-breakdown LinkedIn cap when the normalized
+employer is not represented by a Tier 1 target company name. Component scores
+remain explainable; only the final aggregator priority is bounded.
 
 ## 2. Phases
 
@@ -128,6 +135,45 @@ Deterministic source validation and source smokes are complete. Repository-wide
 validation and the target baselines/two observation cycles remain the open exit
 work; Google Jobs and legacy-source live failures remain safely target-disabled.
 
+### Phase 9 — Summer 2027 and LinkedIn priority refinement
+
+- Goal: make the production preset season-specific and keep non-Tier-1 LinkedIn
+  discoveries out of the urgent/max band while retaining useful lower-band matches.
+- Deliverables: amended Spec Kit contracts, preset/example query terms, contextual
+  PhD gate, Summer 2027 gate, Tier 1 company derivation, LinkedIn cap, tests, and
+  watcher/operator documentation.
+- Exit criteria: focused watcher tests prove every positive/negative policy case;
+  preset/example parity and TypeScript compilation pass; the changed LinkedIn
+  target is baselined after deployment before the watch resumes.
+
+### Phase 10 — Google Careers duplicate-delivery correction
+
+- Goal: prevent the rotating Google term/location matrix from creating a new
+  notification identity when only query-specific application URL parameters vary.
+- Deliverables: Google-specific stable canonical URL selection, unit and execution
+  regression coverage, operator documentation, and a targeted-baseline rollout.
+- Exit criteria: identical Google posting IDs/result URLs with different Apply URL
+  search parameters persist and deliver once; distinct requisition IDs remain
+  separate; watcher tests and TypeScript compilation pass.
+
+### Phase 11 — Enable complete legacy direct-company inventory
+
+- Goal: honor the operator's explicit request to run every configured legacy
+  direct-company target while keeping the known-blocked Google Jobs aggregator off.
+- Deliverables: enabled preset/example targets, updated inventory tests and docs,
+  and an exact paused multi-target baseline rollout.
+- Exit criteria: all 13 legacy targets are enabled in factory/example parity;
+  Google Jobs remains disabled; deterministic watcher validation passes; production
+  resumes only after each newly enabled target has an inspected baseline outcome.
+
+### Phase 12 — Reduce unattended polling volume
+
+1. Reduce Google Careers to one rotating matrix request every 10 minutes.
+2. Move direct-company and ATS board targets to 10 minutes, Wellfound and Canada
+   Job Bank to 30 minutes, and retain LinkedIn at 60 minutes.
+3. Mirror the cadence in the JSON example, tests, and operator documentation.
+4. Require paused preset apply and initialization for materially changed targets.
+
 ## 3. Packages and files touched
 
 | Area | Change |
@@ -176,6 +222,9 @@ the latest stable version and record the change in `docs/log.md`.
 | Preset overwrites operator changes | M | H | Paused-watch requirement, dry-run default, field-level merge, explicit preservation tests. |
 | LinkedIn blocks guest requests | H | M | Best-effort classification, no bypass/auth, degraded visibility, Tier 3 redundancy only. |
 | Empty board mistaken for block | M | H | Validate page/payload markers before accepting `[]`; separate empty vs hard failure fixtures. |
+| Generic postings omit the season while representing Summer 2027 | M | M | Persist with explicit `not-summer-2027` suppression; operators can inspect the observation and revise Q-076 if broader recall is preferred. |
+| Incidental PhD text causes false suppression | M | M | Titles use a direct degree gate; descriptions require student/candidate/enrollment/pursuit/program context and have negative tests. |
+| Company aliases evade Tier 1 matching | M | M | Normalize case/punctuation and accept a configured Tier 1 brand only at the start of the source company name; retain a deterministic cap when uncertain. |
 
 ## 6. Rollback plan
 
@@ -200,9 +249,14 @@ the latest stable version and record the change in `docs/log.md`.
    targets, inspect jobs/URLs/health, then run two no-notification observation
    cycles (including both Tier 1 cycles).
 6. Resume and enable notifications only after operator approval.
+7. For this policy refinement, deploy/build first, preview the preset while paused,
+   apply the materially changed Summer 2027 search scopes, baseline the changed
+   enabled query targets, inspect suppressed examples, and only then resume.
 
 ## 8. Open questions for plan
 
 - The fork range ambiguity is recorded as Q-073 with default A proceeding.
 - Any live source divergence or incomplete Tier 1 evidence discovered during
   implementation is added to `docs/questions.md`; the safe default is disabled.
+- Summer strictness, PhD description context, and LinkedIn Tier 1 score treatment
+  are recorded as Q-076 through Q-078 with the documented defaults proceeding.

@@ -97,6 +97,55 @@ describe("watcher primitives", () => {
     );
     expect(fp.usesObservationEpisodeAnchor(aggregateListingOnly)).toBe(true);
   });
+  it("uses the stable Google Careers result URL instead of matrix-specific Apply parameters", () => {
+    const resultUrl =
+      "https://www.google.com/about/careers/applications/jobs/results/76982475250639558-software-developer-intern-bs-summer-2027";
+    const first = new JobPostDto({
+      site: "google_careers",
+      id: "google-careers-76982475250639558",
+      title: "Software Developer Intern, BS, Summer 2027",
+      companyName: "Google",
+      jobUrl: resultUrl,
+      applyUrl:
+        "https://www.google.com/about/careers/applications/jobs/results/apply?jobId=stable&q=AI+engineer+intern&location=Greater+Toronto+Area&page=1",
+      locations: [{ city: "Toronto", state: "ON", country: "Canada" } as any],
+    });
+    const second = new JobPostDto({
+      ...first,
+      applyUrl:
+        "https://www.google.com/about/careers/applications/jobs/results/apply?jobId=stable&q=devops+engineer+intern&location=Waterloo%2C+Ontario&page=2",
+    });
+    const distinctPosting = new JobPostDto({
+      ...first,
+      id: "google-careers-95423484271698630",
+      title: "Software Developer Intern, MS, Summer 2027",
+      jobUrl:
+        "https://www.google.com/about/careers/applications/jobs/results/95423484271698630-software-developer-intern-ms-summer-2027",
+    });
+
+    expect(fp.fingerprint(first)).toBe(fp.fingerprint(second));
+    expect(fp.canonicalFingerprint(first, { employerOwnedListing: true })).toBe(
+      fp.canonicalFingerprint(second, { employerOwnedListing: true }),
+    );
+    expect(
+      fp.canonicalEpisodeFingerprint(
+        first,
+        new Date("2026-07-20T16:00:00.000Z"),
+        { employerOwnedListing: true },
+      ),
+    ).toBe(
+      fp.canonicalEpisodeFingerprint(
+        second,
+        new Date("2026-07-20T17:00:00.000Z"),
+        { employerOwnedListing: true },
+      ),
+    );
+    expect(
+      fp.canonicalFingerprint(first, { employerOwnedListing: true }),
+    ).not.toBe(
+      fp.canonicalFingerprint(distinctPosting, { employerOwnedListing: true }),
+    );
+  });
   it("canonicalizes Canadian provinces and US states across name/code variants", () => {
     const base = {
       site: "google",
@@ -183,7 +232,8 @@ describe("watcher primitives", () => {
         site: "ashby",
         title: "Software Engineer Intern",
         companyName: "Plaid",
-        description: "You will lead a scoped project with your mentor.",
+        description:
+          "Summer 2027. You will lead a scoped project with your mentor.",
         location: {
           city: "Toronto",
           state: "Ontario",
@@ -258,6 +308,7 @@ describe("watcher primitives", () => {
         site: "stripe",
         title: "Software Engineer Intern",
         companyName: "Stripe",
+        description: "Summer 2027 internship opportunity.",
         location: {
           city: "Toronto",
           state: "Ontario",

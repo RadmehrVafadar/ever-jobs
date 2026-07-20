@@ -7,7 +7,7 @@
 | Status        | in-progress                                     |
 | Owner         | Ever Jobs maintainers                           |
 | Created       | 2026-07-19                                      |
-| Last updated  | 2026-07-19                                      |
+| Last updated  | 2026-07-20                                      |
 | Supersedes    | (none)                                          |
 | Related specs | 003, 005, 016, 975, 5001, 5007                |
 
@@ -76,6 +76,8 @@ behavior; every unlisted Spec 016 contract remains authoritative.
   three consecutive hard failures.
 - Add targeted initialization, a dry-run-first preset application workflow,
   additive schema migration, operational alerts, and complete documentation.
+- Narrow the production watch to Summer 2027, suppress PhD/doctoral internships,
+  and prevent non-Tier-1 LinkedIn discoveries from receiving urgent/max scores.
 
 ## 3. Non-goals
 
@@ -85,11 +87,17 @@ behavior; every unlisted Spec 016 contract remains authoritative.
   workflow automation.
 - New-graduate, experienced, senior, staff, principal, lead, management, or
   director role coverage.
-- Re-enabling unrelated stale Meta or Wellfound direct adapters.
+- Enabling the Google Jobs aggregator while its live response remains classified
+  as blocked; this is separate from the operator-authorized direct-company set.
 - Replacing the maintained Ashby plugin with a Wealthsimple-specific scraper.
 - Destructive migration or automatic removal of old presets, examples, history,
   operator edits, notification destinations, or thresholds.
 - Treating a live third-party request as a CI test dependency.
+- Treating every mention of a PhD researcher as proof that an internship is
+  restricted to PhD candidates; description filtering requires enrollment or
+  candidate language.
+- Reclassifying source tiers, changing their cadence/geography contracts, or
+  promoting a company merely because LinkedIn returned its posting.
 
 ## 4. User and operator stories
 
@@ -112,7 +120,22 @@ behavior; every unlisted Spec 016 contract remains authoritative.
 > repaired or newly added source can be safely baselined without resetting the
 > entire watch.
 
+> As the production watch operator, I want only Summer 2027 internships to notify,
+> PhD/doctoral internships suppressed, and LinkedIn discoveries outside the Tier
+> 1 target-company set kept below the urgent band.
+
 ## 5. Functional requirements
+
+### 5.0 Reduced production query cadence
+
+- **FR-22:** Google Careers MUST run every 10 minutes and process exactly one
+  rotating term/location matrix entry per run.
+- **FR-23:** Shopify, Wealthsimple, Plaid, and the enabled direct-company targets
+  except Wellfound MUST run every 10 minutes. Wellfound MUST run every 30 minutes.
+- **FR-24:** Canada Job Bank MUST run every 30 minutes, LinkedIn MUST remain at
+  60 minutes, and disabled Google Jobs MUST retain a 30-minute configured cadence.
+- **FR-25:** The preset's watch-level interval MUST be 10 minutes. Applying these
+  material target changes MUST require baseline initialization before resume.
 
 ### 5.1 Contracts and compatibility
 
@@ -148,7 +171,7 @@ behavior; every unlisted Spec 016 contract remains authoritative.
 | FR-18 | Harden LinkedIn public guest search for Canada/US with no authentication, cookies, browser session, or challenge bypass. | must |
 | FR-19 | LinkedIn requests newest-first within a bounded recent window; detail fetches occur only for coarse internship candidates and extract external application URLs when exposed. | must |
 | FR-20 | Google Jobs and LinkedIn unattended targets are enabled in the v2 preset only after fixture, failure, and documented disabled smoke validation. | must |
-| FR-21 | Canada Job Bank remains an enabled Tier 2 Canadian contributor. Meta and Wellfound direct targets remain disabled. | must |
+| FR-21 | Canada Job Bank remains an enabled Tier 2 Canadian contributor. The operator-authorized legacy direct-company set—Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel, Meta, and Wellfound—is target-enabled, Canada-scoped, and baseline-required. | must |
 
 ### 5.4 Query planning and location normalization
 
@@ -197,6 +220,14 @@ behavior; every unlisted Spec 016 contract remains authoritative.
 | FR-47 | Add `watch preset apply` as dry-run by default; mutation requires an explicit apply flag and a paused watch. | must |
 | FR-48 | Preset application preserves notification destinations, thresholds, history, and unrelated operator edits; it baselines only newly added or materially changed targets before resume. | must |
 | FR-49 | Rollback can disable individual targets. Database and public contract additions remain backward-compatible and are not rolled back destructively. | must |
+| FR-50 | The v2 preset query terms explicitly target Summer 2027 across every existing software/engineering discipline family. Board-shaped sources remain whole-board fetches and are post-filtered after normalization. | must |
+| FR-51 | A notification-eligible posting must contain unambiguous Summer 2027 evidence in its title or description. `Summer '27`, `Summer 27`, `Summer of 2027`, and `2027 Summer` are equivalent; other or missing terms persist with `not-summer-2027` suppression. | must |
+| FR-52 | A title containing `PhD`, dotted/spaced `Ph.D`, `doctoral`, or `doctorate` is suppressed. A description is suppressed only when those degree terms occur in explicit student/candidate/enrollment/pursuit/program eligibility language; incidental mentions of PhD colleagues or research do not suppress. | must |
+| FR-53 | For a result produced by the LinkedIn target, Tier 1 company membership derives from configured `sourceTargets` having `tier === 1` and a `companyName`; it does not derive from the flat prestige ranking list. Company comparison is case/punctuation-insensitive and permits a configured brand at the beginning of a legal/source company name. | must |
+| FR-54 | A LinkedIn result outside that Tier 1 company set retains its calculated breakdown but its total is capped at `urgentScore - 1` (never below zero). It may remain a standard or digest match but cannot be urgent or display as `100/100` under the default thresholds. | must |
+| FR-55 | Direct/ATS observations and LinkedIn observations for Tier 1 companies retain normal scoring. Existing observation, canonical episode, suppression, and idempotency contracts remain unchanged. | must |
+| FR-56 | Google Careers canonical job and episode identity uses the stable official results URL containing Google's numeric posting ID, not the application URL whose `q`, `location`, pagination, locale, and targeting parameters vary by search-matrix request. The complete application URL remains available for the operator's Apply action. | must |
+| FR-57 | Repeated Google Careers observations with the same stable posting ID and result URL produce one stored source observation, one canonical match episode, and at most one delivery per destination, even when their application-query parameters differ. Distinct Google posting IDs such as BS and MS requisitions remain distinct. | must |
 
 ## 6. Core contracts
 
@@ -309,7 +340,7 @@ or operator-only. Material fields are site, slug/name, tier, interval, and scope
 
 | Target | Tier | Mode | Scope | Preset state |
 | ------ | ---- | ---- | ----- | ------------ |
-| Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel | 1 | declared board/query | Canada | target-disabled pending individual Canada-wide fixture/live evidence; Microsoft live smoke timed out |
+| Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel | 1 | declared board/query | Canada | target-enabled by operator decision; each must complete a paused no-notification baseline and expose failures before resume |
 | Google Careers | 1 | query | Canada | target-enabled inside the globally disabled/uninitialized watch; live smoke returned two Canadian roles; target baseline and two observation cycles remain |
 | Shopify | 1 | board | Canada | target-enabled inside the globally disabled/uninitialized watch; live board was marker-validated empty; target baseline and two observation cycles remain |
 | Ashby `wealthsimple` | 1 | board | Canada post-filter | enabled |
@@ -317,16 +348,17 @@ or operator-only. Material fields are site, slug/name, tier, interval, and scope
 | Canada Job Bank | 2 | query | Canada | enabled |
 | Google Jobs | 2 | query | Canada + US | disabled; live smoke classified the enable-JavaScript shell as blocked |
 | LinkedIn public guest | 3 | query | Canada + US | target-enabled inside the globally disabled/uninitialized watch; public smoke passed; target baseline and operator review remain |
-| Meta direct, Wellfound direct | n/a | n/a | n/a | disabled |
+| Meta direct, Wellfound direct | 1 | direct-company compatibility mode | Canada | target-enabled by operator decision; paused baseline required before resume |
 
 The shipped preset watch itself is disabled and uninitialized. Its target-enabled
 sources are Google Careers, Shopify, Ashby `wealthsimple`, Ashby `plaid`, Canada
 Job Bank, and LinkedIn public guest search. Target-enabled is inventory state,
 not permission to poll or notify while the watch is paused. Google Jobs and all
-unproven legacy direct targets remain target-disabled.
+legacy direct targets are enabled by explicit operator decision and remain gated
+by a paused per-target baseline before notifications resume.
 Google Careers and Canada Job Bank have 76-entry Canadian query matrices (19
 terms × 4 locations); Google Jobs and LinkedIn have 95-entry Canada/US matrices
-(19 × 5). Their rotating per-run request caps are 12, 12, 12, and 8.
+(19 × 5). Their rotating per-run request caps are 1, 12, 12, and 8.
 
 ## 8. Canonical episode algorithm
 
@@ -386,6 +418,7 @@ returned zero. Error messages are sanitized and never include secrets/cookies.
 | NFR-8 | Observability | Per-target counters and Tier 1 degraded state survive restart and are Prometheus-visible. |
 | NFR-9 | Security | No LinkedIn auth/cookies/challenge bypass; no secret-bearing logs or persisted headers. |
 | NFR-10 | CI determinism | Sanitized fixtures only; no automated test requires a live source. |
+| NFR-11 | Filtering determinism | Season, degree, source, and Tier 1 company decisions are pure local text/configuration checks with no additional I/O or dependency. |
 
 ## 11. Test plan
 
@@ -401,6 +434,15 @@ returned zero. Error messages are sanitized and never include secrets/cookies.
   exclusions, ambiguity, and multi-location delimiters.
 - Cover internship/co-op evidence in title and structured type, description-only
   false positives, requested engineering families, and senior/experience gates.
+- Cover Summer 2027 title/description spellings, missing/other seasons, PhD title
+  spellings, explicit PhD enrollment language, and harmless PhD colleague text.
+- Cover non-Tier-1 LinkedIn score capping below the configured urgent threshold,
+  Tier 1 LinkedIn company exemption, direct-source exemption, and explanation
+  text without changing score components.
+- Cover Google Careers observations whose stable posting ID/result URL match but
+  whose application `q` and `location` parameters differ; assert stable source
+  fingerprint, canonical episode, persisted match, and delivery identity while
+  retaining distinct identities for distinct Google posting IDs.
 - Cover Tier 1 Canadian acceptance/US rejection, Tier 2/3 CA/US acceptance,
   regional-remote rules, unknown suppression, and preference-only location score.
 - Cover canonical identity with employer URL, publication-date fallback,
@@ -487,6 +529,8 @@ Recorded integration evidence on 2026-07-19:
 | 2026-07-19 | Reuse Ashby for Wealthsimple. | Maintained official public-board integration; avoids duplicate plugin logic. |
 | 2026-07-19 | Keep LinkedIn unauthenticated and best-effort. | Respects public guest surface, security constraints, and personalized-alert limitations. |
 | 2026-07-19 | Make preset apply dry-run by default and require a paused watch. | Prevents accidental source churn or historical notification floods. |
+| 2026-07-20 | Require Summer 2027 evidence and contextually suppress PhD/doctoral internships. | Focuses the operator's current internship cycle without rejecting incidental research-team degree mentions. |
+| 2026-07-20 | Derive the LinkedIn urgent-score allowlist from configured Tier 1 target company names and cap all other LinkedIn totals below `urgentScore`. | Source tiers are authoritative; unrelated aggregator discoveries remain visible without appearing as maximum-priority alerts. |
 
 ## 13. References
 
