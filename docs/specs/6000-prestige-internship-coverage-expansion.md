@@ -50,15 +50,15 @@ eligible and cannot fail solely because they have a lower location preference.
 | Shopify | 1 | Board | **Target-enabled inside the globally disabled/uninitialized watch.** Deterministic validation passed; the official live board returned a marker-validated valid empty result. Target baseline and two observation cycles remain. |
 | Ashby `wealthsimple` | 1 | Board | **Enabled target** inside the disabled preset watch; `companyName: Wealthsimple`; Canada post-filter; target baseline required. |
 | Ashby `plaid` | 1 | Board | **Enabled target** inside the disabled preset watch; Canada post-filter and target baseline required. |
-| Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel, Meta, Wellfound | 1 | Explicit/compatible direct-company mode | **Target-disabled.** Each requires fixture-backed Canada-wide evidence plus its own live/baseline gate; Microsoft live smoke timed out. |
+| Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel, Meta, Wellfound | 1 | Explicit/compatible direct-company mode | **Enabled by operator request.** Each requires its own baseline before resume; Microsoft's earlier live smoke timed out. |
 | Canada Job Bank | 2 | Query | **Enabled target** inside the disabled preset watch; 12 of 76 Canadian matrix entries per run. |
 | Google Jobs | 2 | Query | **Disabled.** Fixture and hard-failure behavior pass, but the live endpoint returned an enable-JavaScript shell. |
 | LinkedIn public guest search | 3 | Query | **Target-enabled inside the globally disabled/uninitialized watch.** Canada/US newest-first 72-hour listing/detail smoke passed; no login/cookies/challenge bypass; baseline and operator review remain. |
 
 The final target-enabled inventory is `google_careers`, `shopify`,
-`ashby:wealthsimple`, `ashby:plaid`, `canadajobbank`, and `linkedin`. This does
-not enable polling or notifications while the watch is paused. Google Jobs and
-all unproven legacy direct targets remain target-disabled.
+`ashby:wealthsimple`, `ashby:plaid`, all 13 legacy direct-company targets,
+`canadajobbank`, and `linkedin`. This does not enable polling or notifications
+while the watch is paused. Only Google Jobs remains target-disabled.
 
 The preset defines 19 Summer 2027 search terms. Google Careers and Canada Job Bank combine
 them with four Canadian locations (76 entries each); Google Jobs and LinkedIn
@@ -241,8 +241,9 @@ Six deterministic source suites passed with 59 tests. Disabled live evidence
 returned two Canadian Google Careers roles, a marker-validated valid empty
 Shopify board, 37 Wealthsimple Ashby roles with a capped mapped sample, and a
 successful unauthenticated LinkedIn listing/detail result. Microsoft timed out;
-Google Jobs returned the classified enable-JavaScript shell. Those two and every
-other unproven legacy direct source remain target-disabled. Target baselines and
+Google Jobs returned the classified enable-JavaScript shell and remains
+target-disabled. The operator subsequently enabled all 13 legacy direct targets,
+including Microsoft, with explicit acceptance of the evidence gap. Target baselines and
 the two observation cycles are still pending; registration, tests, or a smoke
 alone do not enable notifications.
 

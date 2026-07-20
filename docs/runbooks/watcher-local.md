@@ -38,15 +38,15 @@ registered is not an unattended-readiness claim.
 | Shopify | 1 | Official server-rendered careers pages | **target-enabled inside the disabled/uninitialized watch**; deterministic validation passed and live board was marker-validated empty; baseline and two observation cycles remain |
 | Wealthsimple | 1 | `ashby:wealthsimple`, branded through the maintained Ashby plugin | **enabled target** inside the disabled preset watch; baseline before resume |
 | Plaid | 1 | `ashby:plaid` through the maintained Ashby plugin | **enabled target** inside the disabled preset watch; baseline before resume |
-| Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel, Meta, Wellfound | 1 | legacy direct-company inventory with Canada post-filter scope | **target-disabled**; each requires fixture-backed Canada-wide evidence and its own live/baseline gate; Microsoft live smoke timed out |
+| Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel, Meta, Wellfound | 1 | legacy direct-company inventory with Canada post-filter scope | **enabled by operator request**; baseline each before resume; Microsoft's earlier live smoke timed out |
 | Canada Job Bank | 2 | Structured Canadian query source | **enabled target** inside the disabled preset watch; 12 of 76 matrix requests per run |
 | Google Jobs | 2 | Canada/US query redundancy | **disabled**; fixtures/failure handling pass, but live smoke returned an enable-JavaScript shell |
 | LinkedIn public guest | 3 | Canada/US newest-first 72-hour query | **target-enabled inside the disabled/uninitialized watch**; listing/detail fixtures and unauthenticated live smoke pass; baseline and operator review remain |
 
-The exact target-enabled set is `google_careers`, `shopify`,
-`ashby:wealthsimple`, `ashby:plaid`, `canadajobbank`, and `linkedin`. Target-
-enabled does not start polling or notifications while the watch is paused.
-Google Jobs and every legacy direct-company target remain target-disabled.
+The target-enabled set is `google_careers`, `shopify`, `ashby:wealthsimple`,
+`ashby:plaid`, all 13 legacy direct-company targets, `canadajobbank`, and
+`linkedin`. Target-enabled does not start polling or notifications while the
+watch is paused. Only Google Jobs remains target-disabled.
 
 Recorded source evidence is six deterministic suites/59 tests; Google Careers
 two live Canadian roles; Shopify valid empty; Wealthsimple 37 live Ashby roles

@@ -10,6 +10,30 @@
 
 ---
 
+## Q-079 — Which previously disabled source targets should now be enabled?
+
+**Context:** The operator explicitly requested that every legacy direct-company
+target previously listed as disabled be enabled. Google Jobs is a separate search
+aggregator with a recorded blocked live response and was not part of that list.
+
+**Options:**
+
+- **A — Enable all 13 legacy direct-company targets and keep Google Jobs
+  disabled.** Honors the named request while retaining the known blocked-source
+  safety boundary.
+- **B — Enable every configured target including Google Jobs.** Maximizes attempted
+  coverage but knowingly enables a source whose live response is unusable.
+- **C — Continue enabling targets one at a time.** Lowest operational risk but
+  conflicts with the operator's explicit request.
+
+**Default (proceeding):** **A.** Enable Amazon, Microsoft, Apple, Nvidia, Stripe,
+OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel, Meta, and Wellfound. Keep
+Google Jobs disabled. Baseline all newly enabled targets while paused.
+
+**Resolution:** **A — selected by the operator on 2026-07-20.**
+
+---
+
 ## Q-078 — How should PhD internship exclusions inspect descriptions?
 
 **Context:** The operator wants PhD internships removed. Titles are reliable

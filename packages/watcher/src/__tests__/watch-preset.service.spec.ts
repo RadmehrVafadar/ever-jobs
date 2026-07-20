@@ -41,6 +41,19 @@ describe("prestige-internships-v2 preset", () => {
       "shopify",
       "ashby:wealthsimple",
       "ashby:plaid",
+      "amazon",
+      "microsoft",
+      "apple",
+      "nvidia",
+      "stripe",
+      "openai",
+      "datadog",
+      "doordash",
+      "coinbase",
+      "figma",
+      "vercel",
+      "meta",
+      "wellfound",
       "canadajobbank",
       "linkedin",
     ]);
@@ -81,8 +94,9 @@ describe("prestige-internships-v2 preset", () => {
         searchScope: expect.objectContaining({ maxRequestsPerRun: 8 }),
       }),
     );
-    expect(byKey.get("meta")?.enabled).toBe(false);
-    expect(byKey.get("wellfound")?.enabled).toBe(false);
+    expect(byKey.get("meta")?.enabled).toBe(true);
+    expect(byKey.get("wellfound")?.enabled).toBe(true);
+    expect(byKey.get("google")?.enabled).toBe(false);
   });
 
   it("keeps the Canada/USA JSON example aligned with the factory", () => {

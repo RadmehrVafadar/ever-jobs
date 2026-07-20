@@ -159,7 +159,7 @@
       "companyName": "Amazon",
       "tier": 1,
       "intervalMinutes": 3,
-      "enabled": false,
+      "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
         "locations": [
@@ -178,7 +178,7 @@
       "companyName": "Microsoft",
       "tier": 1,
       "intervalMinutes": 3,
-      "enabled": false,
+      "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
         "locations": [
@@ -197,7 +197,7 @@
       "companyName": "Apple",
       "tier": 1,
       "intervalMinutes": 3,
-      "enabled": false,
+      "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
         "locations": [
@@ -216,7 +216,7 @@
       "companyName": "Nvidia",
       "tier": 1,
       "intervalMinutes": 3,
-      "enabled": false,
+      "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
         "locations": [
@@ -235,7 +235,7 @@
       "companyName": "Stripe",
       "tier": 1,
       "intervalMinutes": 3,
-      "enabled": false,
+      "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
         "locations": [
@@ -254,7 +254,7 @@
       "companyName": "OpenAI",
       "tier": 1,
       "intervalMinutes": 3,
-      "enabled": false,
+      "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
         "locations": [
@@ -273,7 +273,7 @@
       "companyName": "Datadog",
       "tier": 1,
       "intervalMinutes": 3,
-      "enabled": false,
+      "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
         "locations": [
@@ -292,7 +292,7 @@
       "companyName": "DoorDash",
       "tier": 1,
       "intervalMinutes": 3,
-      "enabled": false,
+      "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
         "locations": [
@@ -311,7 +311,7 @@
       "companyName": "Coinbase",
       "tier": 1,
       "intervalMinutes": 3,
-      "enabled": false,
+      "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
         "locations": [
@@ -330,7 +330,7 @@
       "companyName": "Figma",
       "tier": 1,
       "intervalMinutes": 3,
-      "enabled": false,
+      "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
         "locations": [
@@ -349,7 +349,7 @@
       "companyName": "Vercel",
       "tier": 1,
       "intervalMinutes": 3,
-      "enabled": false,
+      "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
         "locations": [
@@ -368,7 +368,7 @@
       "companyName": "Meta",
       "tier": 1,
       "intervalMinutes": 3,
-      "enabled": false,
+      "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
         "locations": [
@@ -387,7 +387,7 @@
       "companyName": "Wellfound",
       "tier": 1,
       "intervalMinutes": 3,
-      "enabled": false,
+      "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
         "locations": [

@@ -149,14 +149,14 @@ it unattended:
 | Shopify | 1 | Official server-rendered careers listing/detail pages; no guessed Ashby slug | **Target-enabled inside the disabled/uninitialized watch.** Deterministic validation passed and the live board was marker-validated as a legitimate empty result. Baseline and two observation cycles remain. |
 | Wealthsimple | 1 | Generic Ashby target `ashby:wealthsimple`, branded with `companyName` | **Enabled target** inside the disabled preset watch; baseline before resuming. |
 | Plaid | 1 | Generic Ashby target `ashby:plaid` | **Enabled target** inside the disabled preset watch; baseline before resuming. |
-| Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel, Meta, Wellfound | 1 | Legacy direct-company inventory with Canada post-filter scope | **Target-disabled.** Each requires fixture-backed Canada-wide evidence and its own live/baseline gate; Microsoft live smoke timed out. |
+| Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel, Meta, Wellfound | 1 | Legacy direct-company inventory with Canada post-filter scope | **Enabled by operator request.** Baseline every target before resuming; Microsoft's earlier live smoke timed out. |
 | Canada Job Bank | 2 | Structured Canadian query source | **Enabled target** inside the disabled preset watch; 12 of 76 matrix requests per run. |
 | Google Jobs | 2 | Canada/US query source with employer application URL extraction | **Disabled.** Fixture/failure gates pass, but the live smoke returned an enable-JavaScript shell; require a successful smoke and baseline. |
 | LinkedIn public guest | 3 | Canada/US newest-first 72-hour public search | **Target-enabled inside the disabled/uninitialized watch.** Listing/detail fixtures and unauthenticated live smoke pass; baseline and operator review remain required. |
 
-The exact target-enabled set is `google_careers`, `shopify`,
-`ashby:wealthsimple`, `ashby:plaid`, `canadajobbank`, and `linkedin`. Google Jobs
-and all legacy direct-company targets remain target-disabled. The final source
+The target-enabled set is `google_careers`, `shopify`, `ashby:wealthsimple`,
+`ashby:plaid`, all 13 legacy direct-company targets listed above,
+`canadajobbank`, and `linkedin`. Only Google Jobs remains target-disabled. The final source
 validation record is six deterministic suites/59 tests, Google Careers two live
 Canadian roles, Shopify valid empty, Wealthsimple 37 live roles with a capped
 mapped sample, LinkedIn public pass, Microsoft timeout, and Google Jobs blocked.
@@ -300,6 +300,20 @@ upgrading an existing watch, pause it, preview/apply the preset, and baseline th
 enabled target keys reported in `targetKeysRequiringInitialization` before
 resuming. The current preset reports the changed enabled query targets rather
 than silently reusing their old baseline.
+
+To roll out the complete operator-enabled direct-company inventory, keep the
+watch paused through preview, apply, and a no-notification baseline of every
+enabled target:
+
+```bash
+node dist/apps/cli/main.js watch pause <watch-id> --json
+node dist/apps/cli/main.js watch preset apply prestige-internships-v2 --watch <watch-id>
+node dist/apps/cli/main.js watch preset apply prestige-internships-v2 --watch <watch-id> --apply
+node dist/apps/cli/main.js watch initialize <watch-id> --json
+```
+
+Inspect every target result. Retry failures or disable a failing target before
+running `watch resume`; do not treat a partial baseline as complete.
 
 The current example is
 [Prestige Internships v2 for Canada/USA](../../examples/prestige-internships-v2-canada-usa.watch.json).

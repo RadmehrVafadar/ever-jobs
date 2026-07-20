@@ -156,6 +156,16 @@ work; Google Jobs and legacy-source live failures remain safely target-disabled.
   search parameters persist and deliver once; distinct requisition IDs remain
   separate; watcher tests and TypeScript compilation pass.
 
+### Phase 11 — Enable complete legacy direct-company inventory
+
+- Goal: honor the operator's explicit request to run every configured legacy
+  direct-company target while keeping the known-blocked Google Jobs aggregator off.
+- Deliverables: enabled preset/example targets, updated inventory tests and docs,
+  and an exact paused multi-target baseline rollout.
+- Exit criteria: all 13 legacy targets are enabled in factory/example parity;
+  Google Jobs remains disabled; deterministic watcher validation passes; production
+  resumes only after each newly enabled target has an inspected baseline outcome.
+
 ## 3. Packages and files touched
 
 | Area | Change |

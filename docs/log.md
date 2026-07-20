@@ -3,6 +3,20 @@
 > Append-only log of every doc/spec edit. **Newest entry at the top.** This is a
 > human-readable audit trail; for source-code history, see `git log`.
 
+## 2026-07-20 — Spec 6000 — Complete direct-company target enablement
+
+**Operator decision:** All 13 legacy direct-company targets—Amazon, Microsoft,
+Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel, Meta,
+and Wellfound—are now enabled in the Prestige Internships v2 preset and its JSON
+example. LinkedIn and the previously enabled direct/ATS targets remain enabled.
+Only the separate Google Jobs aggregator remains target-disabled.
+
+**Safety boundary:** The watch remains globally disabled by default. Applying the
+preset to an existing watch marks newly enabled targets for initialization. The
+operator must pause, apply, baseline every reported target without notifications,
+inspect partial/failure results, and only then resume. Microsoft's earlier live
+smoke timeout remains documented and is not treated as evidence of readiness.
+
 ---
 
 ## 2026-07-20 — Spec 6000 — Google Careers duplicate-delivery correction

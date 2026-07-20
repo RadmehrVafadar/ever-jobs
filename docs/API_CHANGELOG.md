@@ -62,12 +62,13 @@
 
 - All fields and schema changes are additive. Legacy watches without target
   scope/company/baseline fields inherit watch-level settings.
-- The shipped preset watch is globally disabled and uninitialized. Its final
+- The shipped preset watch is globally disabled and uninitialized. Its
   target-enabled set is `google_careers`, `shopify`, `ashby:wealthsimple`,
-  `ashby:plaid`, `canadajobbank`, and `linkedin`. Target-enabled does not permit
-  polling or notifications while the watch is paused.
-- Google Jobs and every legacy direct-company target remain target-disabled.
-  Microsoft live smoke timed out; Google Jobs returned the classified
+  `ashby:plaid`, all 13 legacy direct-company targets, `canadajobbank`, and
+  `linkedin`. Target-enabled does not permit polling or notifications while the
+  watch is paused.
+- Only Google Jobs remains target-disabled. Microsoft is operator-enabled even
+  though its earlier live smoke timed out; Google Jobs returned the classified
   enable-JavaScript shell.
 - Six deterministic source suites passed (59 tests). Disabled live evidence
   returned two Canadian Google Careers roles, a marker-validated valid empty

@@ -246,9 +246,7 @@ function sourceTargets(): WatchSourceTarget[] {
         companyName,
         tier: 1,
         intervalMinutes: 3,
-        // These targets remain visible for rollout, but disabled until each
-        // adapter has Canada-wide fixture and smoke evidence.
-        enabled: false,
+        enabled: true,
         searchScope: canadaBoardScope(),
       }),
     ),

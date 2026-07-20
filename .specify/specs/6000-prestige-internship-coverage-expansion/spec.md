@@ -87,7 +87,8 @@ behavior; every unlisted Spec 016 contract remains authoritative.
   workflow automation.
 - New-graduate, experienced, senior, staff, principal, lead, management, or
   director role coverage.
-- Re-enabling unrelated stale Meta or Wellfound direct adapters.
+- Enabling the Google Jobs aggregator while its live response remains classified
+  as blocked; this is separate from the operator-authorized direct-company set.
 - Replacing the maintained Ashby plugin with a Wealthsimple-specific scraper.
 - Destructive migration or automatic removal of old presets, examples, history,
   operator edits, notification destinations, or thresholds.
@@ -159,7 +160,7 @@ behavior; every unlisted Spec 016 contract remains authoritative.
 | FR-18 | Harden LinkedIn public guest search for Canada/US with no authentication, cookies, browser session, or challenge bypass. | must |
 | FR-19 | LinkedIn requests newest-first within a bounded recent window; detail fetches occur only for coarse internship candidates and extract external application URLs when exposed. | must |
 | FR-20 | Google Jobs and LinkedIn unattended targets are enabled in the v2 preset only after fixture, failure, and documented disabled smoke validation. | must |
-| FR-21 | Canada Job Bank remains an enabled Tier 2 Canadian contributor. Meta and Wellfound direct targets remain disabled. | must |
+| FR-21 | Canada Job Bank remains an enabled Tier 2 Canadian contributor. The operator-authorized legacy direct-company set—Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel, Meta, and Wellfound—is target-enabled, Canada-scoped, and baseline-required. | must |
 
 ### 5.4 Query planning and location normalization
 
@@ -328,7 +329,7 @@ or operator-only. Material fields are site, slug/name, tier, interval, and scope
 
 | Target | Tier | Mode | Scope | Preset state |
 | ------ | ---- | ---- | ----- | ------------ |
-| Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel | 1 | declared board/query | Canada | target-disabled pending individual Canada-wide fixture/live evidence; Microsoft live smoke timed out |
+| Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel | 1 | declared board/query | Canada | target-enabled by operator decision; each must complete a paused no-notification baseline and expose failures before resume |
 | Google Careers | 1 | query | Canada | target-enabled inside the globally disabled/uninitialized watch; live smoke returned two Canadian roles; target baseline and two observation cycles remain |
 | Shopify | 1 | board | Canada | target-enabled inside the globally disabled/uninitialized watch; live board was marker-validated empty; target baseline and two observation cycles remain |
 | Ashby `wealthsimple` | 1 | board | Canada post-filter | enabled |
@@ -336,13 +337,14 @@ or operator-only. Material fields are site, slug/name, tier, interval, and scope
 | Canada Job Bank | 2 | query | Canada | enabled |
 | Google Jobs | 2 | query | Canada + US | disabled; live smoke classified the enable-JavaScript shell as blocked |
 | LinkedIn public guest | 3 | query | Canada + US | target-enabled inside the globally disabled/uninitialized watch; public smoke passed; target baseline and operator review remain |
-| Meta direct, Wellfound direct | n/a | n/a | n/a | disabled |
+| Meta direct, Wellfound direct | 1 | direct-company compatibility mode | Canada | target-enabled by operator decision; paused baseline required before resume |
 
 The shipped preset watch itself is disabled and uninitialized. Its target-enabled
 sources are Google Careers, Shopify, Ashby `wealthsimple`, Ashby `plaid`, Canada
 Job Bank, and LinkedIn public guest search. Target-enabled is inventory state,
 not permission to poll or notify while the watch is paused. Google Jobs and all
-unproven legacy direct targets remain target-disabled.
+legacy direct targets are enabled by explicit operator decision and remain gated
+by a paused per-target baseline before notifications resume.
 Google Careers and Canada Job Bank have 76-entry Canadian query matrices (19
 terms × 4 locations); Google Jobs and LinkedIn have 95-entry Canada/US matrices
 (19 × 5). Their rotating per-run request caps are 12, 12, 12, and 8.

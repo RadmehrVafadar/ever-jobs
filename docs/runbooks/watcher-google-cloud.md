@@ -11,10 +11,10 @@ Complete and validate the [local watcher runbook](watcher-local.md) first. The w
 The cloud deployment does not change source readiness. Registration and fixtures
 alone never authorize unattended polling. The shipped preset target-enables
 `google_careers`, `shopify`, `ashby:wealthsimple`, `ashby:plaid`,
-`canadajobbank`, and `linkedin` inside a globally disabled, uninitialized watch.
-Target-enabled does not poll or notify while the watch is paused. Google Jobs,
-Microsoft, Meta, Wellfound, and every other unproven legacy direct source remain
-target-disabled. The preset preview is authoritative for the installed revision.
+`canadajobbank`, `linkedin`, and all 13 legacy direct-company targets inside a
+globally disabled, uninitialized watch. Target-enabled does not poll or notify
+while the watch is paused. Only Google Jobs remains target-disabled. The preset
+preview is authoritative for the installed revision.
 
 Recorded evidence is six deterministic source suites/59 tests; Google Careers
 two live Canadian roles; Shopify marker-validated valid empty; Wealthsimple 37

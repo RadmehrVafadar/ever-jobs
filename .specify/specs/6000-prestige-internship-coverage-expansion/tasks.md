@@ -241,3 +241,20 @@
   - **Files:** watcher README, Spec 6000 mirror, docs index/log, focused/full watcher validation
   - **Acceptance:** the production watch remains paused until the fixed Google target is baselined; validation evidence and exact deployment commands are recorded.
   - **Estimate:** 0.5 day
+
+## Phase 11 — Enable complete legacy direct-company inventory
+
+- [x] T41 — Amend the target enablement policy before code
+  - **Files:** Spec 6000 `spec.md`, `plan.md`, `tasks.md`, `docs/questions.md`
+  - **Acceptance:** all 13 requested legacy targets are named; Google Jobs remains separately disabled; baseline and failure-inspection gates are explicit.
+  - **Estimate:** 0.25 day
+
+- [x] T42 — Enable and mirror every legacy direct target
+  - **Files:** v2 preset, aligned JSON example, preset/seeder tests
+  - **Acceptance:** factory and JSON enable all 13 targets without changing tier, cadence, or Canada scope; Google Jobs stays disabled.
+  - **Estimate:** 0.25 day
+
+- [~] T43 — Update operations docs and validate rollout
+  - **Files:** watcher README, Spec 6000 mirror, docs index/log, watcher tests/build
+  - **Acceptance:** exact preview/apply/baseline commands and failure handling are documented; tests and TypeScript compilation pass.
+  - **Estimate:** 0.5 day

@@ -1103,8 +1103,9 @@ that produced a job:
 The shipped preset target-enables `google_careers`, `shopify`,
 `ashby:wealthsimple`, `ashby:plaid`, `canadajobbank`, and `linkedin`. The watch
 itself remains globally disabled and uninitialized, so target-enabled does not
-start polling or permit notifications. Google Jobs, Microsoft, and every other
-unproven legacy direct-company target remain target-disabled.
+start polling or permit notifications. All 13 legacy direct-company targets are
+enabled by operator request and require baselines; only Google Jobs remains
+target-disabled.
 
 The rotating query scopes contain 19 internship/co-op terms. Google Careers and
 Canada Job Bank combine them with four Canadian locations (76 matrix entries),
@@ -1188,6 +1189,7 @@ Final source validation passed six deterministic suites (59 tests). Disabled
 live evidence returned two Canadian Google Careers roles, a marker-validated
 valid empty Shopify board, 37 Wealthsimple Ashby roles with a capped mapped
 sample, and a successful unauthenticated LinkedIn listing/detail result.
-Microsoft timed out and Google Jobs was classified blocked; both remain
-target-disabled. None of this bypasses the required target baselines and two
+Microsoft timed out and Google Jobs was classified blocked. Google Jobs remains
+target-disabled; Microsoft and the other legacy direct targets were subsequently
+enabled by operator request. None of this bypasses the required target baselines and two
 no-notification observation cycles.
