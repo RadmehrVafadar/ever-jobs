@@ -14,6 +14,19 @@ const SPECIALTY_ROLE =
   /\b(?:back[- ]?end|front[- ]?end|mobile|ios|android|developer experience|dx|platform|infrastructure|cloud|security|cybersecurity|devops|site reliability|sre)\b/i;
 const INTERNSHIP_INDICATOR =
   /\b(?:intern(?:ship)?s?|co(?:[-\u2010-\u2015 ]?op)s?)\b/i;
+const SUMMER_2027_INDICATOR =
+  /\b(?:summer(?:\s+of)?\s+(?:2027|['\u2019]?\s*27)|2027\s+summer)\b/i;
+const PHD_DEGREE_PATTERN = "(?:ph\\.?\\s*d|doctoral|doctorate)";
+const PHD_INTERNSHIP_TITLE = new RegExp(`\\b${PHD_DEGREE_PATTERN}\\b`, "i");
+const PHD_INTERNSHIP_ELIGIBILITY = new RegExp(
+  [
+    `\\b${PHD_DEGREE_PATTERN}\\b(?:[-\\s]+level)?[-\\s,:/()]*(?:students?|candidates?|interns?|internships?|programs?|programmes?)\\b`,
+    `\\b(?:currently\\s+)?(?:enrolled|pursuing|working\\s+towards?|studying\\s+towards?|candidate\\s+for)\\b.{0,80}\\b${PHD_DEGREE_PATTERN}\\b`,
+    `\\b(?:students?|candidates?)\\b.{0,40}\\b${PHD_DEGREE_PATTERN}\\b`,
+    `\\bapplicants?\\b.{0,40}\\b(?:must|should|required|eligible)\\b.{0,40}\\b${PHD_DEGREE_PATTERN}\\b`,
+  ].join("|"),
+  "i",
+);
 const DIRECT_OR_ATS_SOURCE =
   /^(?:google_careers|source-company-google|amazon|meta|microsoft|apple|nvidia|uber|stripe|openai|netflix|ibm|coinbase|doordash|plaid|figma|datadog|vercel|anthropic|databricks|greenhouse|lever|ashby|workday|smartrecruiters)$/i;
 
@@ -84,6 +97,16 @@ export class JobScoringService {
     if (!hasInternshipIndicator) {
       missingRequired.push("internship or co-op indicator");
     }
+    const requiresSummer2027 = watch.requiredTerms.some(
+      (term) => normalizeRequiredTerm(term) === "summer 2027",
+    );
+    const hasSummer2027 = SUMMER_2027_INDICATOR.test(`${title} ${description}`);
+    if (requiresSummer2027 && !hasSummer2027) {
+      missingRequired.push("Summer 2027 term");
+    } else if (requiresSummer2027) {
+      matched.add("Summer 2027");
+      reasons.push("Summer 2027 evidence in title or description");
+    }
     if (!geography.eligible && target.tier === 1) {
       // Retained for persisted watches and clients that predate the explicit
       // geographyDecision explanation fields.
@@ -147,7 +170,7 @@ export class JobScoringService {
       matched.add("priority company");
     } else if (
       watch.companies.some((configured) =>
-        company.includes(configured.toLowerCase()),
+        companyMatchesConfiguredName(company, configured),
       )
     ) {
       companyScore += weight(watch, "targetCompany", 10);
@@ -194,12 +217,31 @@ export class JobScoringService {
     }
     skills = Math.min(skills, weight(watch, "skillsCap", 45));
 
-    const total = role + internship + location + companyScore + source + skills;
+    const uncappedTotal =
+      role + internship + location + companyScore + source + skills;
+    const tierOneCompanies = tierOneTargetCompanyNames(watch);
+    const linkedInNonTierOneCompany =
+      tierOneCompanies.length > 0 &&
+      isLinkedInTarget(target.key, job.site) &&
+      !tierOneCompanies.some((configured) =>
+        companyMatchesConfiguredName(company, configured),
+      );
+    const linkedInCap = Math.max(0, watch.urgentScore - 1);
+    const total = linkedInNonTierOneCompany
+      ? Math.min(uncappedTotal, linkedInCap)
+      : uncappedTotal;
+    if (linkedInNonTierOneCompany && total < uncappedTotal) {
+      reasons.push(
+        `LinkedIn non-Tier-1 company score capped below urgent threshold (${linkedInCap})`,
+      );
+    }
     const gateExclusion = !hasTargetRoleTitle
       ? "not-software-engineering-role"
       : !hasInternshipIndicator
         ? "not-internship-or-co-op"
-        : geography.suppressionReason;
+        : requiresSummer2027 && !hasSummer2027
+          ? "not-summer-2027"
+          : geography.suppressionReason;
 
     return {
       total,
@@ -347,6 +389,16 @@ export class JobScoringService {
     location: string,
     terms: string[],
   ): string | undefined {
+    const phdExclusionConfigured = terms.some((term) =>
+      PHD_INTERNSHIP_TITLE.test(term),
+    );
+    if (
+      phdExclusionConfigured &&
+      (PHD_INTERNSHIP_TITLE.test(title) ||
+        PHD_INTERNSHIP_ELIGIBILITY.test(description))
+    ) {
+      return "Excluded PhD/doctoral internship";
+    }
     if (
       /\b(?:senior|staff|principal|manager|director|architect)\b|\bsr\.?(?=\s|$)/i.test(
         title,
@@ -406,6 +458,42 @@ function isWatchSourceJob(
 
 function normalizeSource(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function isLinkedInTarget(targetKey: string, site: unknown): boolean {
+  return (
+    normalizeSource(targetKey).startsWith("linkedin") ||
+    normalizeSource(asText(site)) === "linkedin"
+  );
+}
+
+function tierOneTargetCompanyNames(watch: JobWatch): string[] {
+  return watch.sourceTargets
+    .filter((target) => target.tier === 1 && target.companyName)
+    .map((target) => asText(target.companyName));
+}
+
+function companyMatchesConfiguredName(
+  company: string,
+  configured: string,
+): boolean {
+  const candidate = normalizeCompanyName(company);
+  const target = normalizeCompanyName(configured);
+  if (!candidate || !target) return false;
+  return candidate === target || candidate.startsWith(`${target} `);
+}
+
+function normalizeCompanyName(value: string): string {
+  return value
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function normalizeRequiredTerm(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 function normalizeTier(value: unknown): 1 | 2 | 3 {

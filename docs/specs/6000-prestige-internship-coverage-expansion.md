@@ -6,6 +6,7 @@
 > [plan](../../.specify/specs/6000-prestige-internship-coverage-expansion/plan.md),
 > [task ledger](../../.specify/specs/6000-prestige-internship-coverage-expansion/tasks.md)  
 > **Created:** 2026-07-19
+> **Last updated:** 2026-07-20
 
 ## Purpose
 
@@ -21,6 +22,8 @@ The safety boundary stays strict: only software/engineering internships and
 co-ops qualify. New-grad and experienced roles are excluded. Tier 1 is Canada
 only; Tiers 2 and 3 allow Canada and the United States. A source that is blocked,
 malformed, or unexpectedly shaped is a failure, never a successful empty run.
+The production policy additionally requires Summer 2027 evidence and suppresses
+PhD/doctoral internships.
 
 ## Geography policy
 
@@ -57,7 +60,7 @@ The final target-enabled inventory is `google_careers`, `shopify`,
 not enable polling or notifications while the watch is paused. Google Jobs and
 all unproven legacy direct targets remain target-disabled.
 
-The preset defines 19 search terms. Google Careers and Canada Job Bank combine
+The preset defines 19 Summer 2027 search terms. Google Careers and Canada Job Bank combine
 them with four Canadian locations (76 entries each); Google Jobs and LinkedIn
 combine them with five Canada/US locations (95 entries each). Rotating request
 caps are 12, 12, 12, and 8 per run respectively.
@@ -133,6 +136,20 @@ mentions interns, students, universities, campus recruiting, or early careers.
 Senior, staff, principal, lead, manager, director, architect, and experienced
 full-time positions remain excluded.
 
+The v2 watch requires Summer 2027 evidence in the posting title or description.
+Accepted forms include `Summer 2027`, `Summer of 2027`, `Summer '27`,
+`Summer 27`, and `2027 Summer`. Other and seasonless internships remain persisted
+with `not-summer-2027` suppression. Titles containing PhD/Ph.D./doctoral/
+doctorate terms suppress directly. Description degree terms suppress only when
+connected to explicit student, candidate, enrollment, pursuit, applicant,
+internship, or program eligibility language.
+
+For LinkedIn results, the urgent-score allowlist is derived from company names on
+configured Tier 1 source targets, not from the broader prestige ranking list.
+Non-Tier-1 LinkedIn totals are capped at `urgentScore - 1`; they remain eligible
+for standard/digest delivery. Tier 1 LinkedIn employers and non-LinkedIn source
+observations retain the normal additive total.
+
 Geography is a hard eligibility decision. Location preference is a separate
 ranking component. Unknown geography is visible and suppressed rather than
 discarded or treated as successful eligibility.
@@ -202,6 +219,11 @@ The production rollout sequence is:
 5. Run two no-notification observation cycles, including both Tier 1 cycles.
 6. Resume and enable notifications only after operator review.
 
+For an existing v2 watch receiving the 2026-07-20 refinement, preset preview/apply
+marks the changed query scopes as material. Baseline every enabled target key
+reported by the apply result before resuming, preventing the narrowed search
+matrix from surfacing historical postings.
+
 Six deterministic source suites passed with 59 tests. Disabled live evidence
 returned two Canadian Google Careers roles, a marker-validated valid empty
 Shopify board, 37 Wealthsimple Ashby roles with a capped mapped sample, and a
@@ -222,5 +244,7 @@ alone do not enable notifications.
   notification.
 - A source hard failure yields a partial/failed run, never successful zero.
 - Per-target baseline creates no historical alerts.
+- Only Summer 2027 roles notify; PhD/doctoral internships suppress; non-Tier-1
+  LinkedIn results remain below the urgent band.
 - Six source fixture suites (59 tests) cover the repaired sources; CI has no
   live-site dependency.

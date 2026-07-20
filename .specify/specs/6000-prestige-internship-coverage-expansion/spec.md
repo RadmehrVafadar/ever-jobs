@@ -7,7 +7,7 @@
 | Status        | in-progress                                     |
 | Owner         | Ever Jobs maintainers                           |
 | Created       | 2026-07-19                                      |
-| Last updated  | 2026-07-19                                      |
+| Last updated  | 2026-07-20                                      |
 | Supersedes    | (none)                                          |
 | Related specs | 003, 005, 016, 975, 5001, 5007                |
 
@@ -76,6 +76,8 @@ behavior; every unlisted Spec 016 contract remains authoritative.
   three consecutive hard failures.
 - Add targeted initialization, a dry-run-first preset application workflow,
   additive schema migration, operational alerts, and complete documentation.
+- Narrow the production watch to Summer 2027, suppress PhD/doctoral internships,
+  and prevent non-Tier-1 LinkedIn discoveries from receiving urgent/max scores.
 
 ## 3. Non-goals
 
@@ -90,6 +92,11 @@ behavior; every unlisted Spec 016 contract remains authoritative.
 - Destructive migration or automatic removal of old presets, examples, history,
   operator edits, notification destinations, or thresholds.
 - Treating a live third-party request as a CI test dependency.
+- Treating every mention of a PhD researcher as proof that an internship is
+  restricted to PhD candidates; description filtering requires enrollment or
+  candidate language.
+- Reclassifying source tiers, changing their cadence/geography contracts, or
+  promoting a company merely because LinkedIn returned its posting.
 
 ## 4. User and operator stories
 
@@ -111,6 +118,10 @@ behavior; every unlisted Spec 016 contract remains authoritative.
 > As an API or CLI caller, I want to initialize selected target keys so that a
 > repaired or newly added source can be safely baselined without resetting the
 > entire watch.
+
+> As the production watch operator, I want only Summer 2027 internships to notify,
+> PhD/doctoral internships suppressed, and LinkedIn discoveries outside the Tier
+> 1 target-company set kept below the urgent band.
 
 ## 5. Functional requirements
 
@@ -197,6 +208,12 @@ behavior; every unlisted Spec 016 contract remains authoritative.
 | FR-47 | Add `watch preset apply` as dry-run by default; mutation requires an explicit apply flag and a paused watch. | must |
 | FR-48 | Preset application preserves notification destinations, thresholds, history, and unrelated operator edits; it baselines only newly added or materially changed targets before resume. | must |
 | FR-49 | Rollback can disable individual targets. Database and public contract additions remain backward-compatible and are not rolled back destructively. | must |
+| FR-50 | The v2 preset query terms explicitly target Summer 2027 across every existing software/engineering discipline family. Board-shaped sources remain whole-board fetches and are post-filtered after normalization. | must |
+| FR-51 | A notification-eligible posting must contain unambiguous Summer 2027 evidence in its title or description. `Summer '27`, `Summer 27`, `Summer of 2027`, and `2027 Summer` are equivalent; other or missing terms persist with `not-summer-2027` suppression. | must |
+| FR-52 | A title containing `PhD`, dotted/spaced `Ph.D`, `doctoral`, or `doctorate` is suppressed. A description is suppressed only when those degree terms occur in explicit student/candidate/enrollment/pursuit/program eligibility language; incidental mentions of PhD colleagues or research do not suppress. | must |
+| FR-53 | For a result produced by the LinkedIn target, Tier 1 company membership derives from configured `sourceTargets` having `tier === 1` and a `companyName`; it does not derive from the flat prestige ranking list. Company comparison is case/punctuation-insensitive and permits a configured brand at the beginning of a legal/source company name. | must |
+| FR-54 | A LinkedIn result outside that Tier 1 company set retains its calculated breakdown but its total is capped at `urgentScore - 1` (never below zero). It may remain a standard or digest match but cannot be urgent or display as `100/100` under the default thresholds. | must |
+| FR-55 | Direct/ATS observations and LinkedIn observations for Tier 1 companies retain normal scoring. Existing observation, canonical episode, suppression, and idempotency contracts remain unchanged. | must |
 
 ## 6. Core contracts
 
@@ -386,6 +403,7 @@ returned zero. Error messages are sanitized and never include secrets/cookies.
 | NFR-8 | Observability | Per-target counters and Tier 1 degraded state survive restart and are Prometheus-visible. |
 | NFR-9 | Security | No LinkedIn auth/cookies/challenge bypass; no secret-bearing logs or persisted headers. |
 | NFR-10 | CI determinism | Sanitized fixtures only; no automated test requires a live source. |
+| NFR-11 | Filtering determinism | Season, degree, source, and Tier 1 company decisions are pure local text/configuration checks with no additional I/O or dependency. |
 
 ## 11. Test plan
 
@@ -401,6 +419,11 @@ returned zero. Error messages are sanitized and never include secrets/cookies.
   exclusions, ambiguity, and multi-location delimiters.
 - Cover internship/co-op evidence in title and structured type, description-only
   false positives, requested engineering families, and senior/experience gates.
+- Cover Summer 2027 title/description spellings, missing/other seasons, PhD title
+  spellings, explicit PhD enrollment language, and harmless PhD colleague text.
+- Cover non-Tier-1 LinkedIn score capping below the configured urgent threshold,
+  Tier 1 LinkedIn company exemption, direct-source exemption, and explanation
+  text without changing score components.
 - Cover Tier 1 Canadian acceptance/US rejection, Tier 2/3 CA/US acceptance,
   regional-remote rules, unknown suppression, and preference-only location score.
 - Cover canonical identity with employer URL, publication-date fallback,
@@ -487,6 +510,8 @@ Recorded integration evidence on 2026-07-19:
 | 2026-07-19 | Reuse Ashby for Wealthsimple. | Maintained official public-board integration; avoids duplicate plugin logic. |
 | 2026-07-19 | Keep LinkedIn unauthenticated and best-effort. | Respects public guest surface, security constraints, and personalized-alert limitations. |
 | 2026-07-19 | Make preset apply dry-run by default and require a paused watch. | Prevents accidental source churn or historical notification floods. |
+| 2026-07-20 | Require Summer 2027 evidence and contextually suppress PhD/doctoral internships. | Focuses the operator's current internship cycle without rejecting incidental research-team degree mentions. |
+| 2026-07-20 | Derive the LinkedIn urgent-score allowlist from configured Tier 1 target company names and cap all other LinkedIn totals below `urgentScore`. | Source tiers are authoritative; unrelated aggregator discoveries remain visible without appearing as maximum-priority alerts. |
 
 ## 13. References
 

@@ -82,6 +82,7 @@ describe("JobScoringService internship eligibility", () => {
       title: "Software Engineer Intern",
       companyName: "Google",
       employmentType: "internship",
+      description: "Summer 2027 internship opportunity.",
       location: { city: "Austin", state: "TX", country: "US" } as any,
     });
 
@@ -105,6 +106,7 @@ describe("JobScoringService internship eligibility", () => {
           title: "Software Engineer Intern",
           companyName: "Google",
           employmentType: "internship",
+          description: "Summer 2027 internship opportunity.",
           location: { city: "Springfield" } as any,
         }),
         2,
@@ -148,6 +150,7 @@ describe("JobScoringService internship eligibility", () => {
           title: "Backend Engineer Intern",
           companyName: "Example",
           employmentType: "internship",
+          description: "Summer 2027 internship opportunity.",
           location: { city: "Seattle", state: "WA", country: "USA" } as any,
         }),
         3,
@@ -171,6 +174,167 @@ describe("JobScoringService internship eligibility", () => {
       ]),
     );
   });
+
+  it.each([
+    "Software Engineer Intern, Summer 2027",
+    "Software Engineer Intern, Summer of 2027",
+    "Software Engineer Intern — Summer '27",
+    "Software Engineer Intern - Summer 27",
+    "Software Engineer Intern - 2027 Summer",
+  ])("accepts a supported Summer 2027 title spelling: %s", (title) => {
+    const score = scorer.score(
+      canadianJob({ title, description: "Software internship." }),
+      watch,
+    );
+
+    expect(score.missingRequired).not.toContain("Summer 2027 term");
+    expect(score.exclusionReason).toBeUndefined();
+    expect(score.matchedKeywords).toContain("Summer 2027");
+  });
+
+  it("accepts Summer 2027 evidence in the description", () => {
+    const score = scorer.score(
+      canadianJob({
+        title: "Software Engineer Intern",
+        description: "This internship runs during Summer 2027.",
+      }),
+      watch,
+    );
+
+    expect(score.exclusionReason).toBeUndefined();
+  });
+
+  it("keeps legacy watches without the Summer 2027 requirement compatible", () => {
+    const legacyWatch = {
+      ...watch,
+      requiredTerms: ["intern", "internship", "co-op", "coop"],
+    };
+    const score = scorer.score(
+      canadianJob({
+        title: "Software Engineer Intern",
+        description: "Season to be announced.",
+      }),
+      legacyWatch,
+    );
+
+    expect(score.missingRequired).not.toContain("Summer 2027 term");
+    expect(score.exclusionReason).toBeUndefined();
+  });
+
+  it.each(["Fall 2027", "Summer 2026", "term to be announced"])(
+    "suppresses internships outside the Summer 2027 focus: %s",
+    (term) => {
+      const score = scorer.score(
+        canadianJob({
+          title: `Software Engineer Intern - ${term}`,
+          description: "Software internship opportunity.",
+        }),
+        watch,
+      );
+
+      expect(score.missingRequired).toContain("Summer 2027 term");
+      expect(score.exclusionReason).toBe("not-summer-2027");
+    },
+  );
+
+  it.each([
+    "Software Engineering Intern, PhD, Summer 2027",
+    "Software Engineering Intern, Ph.D., Summer 2027",
+    "Doctoral Software Engineering Intern, Summer 2027",
+  ])("suppresses PhD/doctoral internship titles: %s", (title) => {
+    const score = scorer.score(canadianJob({ title }), watch);
+
+    expect(score.total).toBe(0);
+    expect(score.exclusionReason).toBe("Excluded PhD/doctoral internship");
+  });
+
+  it("suppresses a generic title with explicit PhD enrollment eligibility", () => {
+    const score = scorer.score(
+      canadianJob({
+        description:
+          "Summer 2027 applicants must be currently enrolled in a Ph.D. program.",
+      }),
+      watch,
+    );
+
+    expect(score.exclusionReason).toBe("Excluded PhD/doctoral internship");
+  });
+
+  it("does not suppress an incidental mention of PhD colleagues", () => {
+    const score = scorer.score(
+      canadianJob({
+        description:
+          "PhD researchers and software engineers mentor this Summer 2027 internship program.",
+      }),
+      watch,
+    );
+
+    expect(score.exclusionReason).toBeUndefined();
+  });
+
+  it("caps a prestige-listed but non-Tier-1 LinkedIn company below urgent", () => {
+    const score = scorer.score(
+      sourceJob(
+        new JobPostDto({
+          site: "linkedin",
+          title: "Full Stack Software Engineer Intern, Summer 2027",
+          companyName: "Uber",
+          employmentType: "internship",
+          description:
+            "Summer 2027. Python Java Go TypeScript Docker Kubernetes Terraform Kafka SQL distributed systems security React.",
+          location: { city: "Toronto", state: "ON", country: "Canada" } as any,
+        }),
+        3,
+        "linkedin",
+      ),
+      watch,
+    );
+
+    expect(score.total).toBe(watch.urgentScore - 1);
+    expect(
+      score.role + score.internship + score.location + score.skills,
+    ).toBeGreaterThan(score.total);
+    expect(score.reasons).toContain(
+      `LinkedIn non-Tier-1 company score capped below urgent threshold (${watch.urgentScore - 1})`,
+    );
+  });
+
+  it("does not cap a LinkedIn result for a configured Tier 1 company", () => {
+    const score = scorer.score(
+      sourceJob(
+        new JobPostDto({
+          site: "linkedin",
+          title: "Software Engineer Intern, Summer 2027",
+          companyName: "Google LLC",
+          employmentType: "internship",
+          description:
+            "Summer 2027. Python Java Go Docker Kubernetes distributed systems.",
+          location: { city: "Toronto", state: "ON", country: "Canada" } as any,
+        }),
+        3,
+        "linkedin",
+      ),
+      watch,
+    );
+
+    expect(score.total).toBeGreaterThanOrEqual(watch.urgentScore);
+    expect(score.reasons).not.toEqual(
+      expect.arrayContaining([expect.stringContaining("score capped")]),
+    );
+  });
+
+  it("does not apply the LinkedIn cap to direct/ATS observations", () => {
+    const score = scorer.score(
+      canadianJob({
+        companyName: "Example Labs",
+        description:
+          "Summer 2027. Python Java Go Docker Kubernetes distributed systems.",
+      }),
+      watch,
+    );
+
+    expect(score.total).toBeGreaterThanOrEqual(watch.urgentScore);
+  });
 });
 
 function canadianJob(
@@ -181,6 +345,7 @@ function canadianJob(
     title: "Software Engineer Intern",
     companyName: "Example",
     employmentType: "internship",
+    description: "Summer 2027 internship opportunity.",
     location: { city: "Toronto", state: "ON", country: "Canada" } as any,
     ...overrides,
   });

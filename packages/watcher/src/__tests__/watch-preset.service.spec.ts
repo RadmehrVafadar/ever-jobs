@@ -30,7 +30,7 @@ describe("prestige-internships-v2 preset", () => {
         intervalMinutes: 3,
         initializationMode: "baseline",
         countryCodes: ["CA", "US"],
-        requiredTerms: ["intern", "internship", "co-op", "coop"],
+        requiredTerms: ["intern", "internship", "co-op", "coop", "summer 2027"],
       }),
     );
     expect([...byKey]).toHaveLength(targets.length);
@@ -45,6 +45,13 @@ describe("prestige-internships-v2 preset", () => {
       "linkedin",
     ]);
     expect(targets.every((target) => target.initializedAt === null)).toBe(true);
+    expect(watch.searchTerms).toHaveLength(19);
+    expect(
+      watch.searchTerms?.every((term) => term.startsWith("summer 2027 ")),
+    ).toBe(true);
+    expect(watch.excludedTerms).toEqual(
+      expect.arrayContaining(["phd", "ph.d", "ph.d.", "doctoral", "doctorate"]),
+    );
 
     expect(byKey.get("google_careers")).toEqual(
       expect.objectContaining({
@@ -190,13 +197,10 @@ describe("WatchPresetService", () => {
           "internship",
           "co-op",
           "coop",
+          "summer 2027",
         ],
         allowedWorkplaceTypes: ["remote", "flexible", "hybrid", "on-site"],
-        allowedEmploymentTypes: [
-          "internship",
-          "research placement",
-          "co-op",
-        ],
+        allowedEmploymentTypes: ["internship", "research placement", "co-op"],
       }),
     );
     const updatedByKey = new Map(

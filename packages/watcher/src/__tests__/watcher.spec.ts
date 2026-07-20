@@ -183,7 +183,8 @@ describe("watcher primitives", () => {
         site: "ashby",
         title: "Software Engineer Intern",
         companyName: "Plaid",
-        description: "You will lead a scoped project with your mentor.",
+        description:
+          "Summer 2027. You will lead a scoped project with your mentor.",
         location: {
           city: "Toronto",
           state: "Ontario",
@@ -258,6 +259,7 @@ describe("watcher primitives", () => {
         site: "stripe",
         title: "Software Engineer Intern",
         companyName: "Stripe",
+        description: "Summer 2027 internship opportunity.",
         location: {
           city: "Toronto",
           state: "Ontario",

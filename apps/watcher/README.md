@@ -131,7 +131,7 @@ The three-minute cadence means a Tier 1 watch becomes due every three minutes. I
 The preset selects explicit targets rather than querying every registered plugin.
 Plugin metadata declares whether a source is a complete `board` or a search
 `query`; Google Careers and Microsoft declare their actual behavior explicitly.
-Query targets build the complete configured term × location matrix and process a
+Query targets build the complete configured Summer 2027 term × location matrix and process a
 rotating slice capped by `maxRequestsPerRun`, so a permanently fixed first
 country/location cannot starve the remaining matrix. The preset has 19 terms:
 Google Careers and Canada Job Bank each have 76 Canadian matrix entries, while
@@ -179,6 +179,21 @@ regardless of numeric score. The match records whether suppression came from a
 target baseline or current eligibility. Baseline suppression is permanent for
 that episode; eligibility suppression may promote to pending if a later richer
 source observation becomes eligible and no delivery exists.
+
+The v2 preset requires explicit Summer 2027 evidence in the title or description.
+It recognizes `Summer 2027`, `Summer of 2027`, `Summer '27`, `Summer 27`, and
+`2027 Summer`; other or seasonless postings persist with `not-summer-2027`
+suppression. PhD/doctoral terms in titles suppress immediately. Descriptions
+suppress only when degree language is tied to student, candidate, enrollment,
+pursuit, applicant, internship, or program eligibility, so incidental mentions
+of PhD colleagues do not remove otherwise eligible roles.
+
+LinkedIn remains Tier 3. A LinkedIn employer matches the Tier 1 company set only
+when it matches a `companyName` on a configured Tier 1 source target. Other
+LinkedIn totals are capped at one point below the watch's `urgentScore`; those
+jobs can still be standard or digest matches but cannot be urgent or display as
+`100/100` under the default thresholds. Direct/ATS observations and LinkedIn
+observations for Tier 1 companies keep normal scoring.
 
 Toronto, the GTA, and Waterloo add preference points only. Vancouver, Calgary,
 Montréal, Ottawa, remote Canada, and every other confidently Canadian location
@@ -272,6 +287,12 @@ Use `watch run` for a manual post-initialization run. Use `watch initialize`
 for a no-notification baseline; repeat `--target` to select several target keys,
 or omit it for all enabled targets. Preset apply is a dry-run JSON diff unless
 `--apply` is present, and mutation rejects an enabled watch.
+
+The Summer 2027 query-term change is material target configuration. When
+upgrading an existing watch, pause it, preview/apply the preset, and baseline the
+enabled target keys reported in `targetKeysRequiringInitialization` before
+resuming. The current preset reports the changed enabled query targets rather
+than silently reusing their old baseline.
 
 The current example is
 [Prestige Internships v2 for Canada/USA](../../examples/prestige-internships-v2-canada-usa.watch.json).

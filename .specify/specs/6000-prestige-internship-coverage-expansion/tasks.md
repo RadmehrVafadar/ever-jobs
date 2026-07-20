@@ -197,3 +197,30 @@
   TypeScript checks passed, and the independent re-review found no remaining
   high/medium issue in rollover or suppression-promotion behavior.
 - Update `docs/log.md` newest-first and mark tasks accurately as work completes.
+
+## Phase 9 — Summer 2027 and LinkedIn priority refinement
+
+- [x] T33 — Amend the policy specification before code
+  - **Files:** Spec 6000 `spec.md`, `plan.md`, `tasks.md`, mirror, `docs/questions.md`
+  - **Acceptance:** Summer 2027, contextual PhD suppression, Tier 1 company derivation, LinkedIn cap, non-goals, risks, and test plan are explicit before implementation.
+  - **Estimate:** 0.25 day
+
+- [x] T34 — Implement season and degree eligibility
+  - **Files:** `job-scoring.service.ts`, `job-scoring.service.spec.ts`
+  - **Acceptance:** Summer 2027 spellings qualify; other/missing terms suppress; PhD titles and explicit degree enrollment requirements suppress; incidental PhD colleague text remains eligible.
+  - **Estimate:** 0.5 day
+
+- [x] T35 — Implement Tier 1-aware LinkedIn score cap
+  - **Files:** `job-scoring.service.ts`, `job-scoring.service.spec.ts`
+  - **Acceptance:** non-Tier-1 LinkedIn totals are at most `urgentScore - 1`; Tier 1 LinkedIn and non-LinkedIn results retain uncapped totals; explanations identify the cap.
+  - **Estimate:** 0.5 day
+
+- [x] T36 — Narrow and mirror the v2 preset
+  - **Files:** `prestige-internships-v2.preset.ts`, preset tests, Canada/USA example
+  - **Acceptance:** all 19 query families explicitly target Summer 2027, PhD exclusions are visible, and parsed example equals the factory.
+  - **Estimate:** 0.25 day
+
+- [x] T37 — Update operator documentation and validate
+  - **Files:** watcher README, Spec 6000 mirror, docs index/log/questions, focused tests/build/diff
+  - **Acceptance:** deployment/baseline behavior is documented; focused suites and TypeScript checks pass; remaining external/pre-existing blockers are recorded.
+  - **Estimate:** 0.5 day

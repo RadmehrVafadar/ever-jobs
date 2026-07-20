@@ -19,25 +19,25 @@ export interface WatchPresetDefinition {
 }
 
 export const PRESTIGE_INTERNSHIP_SEARCH_TERMS = [
-  "software engineer intern",
-  "software developer intern",
-  "software engineering internship",
-  "software engineering co-op",
-  "software developer co-op",
-  "backend engineer intern",
-  "frontend engineer intern",
-  "full stack engineer intern",
-  "mobile engineer intern",
-  "developer experience intern",
-  "platform engineer intern",
-  "cloud engineer intern",
-  "infrastructure engineer intern",
-  "site reliability engineer intern",
-  "devops engineer intern",
-  "security engineer intern",
-  "data engineer intern",
-  "machine learning engineer intern",
-  "AI engineer intern",
+  "summer 2027 software engineer intern",
+  "summer 2027 software developer intern",
+  "summer 2027 software engineering internship",
+  "summer 2027 software engineering co-op",
+  "summer 2027 software developer co-op",
+  "summer 2027 backend engineer intern",
+  "summer 2027 frontend engineer intern",
+  "summer 2027 full stack engineer intern",
+  "summer 2027 mobile engineer intern",
+  "summer 2027 developer experience intern",
+  "summer 2027 platform engineer intern",
+  "summer 2027 cloud engineer intern",
+  "summer 2027 infrastructure engineer intern",
+  "summer 2027 site reliability engineer intern",
+  "summer 2027 devops engineer intern",
+  "summer 2027 security engineer intern",
+  "summer 2027 data engineer intern",
+  "summer 2027 machine learning engineer intern",
+  "summer 2027 AI engineer intern",
 ] as const;
 
 export const PRESTIGE_TIER_1_LOCATIONS = [
@@ -138,6 +138,11 @@ const EXCLUDED_TERMS = [
   "5+ years",
   "7+ years",
   "10+ years",
+  "phd",
+  "ph.d",
+  "ph.d.",
+  "doctoral",
+  "doctorate",
 ] as const;
 
 const LEGACY_DIRECT_TARGETS: ReadonlyArray<{
@@ -290,7 +295,7 @@ export function prestigeInternshipsV2Watch(): Partial<JobWatch> {
   return {
     name: PRESTIGE_INTERNSHIPS_V2_NAME,
     description:
-      "Versioned, target-scoped monitoring for software internships and co-ops across Canada, with Canada/USA discovery redundancy.",
+      "Versioned, target-scoped monitoring for Summer 2027 software internships and co-ops across Canada, with Canada/USA discovery redundancy.",
     enabled: false,
     intervalMinutes: 3,
     timezone: "America/Toronto",
@@ -302,7 +307,7 @@ export function prestigeInternshipsV2Watch(): Partial<JobWatch> {
     companySlugs: ["ashby:wealthsimple", "ashby:plaid"],
     companies: [...PRESTIGE_COMPANIES],
     searchTerms: [...PRESTIGE_INTERNSHIP_SEARCH_TERMS],
-    requiredTerms: ["intern", "internship", "co-op", "coop"],
+    requiredTerms: ["intern", "internship", "co-op", "coop", "summer 2027"],
     preferredTerms: [...PREFERRED_TERMS],
     excludedTerms: [...EXCLUDED_TERMS],
     locations: [...PRESTIGE_TIER_2_3_LOCATIONS],
@@ -324,6 +329,6 @@ export const PRESTIGE_INTERNSHIPS_V2_PRESET: WatchPresetDefinition =
     version: PRESTIGE_INTERNSHIPS_V2_VERSION,
     name: PRESTIGE_INTERNSHIPS_V2_NAME,
     description:
-      "Canada-only Tier 1 coverage with Canada/USA Tier 2 and Tier 3 redundancy.",
+      "Summer 2027 Canada-only Tier 1 coverage with Canada/USA Tier 2 and Tier 3 redundancy.",
     createWatch: prestigeInternshipsV2Watch,
   });

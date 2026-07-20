@@ -10,6 +10,76 @@
 
 ---
 
+## Q-078 — How should PhD internship exclusions inspect descriptions?
+
+**Context:** The operator wants PhD internships removed. Titles are reliable
+degree signals, but descriptions may mention PhD coworkers, research produced by
+PhDs, or preferred advanced education without restricting applicant eligibility.
+
+**Options:**
+
+- **A — Exclude degree terms in titles and contextual enrollment/candidate
+  language in descriptions.** Catches generic-title PhD internships while
+  avoiding incidental team/research mentions.
+- **B — Exclude any posting containing a PhD/doctoral term anywhere.** Maximizes
+  removal but creates broad false positives.
+- **C — Inspect titles only.** Lowest false-positive risk, but generic titles with
+  PhD-only requirements can still notify.
+
+**Default (proceeding):** **A.** Title matches suppress directly; descriptions
+must connect the degree to student, candidate, enrollment, pursuit, or program
+eligibility language.
+
+**Resolution:** _(pending human review — default A continues.)_
+
+---
+
+## Q-077 — Which companies exempt a LinkedIn result from the urgent-score cap?
+
+**Context:** The operator referred to the “T1 list.” The watcher has authoritative
+source-target tiers plus a separate flat prestige ranking list; it has no distinct
+company-tier field.
+
+**Options:**
+
+- **A — Company names on configured Tier 1 source targets.** Uses the existing
+  authoritative tier contract and changes automatically with the target set.
+- **B — Every name in the flat `PRESTIGE_COMPANIES` ranking list.** Includes
+  companies that do not have Tier 1 source targets.
+- **C — Only currently enabled Tier 1 targets.** Strictest operational set, but a
+  temporarily disabled verified company would change ranking semantics.
+
+**Default (proceeding):** **A.** A LinkedIn result whose normalized employer does
+not match a configured Tier 1 target company is capped at `urgentScore - 1`; it
+remains eligible for standard/digest delivery.
+
+**Resolution:** _(pending human review — default A continues.)_
+
+---
+
+## Q-076 — How strictly should the watch focus on Summer 2027?
+
+**Context:** Query terms can bias search sources toward Summer 2027, but direct
+company/ATS sources fetch complete boards. A ranking-only preference would still
+allow other seasons or seasonless internships to notify.
+
+**Options:**
+
+- **A — Require Summer 2027 evidence in title or description.** Precisely focuses
+  notifications; ambiguous seasonless postings remain persisted but suppressed.
+- **B — Change query terms only.** Improves LinkedIn/Google discovery precision,
+  but direct boards and imperfect search results can still notify other terms.
+- **C — Prefer Summer 2027 with bonus points.** Maximizes recall but does not meet
+  a strict seasonal focus.
+
+**Default (proceeding):** **A.** Recognize `Summer 2027`, `Summer of 2027`,
+`Summer '27`, `Summer 27`, and `2027 Summer`; persist other postings with an
+explicit `not-summer-2027` suppression reason.
+
+**Resolution:** _(pending human review — default A continues.)_
+
+---
+
 ## Q-075 — What recent window should LinkedIn public guest search use?
 
 **Context:** Spec 6000 requires newest-first LinkedIn public guest searches in a

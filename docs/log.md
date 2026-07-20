@@ -5,6 +5,31 @@
 
 ---
 
+## 2026-07-20 — Spec 6000 — Summer 2027 filtering refinement
+
+**Specification:** Amended the existing prestige-internship contract, plan, task
+ledger, human-readable mirror, and ambiguity ledger before code. The v2 watch now
+requires explicit Summer 2027 evidence, contextually suppresses PhD/doctoral
+internships, and derives LinkedIn maximum-priority eligibility from configured
+Tier 1 target company names rather than the broader prestige ranking list.
+
+**Implementation:** Narrowed all 19 query families to Summer 2027 while retaining
+the bounded rotating matrix. Added configurable season and degree eligibility
+gates, exact/prefix-normalized company matching, and a final LinkedIn cap of
+`urgentScore - 1` for employers outside the Tier 1 target-company set. Component
+score explanations remain intact and capped jobs remain eligible for lower bands.
+
+**Operations and tests:** Updated the aligned JSON example, watcher guide, preset
+tests, and scoring tests. Existing watches must pause, preview/apply the changed
+preset, baseline the materially changed enabled query targets reported by the
+apply result, and resume only after inspection. Final validation passed all 10
+watcher suites (124 tests), the watcher TypeScript no-emit check, affected
+TypeScript/JSON Prettier checks, and `git diff --check`. Documentation lint still
+reports only the two pre-existing Spec 5024 H1/metadata defects recorded in the
+earlier validation ledger.
+
+---
+
 ## 2026-07-19 — Spec 6000 — Prestige Internship Coverage Expansion
 
 **Specification:** Reserved the collision-free `6000–6999` Spec Kit band for
