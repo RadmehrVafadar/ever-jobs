@@ -258,3 +258,12 @@
   - **Files:** watcher README, Spec 6000 mirror, docs index/log, watcher tests/build
   - **Acceptance:** exact preview/apply/baseline commands and failure handling are documented; tests and TypeScript compilation pass.
   - **Estimate:** 0.5 day
+
+## Phase 12 — Reduce unattended polling volume
+
+- [x] T44 — Specify the reduced polling contract
+  - **Acceptance:** exact per-target intervals and Google Careers request cap are recorded before code.
+- [x] T45 — Update the preset, JSON example, and expectations
+  - **Acceptance:** Google Careers uses one request per 10-minute run; direct/ATS boards use 10 minutes; Wellfound and Tier 2 use 30; LinkedIn uses 60.
+- [~] T46 — Update operations documentation and validate
+  - **Acceptance:** rollout/baseline effects are documented and focused validation passes.

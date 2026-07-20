@@ -126,6 +126,17 @@ behavior; every unlisted Spec 016 contract remains authoritative.
 
 ## 5. Functional requirements
 
+### 5.0 Reduced production query cadence
+
+- **FR-22:** Google Careers MUST run every 10 minutes and process exactly one
+  rotating term/location matrix entry per run.
+- **FR-23:** Shopify, Wealthsimple, Plaid, and the enabled direct-company targets
+  except Wellfound MUST run every 10 minutes. Wellfound MUST run every 30 minutes.
+- **FR-24:** Canada Job Bank MUST run every 30 minutes, LinkedIn MUST remain at
+  60 minutes, and disabled Google Jobs MUST retain a 30-minute configured cadence.
+- **FR-25:** The preset's watch-level interval MUST be 10 minutes. Applying these
+  material target changes MUST require baseline initialization before resume.
+
 ### 5.1 Contracts and compatibility
 
 | ID | Requirement | Priority |
@@ -347,7 +358,7 @@ legacy direct targets are enabled by explicit operator decision and remain gated
 by a paused per-target baseline before notifications resume.
 Google Careers and Canada Job Bank have 76-entry Canadian query matrices (19
 terms × 4 locations); Google Jobs and LinkedIn have 95-entry Canada/US matrices
-(19 × 5). Their rotating per-run request caps are 12, 12, 12, and 8.
+(19 × 5). Their rotating per-run request caps are 1, 12, 12, and 8.
 
 ## 8. Canonical episode algorithm
 

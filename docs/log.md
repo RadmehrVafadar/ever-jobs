@@ -3,6 +3,18 @@
 > Append-only log of every doc/spec edit. **Newest entry at the top.** This is a
 > human-readable audit trail; for source-code history, see `git log`.
 
+## 2026-07-20 — Spec 6000 — Reduced production polling cadence
+
+Google Careers now processes one rotating matrix request every 10 minutes.
+Direct-company and ATS board targets use 10 minutes, Wellfound and Canada Job
+Bank use 30 minutes, and LinkedIn remains at 60 minutes. Disabled Google Jobs is
+configured at 30 minutes. The watch-level scheduling interval is 10 minutes.
+
+This reduces scheduled request pressure while retaining timely direct-company
+alerts. Preset apply treats the cadence/request-cap changes as material, so the
+watch must remain paused until the reported targets are initialized without
+notifications and their results are inspected.
+
 ## 2026-07-20 — Spec 6000 — Complete direct-company target enablement
 
 **Operator decision:** All 13 legacy direct-company targets—Amazon, Microsoft,

@@ -381,7 +381,7 @@ The present watcher still starts an HTTP server, so a worker pool would run that
 
 ## 14. Honest limitations
 
-- Tier 1's three-minute interval is a scheduling target, not a guarantee. The 15-second scheduler poll, jitter, a previous long run, source latency, retries, Cloud Run restarts, database events, and Discord outages can add time.
+- Tier 1's ten-minute interval (30 minutes for Wellfound) is a scheduling target, not a guarantee. The 15-second scheduler poll, jitter, a previous long run, source latency, retries, Cloud Run restarts, database events, and Discord outages can add time.
 - Cloud Run does not guarantee a particular minimum instance will live forever; durable state makes restarts safe but cannot eliminate the pause.
 - Source publication times may be delayed or missing. The watcher records first observation rather than fabricating a publication timestamp.
 - Live source schemas, availability, IP policies, and rate limits are outside Ever Jobs' control.

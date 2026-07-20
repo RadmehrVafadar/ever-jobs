@@ -20,8 +20,8 @@ There are three independently due source tiers:
 
 | Tier | Default interval | Eligibility geography | Purpose |
 | ---- | ---------------- | --------------------- | ------- |
-| Tier 1 | 3 minutes | Canada only | Fixture-backed direct company and complete ATS targets |
-| Tier 2 | 15 minutes | Canada and United States | Canada Job Bank and validated Google Jobs redundancy |
+| Tier 1 | 10 minutes (Wellfound: 30) | Canada only | Fixture-backed direct company and complete ATS targets |
+| Tier 2 | 30 minutes | Canada and United States | Canada Job Bank and validated Google Jobs redundancy |
 | Tier 3 | 60 minutes | Canada and United States | Validated unauthenticated LinkedIn public guest redundancy |
 
 The scheduler polls PostgreSQL every 15 seconds by default. Therefore, the normal start delay after a tier becomes due is up to one scheduler poll, subject to another run holding the lease, database availability, process load, and jitter. The interval is a target cadence rather than an end-to-end notification guarantee.
@@ -39,7 +39,7 @@ registered is not an unattended-readiness claim.
 | Wealthsimple | 1 | `ashby:wealthsimple`, branded through the maintained Ashby plugin | **enabled target** inside the disabled preset watch; baseline before resume |
 | Plaid | 1 | `ashby:plaid` through the maintained Ashby plugin | **enabled target** inside the disabled preset watch; baseline before resume |
 | Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel, Meta, Wellfound | 1 | legacy direct-company inventory with Canada post-filter scope | **enabled by operator request**; baseline each before resume; Microsoft's earlier live smoke timed out |
-| Canada Job Bank | 2 | Structured Canadian query source | **enabled target** inside the disabled preset watch; 12 of 76 matrix requests per run |
+| Canada Job Bank | 2 | Structured Canadian query source | **enabled target** inside the disabled preset watch; 12 of 76 matrix requests every 30 minutes |
 | Google Jobs | 2 | Canada/US query redundancy | **disabled**; fixtures/failure handling pass, but live smoke returned an enable-JavaScript shell |
 | LinkedIn public guest | 3 | Canada/US newest-first 72-hour query | **target-enabled inside the disabled/uninitialized watch**; listing/detail fixtures and unauthenticated live smoke pass; baseline and operator review remain |
 
@@ -56,7 +56,8 @@ timeout; and Google Jobs classified blocked by the enable-JavaScript shell.
 The preset has 19 search terms. Google Careers and Canada Job Bank each have 76
 term/location entries across four Canadian locations. Google Jobs and LinkedIn
 each have 95 entries across five Canada/US locations. The rotating per-run caps
-are 12, 12, 12, and 8 respectively.
+are 1, 12, 12, and 8 respectively. Google Careers therefore makes one rotating
+request every 10 minutes.
 
 Do not enable a target to make the matrix look complete. Perform the source live
 smoke before target enablement, then keep the global watch paused. Inspect all
@@ -304,7 +305,7 @@ npm run cli -- watch resume <watch-id> --json
 ```
 
 Resume sets `enabled=true` and makes the watch schedulable. The next scheduler
-poll picks up a due watch; subsequent Tier 1 executions follow the three-minute
+poll picks up a due watch; subsequent normal Tier 1 executions follow the ten-minute
 interval. Tier 2 and Tier 3 run only when independently due. Unproven targets
 must still be disabled; resuming the watch does not waive a target smoke gate.
 
@@ -528,7 +529,7 @@ remain uninitialized. Resolve or explicitly disable each failed target and rerun
 `watch initialize <id> --target <key>`. Never treat a partial overall run as
 evidence that every target was baselined.
 
-### The three-minute target is missed
+### The ten-minute target is missed
 
 Check scheduler poll freshness, previous run duration, source timeouts/retries, lease state, PostgreSQL health, and process uptime. The scheduler does not overlap a slow run of the same watch. A source publication timestamp can also be delayed or absent; Ever Jobs does not fabricate it.
 

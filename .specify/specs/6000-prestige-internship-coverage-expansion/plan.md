@@ -166,6 +166,14 @@ work; Google Jobs and legacy-source live failures remain safely target-disabled.
   Google Jobs remains disabled; deterministic watcher validation passes; production
   resumes only after each newly enabled target has an inspected baseline outcome.
 
+### Phase 12 — Reduce unattended polling volume
+
+1. Reduce Google Careers to one rotating matrix request every 10 minutes.
+2. Move direct-company and ATS board targets to 10 minutes, Wellfound and Canada
+   Job Bank to 30 minutes, and retain LinkedIn at 60 minutes.
+3. Mirror the cadence in the JSON example, tests, and operator documentation.
+4. Require paused preset apply and initialization for materially changed targets.
+
 ## 3. Packages and files touched
 
 | Area | Change |

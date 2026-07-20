@@ -27,7 +27,7 @@ describe("prestige-internships-v2 preset", () => {
       expect.objectContaining({
         name: PRESTIGE_INTERNSHIPS_V2_NAME,
         enabled: false,
-        intervalMinutes: 3,
+        intervalMinutes: 10,
         initializationMode: "baseline",
         countryCodes: ["CA", "US"],
         requiredTerms: ["intern", "internship", "co-op", "coop", "summer 2027"],
@@ -69,16 +69,16 @@ describe("prestige-internships-v2 preset", () => {
     expect(byKey.get("google_careers")).toEqual(
       expect.objectContaining({
         tier: 1,
-        intervalMinutes: 3,
+        intervalMinutes: 10,
         enabled: true,
         searchScope: expect.objectContaining({
           countryCodes: ["CA"],
-          maxRequestsPerRun: 12,
+          maxRequestsPerRun: 1,
         }),
       }),
     );
     expect(byKey.get("canadajobbank")).toEqual(
-      expect.objectContaining({ tier: 2, intervalMinutes: 15, enabled: true }),
+      expect.objectContaining({ tier: 2, intervalMinutes: 30, enabled: true }),
     );
     expect(byKey.get("google")?.searchScope).toEqual(
       expect.objectContaining({
@@ -95,7 +95,10 @@ describe("prestige-internships-v2 preset", () => {
       }),
     );
     expect(byKey.get("meta")?.enabled).toBe(true);
-    expect(byKey.get("wellfound")?.enabled).toBe(true);
+    expect(byKey.get("meta")?.intervalMinutes).toBe(10);
+    expect(byKey.get("wellfound")).toEqual(
+      expect.objectContaining({ enabled: true, intervalMinutes: 30 }),
+    );
     expect(byKey.get("google")?.enabled).toBe(false);
   });
 

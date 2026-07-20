@@ -233,7 +233,7 @@ no-notification observation cycles before resume.
 The preset defaults to Canada-only Tier 1 and Canada/US Tier 2/3. Its 19 search
 terms form 76-entry Canadian matrices for Google Careers and Canada Job Bank and
 95-entry Canada/US matrices for Google Jobs and LinkedIn. Per-run request budgets
-are 12, 12, 12, and 8 respectively; LinkedIn uses a newest-first 72-hour recent
+are 1, 12, 12, and 8 respectively; LinkedIn uses a newest-first 72-hour recent
 window. The target-enabled set inside the globally disabled/uninitialized watch
 is `google_careers`, `shopify`, `ashby:wealthsimple`, `ashby:plaid`, all 13
 legacy direct-company targets, `canadajobbank`, and `linkedin`. Only Google Jobs

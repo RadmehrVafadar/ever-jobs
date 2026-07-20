@@ -2,7 +2,7 @@
   "name": "Prestige Software Internships — Canada and USA",
   "description": "Versioned, target-scoped monitoring for Summer 2027 software internships and co-ops across Canada, with Canada/USA discovery redundancy.",
   "enabled": false,
-  "intervalMinutes": 3,
+  "intervalMinutes": 10,
   "timezone": "America/Toronto",
   "initializationMode": "baseline",
   "recentWindowMinutes": 180,
@@ -58,7 +58,7 @@
       "site": "google_careers",
       "companyName": "Google",
       "tier": 1,
-      "intervalMinutes": 3,
+      "intervalMinutes": 10,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -89,7 +89,7 @@
           "summer 2027 machine learning engineer intern",
           "summer 2027 AI engineer intern"
         ],
-        "maxRequestsPerRun": 12
+        "maxRequestsPerRun": 1
       },
       "initializedAt": null,
       "lastRunAt": null,
@@ -99,7 +99,7 @@
       "site": "shopify",
       "companyName": "Shopify",
       "tier": 1,
-      "intervalMinutes": 3,
+      "intervalMinutes": 10,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -119,7 +119,7 @@
       "companySlug": "wealthsimple",
       "companyName": "Wealthsimple",
       "tier": 1,
-      "intervalMinutes": 3,
+      "intervalMinutes": 10,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -139,7 +139,7 @@
       "companySlug": "plaid",
       "companyName": "Plaid",
       "tier": 1,
-      "intervalMinutes": 3,
+      "intervalMinutes": 10,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -158,7 +158,7 @@
       "site": "amazon",
       "companyName": "Amazon",
       "tier": 1,
-      "intervalMinutes": 3,
+      "intervalMinutes": 10,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -177,7 +177,7 @@
       "site": "microsoft",
       "companyName": "Microsoft",
       "tier": 1,
-      "intervalMinutes": 3,
+      "intervalMinutes": 10,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -196,7 +196,7 @@
       "site": "apple",
       "companyName": "Apple",
       "tier": 1,
-      "intervalMinutes": 3,
+      "intervalMinutes": 10,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -215,7 +215,7 @@
       "site": "nvidia",
       "companyName": "Nvidia",
       "tier": 1,
-      "intervalMinutes": 3,
+      "intervalMinutes": 10,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -234,7 +234,7 @@
       "site": "stripe",
       "companyName": "Stripe",
       "tier": 1,
-      "intervalMinutes": 3,
+      "intervalMinutes": 10,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -253,7 +253,7 @@
       "site": "openai",
       "companyName": "OpenAI",
       "tier": 1,
-      "intervalMinutes": 3,
+      "intervalMinutes": 10,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -272,7 +272,7 @@
       "site": "datadog",
       "companyName": "Datadog",
       "tier": 1,
-      "intervalMinutes": 3,
+      "intervalMinutes": 10,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -291,7 +291,7 @@
       "site": "doordash",
       "companyName": "DoorDash",
       "tier": 1,
-      "intervalMinutes": 3,
+      "intervalMinutes": 10,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -310,7 +310,7 @@
       "site": "coinbase",
       "companyName": "Coinbase",
       "tier": 1,
-      "intervalMinutes": 3,
+      "intervalMinutes": 10,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -329,7 +329,7 @@
       "site": "figma",
       "companyName": "Figma",
       "tier": 1,
-      "intervalMinutes": 3,
+      "intervalMinutes": 10,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -348,7 +348,7 @@
       "site": "vercel",
       "companyName": "Vercel",
       "tier": 1,
-      "intervalMinutes": 3,
+      "intervalMinutes": 10,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -367,7 +367,7 @@
       "site": "meta",
       "companyName": "Meta",
       "tier": 1,
-      "intervalMinutes": 3,
+      "intervalMinutes": 10,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -386,7 +386,7 @@
       "site": "wellfound",
       "companyName": "Wellfound",
       "tier": 1,
-      "intervalMinutes": 3,
+      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -405,7 +405,7 @@
       "site": "canadajobbank",
       "companyName": "Canada Job Bank",
       "tier": 2,
-      "intervalMinutes": 15,
+      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -446,7 +446,7 @@
       "site": "google",
       "companyName": "Google Jobs",
       "tier": 2,
-      "intervalMinutes": 15,
+      "intervalMinutes": 30,
       "enabled": false,
       "searchScope": {
         "countryCodes": ["CA", "US"],

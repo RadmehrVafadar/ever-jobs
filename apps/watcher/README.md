@@ -122,11 +122,11 @@ Source tiers define both cadence and target-specific eligibility geography.
 
 | Tier | Default cadence | Eligible geography | Intended sources |
 | ---- | --------------- | ------------------ | ---------------- |
-| Tier 1 | 3 minutes | Canada only | Fixture-backed direct company sources and complete ATS boards |
-| Tier 2 | 15 minutes | Canada and United States | Canada Job Bank and validated Google Jobs redundancy |
+| Tier 1 | 10 minutes (Wellfound: 30) | Canada only | Fixture-backed direct company sources and complete ATS boards |
+| Tier 2 | 30 minutes | Canada and United States | Canada Job Bank and validated Google Jobs redundancy |
 | Tier 3 | 60 minutes | Canada and United States | Validated unauthenticated LinkedIn public guest search |
 
-The three-minute cadence means a Tier 1 watch becomes due every three minutes. It is not a publication-to-notification service-level guarantee: source runtime, source outages, missing publication timestamps, retries, PostgreSQL availability, and process restarts can add latency. A second run never starts while the same watch still holds its execution lease.
+The ten-minute cadence means a normal Tier 1 target becomes due every ten minutes; Wellfound uses a 30-minute override. It is not a publication-to-notification service-level guarantee: source runtime, source outages, missing publication timestamps, retries, PostgreSQL availability, and process restarts can add latency. A second run never starts while the same watch still holds its execution lease.
 
 The preset selects explicit targets rather than querying every registered plugin.
 Plugin metadata declares whether a source is a complete `board` or a search
@@ -136,7 +136,8 @@ rotating slice capped by `maxRequestsPerRun`, so a permanently fixed first
 country/location cannot starve the remaining matrix. The preset has 19 terms:
 Google Careers and Canada Job Bank each have 76 Canadian matrix entries, while
 Google Jobs and LinkedIn each have 95 Canada/US entries. Their request caps are
-12, 12, 12, and 8 per run respectively.
+1, 12, 12, and 8 per run respectively. Google Careers therefore makes only one
+rotating search per 10-minute run.
 
 ## Default source readiness
 
@@ -150,7 +151,7 @@ it unattended:
 | Wealthsimple | 1 | Generic Ashby target `ashby:wealthsimple`, branded with `companyName` | **Enabled target** inside the disabled preset watch; baseline before resuming. |
 | Plaid | 1 | Generic Ashby target `ashby:plaid` | **Enabled target** inside the disabled preset watch; baseline before resuming. |
 | Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel, Meta, Wellfound | 1 | Legacy direct-company inventory with Canada post-filter scope | **Enabled by operator request.** Baseline every target before resuming; Microsoft's earlier live smoke timed out. |
-| Canada Job Bank | 2 | Structured Canadian query source | **Enabled target** inside the disabled preset watch; 12 of 76 matrix requests per run. |
+| Canada Job Bank | 2 | Structured Canadian query source | **Enabled target** inside the disabled preset watch; 12 of 76 matrix requests every 30 minutes. |
 | Google Jobs | 2 | Canada/US query source with employer application URL extraction | **Disabled.** Fixture/failure gates pass, but the live smoke returned an enable-JavaScript shell; require a successful smoke and baseline. |
 | LinkedIn public guest | 3 | Canada/US newest-first 72-hour public search | **Target-enabled inside the disabled/uninitialized watch.** Listing/detail fixtures and unauthenticated live smoke pass; baseline and operator review remain required. |
 

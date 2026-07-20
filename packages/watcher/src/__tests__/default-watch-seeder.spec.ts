@@ -19,7 +19,7 @@ describe("DefaultWatchSeederService", () => {
         name: PRESTIGE_INTERNSHIPS_V2_NAME,
         enabled: false,
         initializationMode: "baseline",
-        intervalMinutes: 3,
+        intervalMinutes: 10,
       }),
     );
     expect(

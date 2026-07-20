@@ -29,8 +29,8 @@ PhD/doctoral internships.
 
 | Tier | Default cadence | Eligibility | Default query locations |
 | ---- | --------------- | ----------- | ----------------------- |
-| 1 | 3 minutes | At least one Canadian location | Canada; Toronto, Ontario; Greater Toronto Area; Waterloo, Ontario |
-| 2 | 15 minutes | At least one Canadian or US location | Tier 1 locations plus United States |
+| 1 | 10 minutes (Wellfound: 30) | At least one Canadian location | Canada; Toronto, Ontario; Greater Toronto Area; Waterloo, Ontario |
+| 2 | 30 minutes | At least one Canadian or US location | Tier 1 locations plus United States |
 | 3 | 60 minutes | At least one Canadian or US location | Tier 1 locations plus United States |
 
 `Remote Canada` qualifies every tier. `Remote US` qualifies Tiers 2/3 only.
@@ -51,7 +51,7 @@ eligible and cannot fail solely because they have a lower location preference.
 | Ashby `wealthsimple` | 1 | Board | **Enabled target** inside the disabled preset watch; `companyName: Wealthsimple`; Canada post-filter; target baseline required. |
 | Ashby `plaid` | 1 | Board | **Enabled target** inside the disabled preset watch; Canada post-filter and target baseline required. |
 | Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel, Meta, Wellfound | 1 | Explicit/compatible direct-company mode | **Enabled by operator request.** Each requires its own baseline before resume; Microsoft's earlier live smoke timed out. |
-| Canada Job Bank | 2 | Query | **Enabled target** inside the disabled preset watch; 12 of 76 Canadian matrix entries per run. |
+| Canada Job Bank | 2 | Query | **Enabled target** inside the disabled preset watch; 12 of 76 Canadian matrix entries every 30 minutes. |
 | Google Jobs | 2 | Query | **Disabled.** Fixture and hard-failure behavior pass, but the live endpoint returned an enable-JavaScript shell. |
 | LinkedIn public guest search | 3 | Query | **Target-enabled inside the globally disabled/uninitialized watch.** Canada/US newest-first 72-hour listing/detail smoke passed; no login/cookies/challenge bypass; baseline and operator review remain. |
 
@@ -63,7 +63,8 @@ while the watch is paused. Only Google Jobs remains target-disabled.
 The preset defines 19 Summer 2027 search terms. Google Careers and Canada Job Bank combine
 them with four Canadian locations (76 entries each); Google Jobs and LinkedIn
 combine them with five Canada/US locations (95 entries each). Rotating request
-caps are 12, 12, 12, and 8 per run respectively.
+caps are 1, 12, 12, and 8 per run respectively. Google Careers makes one
+rotating request every 10 minutes.
 
 ## Contracts
 

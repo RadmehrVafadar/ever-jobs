@@ -45,6 +45,10 @@
 
 ### Changed
 
+- Prestige Internships v2 now runs Google Careers at one rotating request every
+  10 minutes. Direct-company/ATS board targets use 10 minutes, Wellfound and
+  Canada Job Bank use 30 minutes, and LinkedIn remains at 60 minutes.
+
 - Geography eligibility is target-tier-specific: Tier 1 accepts Canada; Tier
   2/3 accept Canada or the United States. Location preference scoring is
   separate from eligibility.
