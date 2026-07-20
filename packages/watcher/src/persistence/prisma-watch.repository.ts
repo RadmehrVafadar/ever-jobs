@@ -7,6 +7,8 @@ import {
   WatchMatch as PrismaWatchMatch,
   WatchRun as PrismaWatchRun,
 } from "@prisma/client";
+import { createHash } from "crypto";
+import { LocationDto } from "@ever-jobs/models";
 import {
   AcquireWatchLeaseInput,
   ClaimNotificationDeliveryInput,
@@ -15,6 +17,7 @@ import {
   NotificationDelivery,
   NotificationDeliveryQuery,
   NotificationStatus,
+  NotificationSuppressionReason,
   ObservedJob,
   ObservedJobInput,
   ObservedJobQuery,
@@ -38,6 +41,8 @@ import {
   WatchRunQuery,
   WatchRunStatus,
   WatchSourceTarget,
+  WatchTargetHealth,
+  WatchTargetRunResult,
 } from "../interfaces/watch.types";
 import { WatcherPrismaService } from "./watcher-prisma.service";
 
@@ -64,7 +69,18 @@ export class PrismaWatchRepository implements WatchRepository {
     try {
       // Connectivity alone is insufficient: the scheduler cannot operate
       // until watcher migrations have created its durable tables.
-      await this.prisma.$queryRaw(Prisma.sql`SELECT 1 FROM "JobWatch" LIMIT 1`);
+      await this.prisma.$queryRaw(
+        Prisma.sql`SELECT "targetHealth" FROM "JobWatch" LIMIT 0`,
+      );
+      await this.prisma.$queryRaw(
+        Prisma.sql`SELECT "sourceTargetKey", "locations", "canonicalEpisodeKey", "canonicalEpisodeStartedAt" FROM "ObservedJob" LIMIT 0`,
+      );
+      await this.prisma.$queryRaw(
+        Prisma.sql`SELECT "canonicalEpisodeKey", "sourceTargetKey", "notificationSuppressionReason" FROM "WatchMatch" LIMIT 0`,
+      );
+      await this.prisma.$queryRaw(
+        Prisma.sql`SELECT "targetResults", "coverageDegraded" FROM "WatchRun" LIMIT 0`,
+      );
       return true;
     } catch {
       return false;
@@ -206,6 +222,10 @@ export class PrismaWatchRepository implements WatchRepository {
         sourcesRequested: jsonInput(input.sourcesRequested ?? []),
         sourcesSucceeded: jsonInput(input.sourcesSucceeded ?? []),
         sourcesFailed: jsonInput(input.sourcesFailed ?? []),
+        targetResults: jsonInput(
+          targetResultsForStorage(input.targetResults ?? []),
+        ),
+        coverageDegraded: input.coverageDegraded ?? false,
         jobsFetched: input.jobsFetched ?? 0,
         jobsNormalized: input.jobsNormalized ?? 0,
         newJobsDetected: input.newJobsDetected ?? 0,
@@ -236,6 +256,14 @@ export class PrismaWatchRepository implements WatchRepository {
     }
     if (patch.sourcesFailed !== undefined) {
       data.sourcesFailed = jsonInput(patch.sourcesFailed);
+    }
+    if (patch.targetResults !== undefined) {
+      data.targetResults = jsonInput(
+        targetResultsForStorage(patch.targetResults),
+      );
+    }
+    if (patch.coverageDegraded !== undefined) {
+      data.coverageDegraded = patch.coverageDegraded;
     }
     if (patch.jobsFetched !== undefined) data.jobsFetched = patch.jobsFetched;
     if (patch.jobsNormalized !== undefined) {
@@ -324,13 +352,21 @@ export class PrismaWatchRepository implements WatchRepository {
     input: PersistObservationAndMatchInput,
   ): Promise<PersistObservationAndMatchResult> {
     return this.serializableTransaction(async (transaction) => {
-      const observation = await this.upsertObservedJobInTransaction(
+      const observedJob = await this.resolveAnchoredCanonicalEpisode(
         transaction,
         input.observedJob,
+        input.canonicalEpisodeAnchorWindowMs,
+      );
+      const observation = await this.upsertObservedJobInTransaction(
+        transaction,
+        observedJob,
       );
       const match = await this.upsertMatchInTransaction(transaction, {
         ...input.match,
         observedJobId: observation.job.id,
+        canonicalEpisodeKey:
+          observation.job.canonicalEpisodeKey ??
+          input.match.canonicalEpisodeKey,
       });
       return {
         job: observation.job,
@@ -352,6 +388,15 @@ export class PrismaWatchRepository implements WatchRepository {
     patch: Partial<WatchMatch>,
   ): Promise<WatchMatch> {
     const data: Prisma.WatchMatchUncheckedUpdateInput = {};
+    if (patch.observedJobId !== undefined) {
+      data.observedJobId = patch.observedJobId;
+    }
+    if (patch.canonicalEpisodeKey !== undefined) {
+      data.canonicalEpisodeKey = patch.canonicalEpisodeKey;
+    }
+    if (patch.sourceTargetKey !== undefined) {
+      data.sourceTargetKey = patch.sourceTargetKey;
+    }
     if (patch.score !== undefined) data.score = patch.score;
     if (patch.scoreBreakdown !== undefined) {
       data.scoreBreakdown = jsonInput(patch.scoreBreakdown);
@@ -368,6 +413,9 @@ export class PrismaWatchRepository implements WatchRepository {
     }
     if (patch.notificationState !== undefined) {
       data.notificationState = patch.notificationState;
+    }
+    if (patch.notificationSuppressionReason !== undefined) {
+      data.notificationSuppressionReason = patch.notificationSuppressionReason;
     }
     const row = await this.prisma.watchMatch.update({ where: { id }, data });
     return mapMatch(row);
@@ -594,12 +642,25 @@ export class PrismaWatchRepository implements WatchRepository {
     transaction: Prisma.TransactionClient,
     input: ObservedJobInput,
   ): Promise<ObservationUpsertResult> {
-    const existing = await transaction.observedJob.findUnique({
+    let storageFingerprint = input.fingerprint;
+    let existing = await transaction.observedJob.findUnique({
       where: { fingerprint: input.fingerprint },
     });
+    if (requiresEpisodeScopedObservation(existing, input)) {
+      storageFingerprint = episodeObservationFingerprint(
+        input.fingerprint,
+        input.canonicalEpisodeKey!,
+      );
+      existing = await transaction.observedJob.findUnique({
+        where: { fingerprint: storageFingerprint },
+      });
+    }
     if (!existing) {
       const row = await transaction.observedJob.create({
-        data: observedJobCreateData(input),
+        data: observedJobCreateData({
+          ...input,
+          fingerprint: storageFingerprint,
+        }),
       });
       return {
         job: mapObservedJob(row),
@@ -620,31 +681,118 @@ export class PrismaWatchRepository implements WatchRepository {
     };
   }
 
+  private async resolveAnchoredCanonicalEpisode(
+    transaction: Prisma.TransactionClient,
+    input: ObservedJobInput,
+    windowMs: number | undefined,
+  ): Promise<ObservedJobInput> {
+    const anchor = input.canonicalEpisodeStartedAt;
+    if (
+      !windowMs ||
+      windowMs <= 0 ||
+      !input.canonicalKey ||
+      !input.canonicalEpisodeKey ||
+      !anchor ||
+      !Number.isFinite(anchor.getTime())
+    ) {
+      return input;
+    }
+    const recent = await transaction.observedJob.findFirst({
+      where: {
+        canonicalKey: input.canonicalKey,
+        canonicalEpisodeKey: { not: null },
+        canonicalEpisodeStartedAt: {
+          gte: new Date(anchor.getTime() - windowMs),
+          lte: anchor,
+        },
+      },
+      orderBy: [{ canonicalEpisodeStartedAt: "desc" }, { id: "desc" }],
+      select: {
+        canonicalEpisodeKey: true,
+        canonicalEpisodeStartedAt: true,
+      },
+    });
+    return recent?.canonicalEpisodeKey && recent.canonicalEpisodeStartedAt
+      ? {
+          ...input,
+          canonicalEpisodeKey: recent.canonicalEpisodeKey,
+          canonicalEpisodeStartedAt: recent.canonicalEpisodeStartedAt,
+        }
+      : input;
+  }
+
   private async upsertMatchInTransaction(
     transaction: Prisma.TransactionClient,
     input: WatchMatchInput,
   ): Promise<MatchUpsertResult> {
-    const existing = await transaction.watchMatch.findUnique({
-      where: {
-        watchId_observedJobId: {
-          watchId: input.watchId,
-          observedJobId: input.observedJobId,
+    let existing = input.canonicalEpisodeKey
+      ? await transaction.watchMatch.findUnique({
+          where: {
+            watchId_canonicalEpisodeKey: {
+              watchId: input.watchId,
+              canonicalEpisodeKey: input.canonicalEpisodeKey,
+            },
+          },
+        })
+      : null;
+    if (!existing) {
+      const observationMatch = await transaction.watchMatch.findUnique({
+        where: {
+          watchId_observedJobId: {
+            watchId: input.watchId,
+            observedJobId: input.observedJobId,
+          },
         },
-      },
-    });
+      });
+      // The observed-job identity is only a compatibility path for rows that
+      // predate canonical episodes. A non-null, different episode is never
+      // collapsed into the incoming canonical episode.
+      if (
+        !input.canonicalEpisodeKey ||
+        !observationMatch?.canonicalEpisodeKey
+      ) {
+        existing = observationMatch;
+      }
+    }
     if (!existing) {
       const row = await transaction.watchMatch.create({
         data: matchCreateData(input),
       });
       return { match: mapMatch(row), isNew: true };
     }
+    const promotesEligibilitySuppression =
+      existing.notificationState === "suppressed" &&
+      existing.notificationSuppressionReason === "eligibility" &&
+      input.notificationState === "pending";
+    const useIncomingObservation =
+      existing.observedJobId === input.observedJobId ||
+      input.score > existing.score ||
+      promotesEligibilitySuppression ||
+      (await incomingObservationIsRicher(
+        transaction,
+        existing.observedJobId,
+        input.observedJobId,
+      ));
     const row = await transaction.watchMatch.update({
       where: { id: existing.id },
       data: {
-        score: input.score,
-        scoreBreakdown: jsonInput(input.scoreBreakdown),
-        matchedTerms: jsonInput(input.matchedTerms),
-        excludedReason: input.excludedReason,
+        ...(useIncomingObservation
+          ? {
+              observedJobId: input.observedJobId,
+              canonicalEpisodeKey: input.canonicalEpisodeKey,
+              sourceTargetKey: input.sourceTargetKey,
+              score: input.score,
+              scoreBreakdown: jsonInput(input.scoreBreakdown),
+              matchedTerms: jsonInput(input.matchedTerms),
+              excludedReason: input.excludedReason,
+            }
+          : {}),
+        ...(promotesEligibilitySuppression
+          ? {
+              notificationState: "pending",
+              notificationSuppressionReason: null,
+            }
+          : {}),
         lastMatchedAt: input.lastMatchedAt,
       },
     });
@@ -690,6 +838,7 @@ function watchCreateData(
     sourceTargets: jsonInput(
       sourceTargetsForStorage(input.sourceTargets ?? []),
     ),
+    targetHealth: jsonInput(targetHealthForStorage(input.targetHealth ?? {})),
     companySlugs: jsonInput(input.companySlugs ?? []),
     companies: jsonInput(input.companies ?? []),
     searchTerms: jsonInput(input.searchTerms ?? []),
@@ -742,6 +891,9 @@ function watchUpdateData(
     data.sourceTargets = jsonInput(
       sourceTargetsForStorage(input.sourceTargets),
     );
+  }
+  if (input.targetHealth !== undefined) {
+    data.targetHealth = jsonInput(targetHealthForStorage(input.targetHealth));
   }
   if (input.companySlugs !== undefined) {
     data.companySlugs = jsonInput(input.companySlugs);
@@ -802,6 +954,7 @@ function observedJobCreateData(
   return {
     fingerprint: input.fingerprint,
     source: input.source,
+    sourceTargetKey: input.sourceTargetKey,
     sourceType: input.sourceType,
     externalJobId: input.externalJobId,
     company: input.company,
@@ -810,6 +963,10 @@ function observedJobCreateData(
     normalizedTitle: input.normalizedTitle,
     location: input.location,
     normalizedLocation: input.normalizedLocation,
+    locations: jsonInput(input.locations ?? []),
+    canonicalKey: input.canonicalKey,
+    canonicalEpisodeKey: input.canonicalEpisodeKey,
+    canonicalEpisodeStartedAt: input.canonicalEpisodeStartedAt,
     workplaceType: input.workplaceType,
     employmentType: input.employmentType,
     description: input.description,
@@ -829,6 +986,7 @@ function observedJobUpdateData(
 ): Prisma.ObservedJobUncheckedUpdateInput {
   return {
     source: input.source,
+    sourceTargetKey: input.sourceTargetKey,
     sourceType: input.sourceType,
     externalJobId: input.externalJobId,
     company: input.company,
@@ -837,6 +995,10 @@ function observedJobUpdateData(
     normalizedTitle: input.normalizedTitle,
     location: input.location,
     normalizedLocation: input.normalizedLocation,
+    locations: jsonInput(input.locations ?? []),
+    canonicalKey: input.canonicalKey,
+    canonicalEpisodeKey: input.canonicalEpisodeKey,
+    canonicalEpisodeStartedAt: input.canonicalEpisodeStartedAt,
     workplaceType: input.workplaceType,
     employmentType: input.employmentType,
     description: input.description,
@@ -856,6 +1018,8 @@ function matchCreateData(
   return {
     watchId: input.watchId,
     observedJobId: input.observedJobId,
+    canonicalEpisodeKey: input.canonicalEpisodeKey,
+    sourceTargetKey: input.sourceTargetKey,
     score: input.score,
     scoreBreakdown: jsonInput(input.scoreBreakdown),
     matchedTerms: jsonInput(input.matchedTerms),
@@ -864,6 +1028,7 @@ function matchCreateData(
     firstMatchedAt: input.firstMatchedAt,
     lastMatchedAt: input.lastMatchedAt,
     notificationState: input.notificationState,
+    notificationSuppressionReason: input.notificationSuppressionReason,
   };
 }
 
@@ -983,6 +1148,7 @@ function mapWatch(row: PrismaJobWatch): JobWatch {
     sources: stringArray(row.sources),
     sourceTiers: numberRecord(row.sourceTiers),
     sourceTargets: sourceTargetsFromStorage(row.sourceTargets),
+    targetHealth: targetHealthFromStorage(row.targetHealth),
     companySlugs: stringArray(row.companySlugs),
     companies: stringArray(row.companies),
     searchTerms: stringArray(row.searchTerms),
@@ -1018,6 +1184,7 @@ function mapObservedJob(row: PrismaObservedJob): ObservedJob {
     id: row.id,
     fingerprint: row.fingerprint,
     source: row.source,
+    sourceTargetKey: row.sourceTargetKey,
     sourceType: row.sourceType,
     externalJobId: row.externalJobId,
     company: row.company,
@@ -1026,6 +1193,10 @@ function mapObservedJob(row: PrismaObservedJob): ObservedJob {
     normalizedTitle: row.normalizedTitle,
     location: row.location,
     normalizedLocation: row.normalizedLocation,
+    locations: locationArray(row.locations),
+    canonicalKey: row.canonicalKey,
+    canonicalEpisodeKey: row.canonicalEpisodeKey,
+    canonicalEpisodeStartedAt: row.canonicalEpisodeStartedAt,
     workplaceType: row.workplaceType,
     employmentType: row.employmentType,
     description: row.description,
@@ -1047,6 +1218,8 @@ function mapMatch(row: PrismaWatchMatch): WatchMatch {
     id: row.id,
     watchId: row.watchId,
     observedJobId: row.observedJobId,
+    canonicalEpisodeKey: row.canonicalEpisodeKey,
+    sourceTargetKey: row.sourceTargetKey,
     score: row.score,
     scoreBreakdown: row.scoreBreakdown as unknown as ScoreBreakdown,
     matchedTerms: stringArray(row.matchedTerms),
@@ -1055,6 +1228,8 @@ function mapMatch(row: PrismaWatchMatch): WatchMatch {
     firstMatchedAt: row.firstMatchedAt,
     lastMatchedAt: row.lastMatchedAt,
     notificationState: row.notificationState as NotificationStatus,
+    notificationSuppressionReason:
+      row.notificationSuppressionReason as NotificationSuppressionReason | null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -1096,6 +1271,8 @@ function mapRun(row: PrismaWatchRun): WatchRun {
     sourcesRequested: stringArray(row.sourcesRequested),
     sourcesSucceeded: stringArray(row.sourcesSucceeded),
     sourcesFailed: stringArray(row.sourcesFailed),
+    targetResults: targetResultsFromStorage(row.targetResults),
+    coverageDegraded: row.coverageDegraded,
     jobsFetched: row.jobsFetched,
     jobsNormalized: row.jobsNormalized,
     newJobsDetected: row.newJobsDetected,
@@ -1109,7 +1286,7 @@ function mapRun(row: PrismaWatchRun): WatchRun {
 
 function sourceTargetsForStorage(
   targets: WatchSourceTarget[],
-): Array<Record<string, string | number | boolean | null>> {
+): Prisma.InputJsonObject[] {
   return targets.map((target) => ({
     site: String(target.site),
     tier: target.tier,
@@ -1118,6 +1295,26 @@ function sourceTargetsForStorage(
     ...(target.companySlug === undefined
       ? {}
       : { companySlug: target.companySlug }),
+    ...(target.companyName === undefined
+      ? {}
+      : { companyName: target.companyName }),
+    ...(target.searchScope === undefined
+      ? {}
+      : {
+          searchScope: {
+            countryCodes: target.searchScope.countryCodes,
+            locations: target.searchScope.locations,
+            ...(target.searchScope.searchTerms === undefined
+              ? {}
+              : { searchTerms: target.searchScope.searchTerms }),
+            ...(target.searchScope.maxRequestsPerRun === undefined
+              ? {}
+              : { maxRequestsPerRun: target.searchScope.maxRequestsPerRun }),
+          },
+        }),
+    ...(target.initializedAt === undefined
+      ? {}
+      : { initializedAt: target.initializedAt?.toISOString() ?? null }),
     ...(target.lastRunAt === undefined
       ? {}
       : { lastRunAt: target.lastRunAt?.toISOString() ?? null }),
@@ -1151,6 +1348,15 @@ function sourceTargetsFromStorage(
       ...(typeof candidate.companySlug === "string"
         ? { companySlug: candidate.companySlug }
         : {}),
+      ...(typeof candidate.companyName === "string"
+        ? { companyName: candidate.companyName }
+        : {}),
+      ...(searchScopeFromStorage(candidate.searchScope)
+        ? { searchScope: searchScopeFromStorage(candidate.searchScope) }
+        : {}),
+      ...(candidate.initializedAt === undefined
+        ? {}
+        : { initializedAt: nullableDate(candidate.initializedAt) }),
       ...(candidate.lastRunAt === undefined
         ? {}
         : { lastRunAt: nullableDate(candidate.lastRunAt) }),
@@ -1162,6 +1368,156 @@ function sourceTargetsFromStorage(
   return targets;
 }
 
+function targetHealthForStorage(
+  health: Record<string, WatchTargetHealth>,
+): Prisma.InputJsonObject {
+  return Object.fromEntries(
+    Object.entries(health).map(([targetKey, state]) => [
+      targetKey,
+      {
+        targetKey: state.targetKey,
+        tier: state.tier,
+        successCount: state.successCount,
+        hardFailureCount: state.hardFailureCount,
+        emptyRunCount: state.emptyRunCount,
+        partialRunCount: state.partialRunCount,
+        consecutiveHardFailures: state.consecutiveHardFailures,
+        lastAttemptAt: state.lastAttemptAt?.toISOString() ?? null,
+        lastSuccessAt: state.lastSuccessAt?.toISOString() ?? null,
+        lastNonEmptyAt: state.lastNonEmptyAt?.toISOString() ?? null,
+        degradedAt: state.degradedAt?.toISOString() ?? null,
+      },
+    ]),
+  );
+}
+
+function targetHealthFromStorage(
+  value: Prisma.JsonValue,
+): Record<string, WatchTargetHealth> {
+  if (!isJsonObject(value)) return {};
+  const health: Record<string, WatchTargetHealth> = {};
+  for (const [targetKey, candidate] of Object.entries(value)) {
+    if (!isJsonObject(candidate)) continue;
+    const tier = candidate.tier;
+    if (tier !== 1 && tier !== 2 && tier !== 3) continue;
+    health[targetKey] = {
+      targetKey,
+      tier,
+      successCount: nonNegativeJsonInteger(candidate.successCount),
+      hardFailureCount: nonNegativeJsonInteger(candidate.hardFailureCount),
+      emptyRunCount: nonNegativeJsonInteger(candidate.emptyRunCount),
+      partialRunCount: nonNegativeJsonInteger(candidate.partialRunCount),
+      consecutiveHardFailures: nonNegativeJsonInteger(
+        candidate.consecutiveHardFailures,
+      ),
+      lastAttemptAt: nullableDate(candidate.lastAttemptAt),
+      lastSuccessAt: nullableDate(candidate.lastSuccessAt),
+      lastNonEmptyAt: nullableDate(candidate.lastNonEmptyAt),
+      degradedAt: nullableDate(candidate.degradedAt),
+    };
+  }
+  return health;
+}
+
+function targetResultsForStorage(
+  results: WatchTargetRunResult[],
+): Prisma.InputJsonObject[] {
+  return results.map((result) => ({
+    ...result,
+    lastSuccessAt: result.lastSuccessAt?.toISOString() ?? null,
+    lastNonEmptyAt: result.lastNonEmptyAt?.toISOString() ?? null,
+  }));
+}
+
+function targetResultsFromStorage(
+  value: Prisma.JsonValue,
+): WatchTargetRunResult[] {
+  if (!Array.isArray(value)) return [];
+  const results: WatchTargetRunResult[] = [];
+  for (const candidate of value) {
+    if (!isJsonObject(candidate)) continue;
+    const tier = candidate.tier;
+    const status = candidate.status;
+    const outcome = candidate.outcome;
+    if (
+      typeof candidate.targetKey !== "string" ||
+      (tier !== 1 && tier !== 2 && tier !== 3) ||
+      (status !== "succeeded" && status !== "partial" && status !== "failed") ||
+      (outcome !== "success" &&
+        outcome !== "empty" &&
+        outcome !== "partial" &&
+        outcome !== "hard_failure")
+    ) {
+      continue;
+    }
+    results.push({
+      targetKey: candidate.targetKey,
+      tier,
+      status,
+      outcome,
+      requests: nonNegativeJsonInteger(candidate.requests),
+      requestsSucceeded: nonNegativeJsonInteger(candidate.requestsSucceeded),
+      requestsFailed: nonNegativeJsonInteger(candidate.requestsFailed),
+      jobsFetched: nonNegativeJsonInteger(candidate.jobsFetched),
+      durationMs: nonNegativeJsonInteger(candidate.durationMs),
+      empty: candidate.empty === true,
+      hardFailure: candidate.hardFailure === true,
+      consecutiveHardFailures: nonNegativeJsonInteger(
+        candidate.consecutiveHardFailures,
+      ),
+      degraded: candidate.degraded === true,
+      lastSuccessAt: nullableDate(candidate.lastSuccessAt),
+      lastNonEmptyAt: nullableDate(candidate.lastNonEmptyAt),
+    });
+  }
+  return results;
+}
+
+function locationArray(
+  value: Prisma.JsonValue,
+): NonNullable<ObservedJob["locations"]> {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((candidate) => {
+    if (!isJsonObject(candidate)) return [];
+    const location: Record<string, string | null> = {};
+    for (const key of ["city", "state", "country"] as const) {
+      const part = candidate[key];
+      if (typeof part === "string" || part === null) location[key] = part;
+    }
+    return Object.keys(location).length > 0 ? [new LocationDto(location)] : [];
+  });
+}
+
+function nonNegativeJsonInteger(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.max(0, Math.trunc(value))
+    : 0;
+}
+
+function searchScopeFromStorage(
+  value: Prisma.JsonValue | undefined,
+): WatchSourceTarget["searchScope"] | undefined {
+  if (!value || !isJsonObject(value)) return undefined;
+  const countryCodes = stringArray(value.countryCodes ?? []);
+  const locations = stringArray(value.locations ?? []);
+  if (countryCodes.length === 0 || locations.length === 0) return undefined;
+  const searchTerms =
+    value.searchTerms === undefined
+      ? undefined
+      : stringArray(value.searchTerms);
+  const maxRequestsPerRun =
+    typeof value.maxRequestsPerRun === "number" &&
+    Number.isFinite(value.maxRequestsPerRun)
+      ? Math.max(1, Math.trunc(value.maxRequestsPerRun))
+      : undefined;
+  return {
+    countryCodes,
+    locations,
+    ...(searchTerms === undefined ? {} : { searchTerms }),
+    ...(maxRequestsPerRun === undefined ? {} : { maxRequestsPerRun }),
+  };
+}
+
 function nullableDate(value: unknown): Date | null {
   if (value === null) return null;
   if (typeof value !== "string") return null;
@@ -1169,11 +1525,11 @@ function nullableDate(value: unknown): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function isJsonObject(value: Prisma.JsonValue): value is Prisma.JsonObject {
+function isJsonObject(value: unknown): value is Prisma.JsonObject {
   return value !== null && !Array.isArray(value) && typeof value === "object";
 }
 
-function stringArray(value: Prisma.JsonValue): string[] {
+function stringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.filter((item): item is string => typeof item === "string");
 }
@@ -1223,4 +1579,51 @@ function isRetryableTransactionError(error: unknown): boolean {
   if (!error || typeof error !== "object" || !("code" in error)) return false;
   const code = Reflect.get(error, "code");
   return code === "P2002" || code === "P2034";
+}
+
+function requiresEpisodeScopedObservation(
+  existing: PrismaObservedJob | null,
+  input: ObservedJobInput,
+): boolean {
+  return Boolean(
+    existing?.canonicalEpisodeKey &&
+    input.canonicalEpisodeKey &&
+    existing.canonicalEpisodeKey !== input.canonicalEpisodeKey,
+  );
+}
+
+function episodeObservationFingerprint(
+  sourceFingerprint: string,
+  canonicalEpisodeKey: string,
+): string {
+  return createHash("sha256")
+    .update(
+      ["observation-episode", sourceFingerprint, canonicalEpisodeKey].join("|"),
+    )
+    .digest("hex");
+}
+
+async function incomingObservationIsRicher(
+  transaction: Prisma.TransactionClient,
+  currentId: string,
+  incomingId: string,
+): Promise<boolean> {
+  const [current, incoming] = await Promise.all([
+    transaction.observedJob.findUnique({ where: { id: currentId } }),
+    transaction.observedJob.findUnique({ where: { id: incomingId } }),
+  ]);
+  if (!incoming) return false;
+  if (!current) return true;
+  return observationRichness(incoming) > observationRichness(current);
+}
+
+function observationRichness(row: PrismaObservedJob): number {
+  const locations = Array.isArray(row.locations) ? row.locations.length : 0;
+  return (
+    (row.applicationUrl ? 100 : 0) +
+    (row.sourcePublishedAt ? 30 : 0) +
+    Math.min(50, locations * 10) +
+    (row.jobUrl ? 10 : 0) +
+    Math.min(40, Math.floor((row.description?.length ?? 0) / 500))
+  );
 }

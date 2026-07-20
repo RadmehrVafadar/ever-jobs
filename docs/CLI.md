@@ -157,6 +157,92 @@ The compare command outputs:
 
 ---
 
+### `watch` — Manage Persistent Watches
+
+The watcher CLI uses the same PostgreSQL repositories and validation as the API,
+with its scheduler disabled inside the administrative process.
+
+```bash
+npm run cli -- watch <action> [arguments] [options]
+```
+
+Core actions are:
+
+| Action | Purpose |
+| ------ | ------- |
+| `create --config <file>` | Create a validated watch from JSON |
+| `update <watch-id> --config <file>` | Apply a validated watch patch |
+| `list`, `show <watch-id>`, `delete <watch-id>` | Inspect or remove watches |
+| `run <watch-id>` | Run safely: baseline if uninitialized, recent-only otherwise |
+| `initialize <watch-id>` | Run a no-notification baseline for all enabled targets |
+| `initialize <watch-id> --target <key>` | Baseline only selected target keys; repeat `--target` as needed |
+| `pause <watch-id>`, `resume <watch-id>` | Control future scheduling |
+| `runs`, `matches`, `metrics`, `observed-jobs`, `deliveries` | Read durable history and operational state |
+| `match-status <match-id> <status>` | Update application workflow status |
+| `notifications-test <watch-id>` | Test Discord configuration without creating a fake match |
+
+#### Targeted initialization
+
+Target keys are stable planner keys: `<site>` for a singleton source and
+`<site>:<companySlug>` for a generic ATS board. Use the actual `Site` value, such
+as `google_careers` (underscore), not a display-name slug. The current v2 preset
+target-enables `google_careers` inside the globally disabled/uninitialized watch,
+so it is a valid targeted-baseline key but cannot poll or notify while paused.
+
+```bash
+npm run cli -- watch initialize <watch-id> \
+  --target google_careers \
+  --target shopify \
+  --target ashby:wealthsimple \
+  --target ashby:plaid \
+  --target canadajobbank \
+  --target linkedin \
+  --json
+```
+
+`--target` is repeatable. Omit it to initialize every enabled target. Unknown,
+disabled, or duplicate keys produce a non-zero validated error. A target receives
+its baseline timestamp only after its own successful baseline; a failed sibling
+does not erase successful target state.
+
+#### Apply the Prestige Internships v2 preset
+
+Preset application is a dry run by default:
+
+```bash
+npm run cli -- watch preset apply prestige-internships-v2 --watch <watch-id>
+```
+
+The JSON diff classifies targets as unchanged, added, materially changed,
+disabled, or operator-only. It makes no state change. Review the diff, pause the
+watch, and mutate only with the explicit flag:
+
+```bash
+npm run cli -- watch pause <watch-id> --json
+npm run cli -- watch preset apply prestige-internships-v2 \
+  --watch <watch-id> \
+  --apply
+```
+
+Mutation rejects an enabled watch. It preserves notification destinations,
+thresholds, history, and unrelated operator edits. Baseline only target keys
+reported as added or materially changed, inspect their locations/application
+URLs and health, then repeat targeted initialization for two additional
+no-notification observation cycles before resume.
+
+The preset defaults to Canada-only Tier 1 and Canada/US Tier 2/3. Its 19 search
+terms form 76-entry Canadian matrices for Google Careers and Canada Job Bank and
+95-entry Canada/US matrices for Google Jobs and LinkedIn. Per-run request budgets
+are 12, 12, 12, and 8 respectively; LinkedIn uses a newest-first 72-hour recent
+window. The final target-enabled set inside the globally disabled/uninitialized
+watch is `google_careers`, `shopify`, `ashby:wealthsimple`, `ashby:plaid`,
+`canadajobbank`, and `linkedin`. Google Jobs and every unproven legacy direct
+target remain target-disabled. Six deterministic source suites (59 tests) and
+the recorded disabled smokes support these states; target baselines and both
+observation cycles still gate resume and notifications.
+
+---
+
 ## Output Formats
 
 ### JSON (default)

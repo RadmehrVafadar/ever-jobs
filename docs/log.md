@@ -5,6 +5,76 @@
 
 ---
 
+## 2026-07-19 — Spec 6000 — Prestige Internship Coverage Expansion
+
+**Specification:** Reserved the collision-free `6000–6999` Spec Kit band for
+`RadmehrVafadar/ever-jobs`, allocated Spec 6000, and added the authoritative
+specification, implementation plan, ordered task ledger, and human-readable
+mirror. The contract makes Tier 1 Canada-only and Tiers 2/3 Canada-and-US,
+requires title/structured-type internship evidence, and separates geography
+eligibility from Toronto/GTA/Waterloo ranking preference.
+
+**Coverage and safety:** Defined official/public Google Careers, Shopify,
+Wealthsimple-through-Ashby, Google Jobs, and unauthenticated LinkedIn behavior;
+bounded rotating term/location query matrices; lossless multi-location mapping;
+source-independent canonical episodes; per-target baseline and health; hard
+failure propagation; dry-run-first preset application; additive migration and
+rollback; deterministic fixture tests; and disabled operational smoke gates.
+Canonical fallback episodes are first-observation-anchored rolling 14-day
+windows rather than UTC buckets. Delivery identity is watch + canonical episode
++ channel/destination and excludes notification type, preventing band-change
+resends. Success, valid-empty, and partial outcomes reset a target's consecutive
+hard-failure streak.
+
+**Acceptance hardening:** Preserved legacy match uniqueness through an additive
+episode-scoped observation snapshot when a stable source fingerprint begins a
+new fallback episode after 14 days. Added a durable baseline-versus-eligibility
+suppression reason: baseline and sent matches remain terminal, while an unsent
+eligibility-suppressed canonical episode may promote to pending exactly once
+after a richer observation becomes eligible.
+
+**Documentation:** Updated the root and watcher READMEs, local and Google Cloud
+runbooks, plugin architecture, CLI guide, API changelog, upgrade guide, tool
+manifest, Spec 6000 mirror, and Google Jobs/LinkedIn plugin READMEs. The operator
+path now records the exact shipped preset state, 19-term rotating matrices (76
+Canadian and 95 Canada/US entries), 12/12/12/8 request caps, target-aware
+geography, targeted baseline semantics, canonical notification identity, durable
+health metrics, safe preset preview/apply, and rollback. Added the v2 example
+link while retaining and deprecating the Toronto example. Added Q-073 for the
+fork range, Q-074 for query budgets, and Q-075 for LinkedIn's recent window;
+updated the documentation index and linked this expansion beside Spec 016.
+
+**Integration evidence and rollout:** Six deterministic source suites passed (59
+tests). Disabled live evidence returned two Canadian Google Careers roles, a
+marker-validated valid empty Shopify board, 37 Wealthsimple Ashby roles with a
+capped mapped sample, and a successful unauthenticated LinkedIn listing/detail
+result. Microsoft timed out and Google Jobs returned the classified
+enable-JavaScript shell. The v2 watch remains globally disabled/uninitialized;
+`google_careers`, `shopify`, `ashby:wealthsimple`, `ashby:plaid`,
+`canadajobbank`, and `linkedin` are target-enabled inventory, while Google Jobs
+and every legacy direct target remain target-disabled. Target-enabled does not
+poll or notify while paused. Targeted baselines and two additional
+no-notification observation cycles remain mandatory before resume.
+
+**Documentation validation:** JSON parsing passed for `tool_manifest.json` and
+`.specify/ranges.json`. The documentation linter reported no Spec 6000 or watcher
+documentation defects; its only findings remain the two pre-existing missing H1
+and metadata-table defects in Spec 5024's `spec.md` and `plan.md`. The
+`git diff --check` check passed. The Nx lint gate exited zero with no configured
+lint tasks. Two bounded repository-wide Nx build attempts—normal and with the
+daemon/cache disabled—stalled before emitting task output and were terminated;
+direct TypeScript compilation passed for the watcher, API, CLI, worker, common,
+models, plugin infrastructure, and all seven affected source packages instead.
+Prisma validation/generation and the focused source, watcher, persistence,
+health, API, CLI, DTO, location, and plugin-registration suites passed.
+The final episode-edge validation passed both persistence suites (9 tests) and
+the watcher execution pipeline (11 tests); direct watcher, Google Jobs, and
+LinkedIn TypeScript checks passed. An independent post-fix acceptance review
+found no remaining high- or medium-severity issue in rollover, suppression
+promotion, baseline/sent closure, or delivery idempotency.
+
+---
+
 ## 2026-07-14 — Run #462 — Watcher live pipeline and Docker validation
 
 **Implementation:** Completed PostgreSQL repositories and migrations, database-backed scheduler leases, tier due-state, bounded source execution, explainable scoring gates, persistent notification outbox/retries/idempotency, Discord delivery, daily digest selection, REST/CLI management, health, Prometheus metrics, safe default seeding, and local/Google Cloud operations documentation. Updated the unattended source set to the verified public endpoints, including DoorDash Canada and Plaid through Ashby.

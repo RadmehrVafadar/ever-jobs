@@ -132,7 +132,7 @@ ATS scrapers require a `companySlug` to target a specific company's job board. E
 | **Greenhouse**         | Greenhouse         | REST API                  | Airbnb, Coinbase, Datadog, DoorDash, HubSpot, Notion, Stripe |
 | **Lever**              | Lever              | REST API                  | Netflix, Shopify, KPMG, Eventbrite, Atlassian                |
 | **Workday**            | Workday            | REST API                  | Amazon, Salesforce, Target, Bank of America, Visa            |
-| **Ashby**              | Ashby              | REST API                  | Ramp, Figma, Linear, Vercel, Plaid                           |
+| **Ashby**              | Ashby              | REST API                  | Ramp, Figma, Linear, Vercel, Plaid, Wealthsimple             |
 | **SmartRecruiters**    | SmartRecruiters    | REST API                  | Visa, Bosch, LinkedIn, Skechers, Equinox                     |
 | **Jobvite**            | Jobvite            | REST API                  | Logitech, Schneider Electric, Zappos                         |
 | **Workable**           | Workable           | GraphQL API               | Sephora, Bain Capital, Forbes                                |
@@ -168,7 +168,7 @@ ATS scrapers require a `companySlug` to target a specific company's job board. E
 | **iSmartRecruit**      | iSmartRecruit      | REST API (API Key)        | Global ATS                                                   |
 | **Recruiterflow**      | Recruiterflow      | REST API (API Key)        | Recruiting agencies                                          |
 
-### Company-Specific Scrapers (15)
+### Company-Specific Scrapers (16)
 
 Direct integrations with major tech companies' career APIs.
 
@@ -181,8 +181,9 @@ Direct integrations with major tech companies' career APIs.
 | **TikTok**    | `lifeattiktok.com` API            | REST POST        |
 | **Uber**      | `uber.com/api`                    | REST POST        |
 | **Cursor**    | `cursor.com/careers`              | HTML scraping    |
-| **Google**    | `careers.google.com` API          | REST GET         |
+| **Google**    | Official Careers results/details  | HTML parsing     |
 | **Meta**      | `metacareers.com`                 | `__NEXT_DATA__`  |
+| **Shopify**   | `shopify.com/careers`             | HTML parsing     |
 | **Netflix**   | `jobs.netflix.com` API            | REST GET         |
 | **Stripe**    | Greenhouse API                    | REST GET         |
 | **OpenAI**    | Ashby API                         | REST POST        |
@@ -462,7 +463,7 @@ All parameters are optional. When `siteType` is omitted, search + company scrape
 
 | Parameter                  | Type       | Default    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | -------------------------- | ---------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `siteType`                 | `string[]` | all        | Sites to search. **Search**: `linkedin`, `indeed`, `zip_recruiter`, `glassdoor`, `google`, `bayt`, `naukri`, `bdjobs`, `internshala`, `exa`, `upwork`, `remoteok`, `remotive`, `jobicy`, `himalayas`, `arbeitnow`, `weworkremotely`, `usajobs`, `adzuna`, `reed`, `jooble`, `careerjet`, `dice`, `simplyhired`, `wellfound`, `stepstone`, `monster`, `careerbuilder`, `builtin`, `snagajob`, `dribbble`, `themuse`, `workingnomads`, `fourdayweek`, `startupjobs`, `nodesk`, `web3career`, `echojobs`, `jobstreet`, `careeronestop`, `arbeitsagentur`, `hackernews`, `landingjobs`, `findwork`, `jobdataapi`, `authenticjobs`, `cryptojobslist`, `jobspresso`, `higheredjobs`, `fossjobs`, `larajobs`, `pythonjobs`, `drupaljobs`, `realworkfromanywhere`, `golangjobs`, `wordpressjobs`, `talroo`, `infojobs`, `jobtechdev`, `francetravail`, `navjobs`, `jobsacuk`, `jobindex`, `getonboard`, `freelancercom`, `joinrise`, `canadajobbank`, `reliefweb`, `undpjobs`, `devitjobs`, `pyjobs`, `vuejobs`, `conservationjobs`, `coroflot`, `berlinstartupjobs`, `railsjobs`, `elixirjobs`, `crunchboard`, `cryptocurrencyjobs`, `hasjob`, `icrunchdata`, `swissdevjobs`, `germantechjobs`, `virtualvocations`, `nofluffjobs`, `greenjobsboard`, `eurojobs`, `opensourcedesignjobs`, `academiccareers`, `remotefirstjobs`, `djinni`, `headhunter`, `habrcareer`, `mycareersfuture`, `jobsinjapan`, `duunitori`, `jobsch`, `guardianjobs`, `androidjobs`, `iosdevjobs`, `devopsjobs`, `functionalworks`, `powertofly`, `clojurejobs`, `ecojobs`. **ATS**: `ashby`, `greenhouse`, `lever`, `workable`, `smartrecruiters`, `rippling`, `workday`, `recruitee`, `teamtailor`, `bamboohr`, `personio`, `jazzhr`, `icims`, `taleo`, `successfactors`, `jobvite`, `adp`, `ukg`, `breezyhr`, `comeet`, `pinpoint`, `manatal`, `paylocity`, `freshteam`, `bullhorn`, `trakstar`, `hiringthing`, `loxo`, `fountain`, `deel`, `phenom`, `jobylon`, `homerun`, `jobscore`, `talentlyft`, `crelate`, `ismartrecruit`, `recruiterflow`. **Company**: `amazon`, `apple`, `microsoft`, `nvidia`, `tiktok`, `uber`, `cursor`, `google_careers`, `meta`, `netflix`, `stripe`, `openai`, `ibm`, `boeing`, `zoom` |
+| `siteType`                 | `string[]` | all        | Sites to search. **Search**: `linkedin`, `indeed`, `zip_recruiter`, `glassdoor`, `google`, `bayt`, `naukri`, `bdjobs`, `internshala`, `exa`, `upwork`, `remoteok`, `remotive`, `jobicy`, `himalayas`, `arbeitnow`, `weworkremotely`, `usajobs`, `adzuna`, `reed`, `jooble`, `careerjet`, `dice`, `simplyhired`, `wellfound`, `stepstone`, `monster`, `careerbuilder`, `builtin`, `snagajob`, `dribbble`, `themuse`, `workingnomads`, `fourdayweek`, `startupjobs`, `nodesk`, `web3career`, `echojobs`, `jobstreet`, `careeronestop`, `arbeitsagentur`, `hackernews`, `landingjobs`, `findwork`, `jobdataapi`, `authenticjobs`, `cryptojobslist`, `jobspresso`, `higheredjobs`, `fossjobs`, `larajobs`, `pythonjobs`, `drupaljobs`, `realworkfromanywhere`, `golangjobs`, `wordpressjobs`, `talroo`, `infojobs`, `jobtechdev`, `francetravail`, `navjobs`, `jobsacuk`, `jobindex`, `getonboard`, `freelancercom`, `joinrise`, `canadajobbank`, `reliefweb`, `undpjobs`, `devitjobs`, `pyjobs`, `vuejobs`, `conservationjobs`, `coroflot`, `berlinstartupjobs`, `railsjobs`, `elixirjobs`, `crunchboard`, `cryptocurrencyjobs`, `hasjob`, `icrunchdata`, `swissdevjobs`, `germantechjobs`, `virtualvocations`, `nofluffjobs`, `greenjobsboard`, `eurojobs`, `opensourcedesignjobs`, `academiccareers`, `remotefirstjobs`, `djinni`, `headhunter`, `habrcareer`, `mycareersfuture`, `jobsinjapan`, `duunitori`, `jobsch`, `guardianjobs`, `androidjobs`, `iosdevjobs`, `devopsjobs`, `functionalworks`, `powertofly`, `clojurejobs`, `ecojobs`. **ATS**: `ashby`, `greenhouse`, `lever`, `workable`, `smartrecruiters`, `rippling`, `workday`, `recruitee`, `teamtailor`, `bamboohr`, `personio`, `jazzhr`, `icims`, `taleo`, `successfactors`, `jobvite`, `adp`, `ukg`, `breezyhr`, `comeet`, `pinpoint`, `manatal`, `paylocity`, `freshteam`, `bullhorn`, `trakstar`, `hiringthing`, `loxo`, `fountain`, `deel`, `phenom`, `jobylon`, `homerun`, `jobscore`, `talentlyft`, `crelate`, `ismartrecruit`, `recruiterflow`. **Company**: `amazon`, `apple`, `microsoft`, `nvidia`, `tiktok`, `uber`, `cursor`, `google_careers`, `shopify`, `meta`, `netflix`, `stripe`, `openai`, `ibm`, `boeing`, `zoom` |
 | `companySlug`              | `string`   | —          | Company identifier for ATS scrapers (e.g. `stripe`, `notion`). When set without `siteType`, only ATS scrapers run                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `searchTerm`               | `string`   | —          | Job search keywords                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `googleSearchTerm`         | `string`   | —          | Google-specific search query override                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
@@ -504,6 +505,10 @@ JobPost
 │   ├── city
 │   ├── state
 │   └── country
+├── locations[]                  all normalized advertised locations
+│   ├── city
+│   ├── state
+│   └── country
 ├── description
 ├── datePosted
 ├── isRemote
@@ -541,6 +546,11 @@ JobPost
 ├── vacancyCount                 (Naukri)
 └── workFromHomeType             (Naukri)
 ```
+
+`location` remains the primary compatibility field. Sources that advertise more
+than one place also return `locations`; its first entry is the primary location.
+Consumers that need geography or canonical identity should inspect the complete
+array rather than assuming the first location is the only eligible one.
 
 ---
 
@@ -1071,9 +1081,49 @@ You can also view a full list of our [contributors tracked by GitHub](https://gi
 
 ## Real-time job watcher
 
-Ever Jobs includes a persistent watcher for low-latency internship and co-op discovery. It reuses the registered source plugins, stores state and distributed execution leases in PostgreSQL, checks direct company/ATS sources every three minutes by default, scores new jobs, and sends idempotent Discord notifications after persistence succeeds. Tier 2 and Tier 3 sources default to 15-minute and 60-minute cadences so expensive sources are not polled every three minutes.
+Ever Jobs includes a persistent watcher for low-latency software internship and
+co-op discovery. It reuses registered source plugins, stores state and execution
+leases in PostgreSQL, retains every source observation, and groups equivalent
+company, Google Jobs, and LinkedIn discoveries under one canonical episode so a
+destination receives one notification for one posting. Delivery identity is
+watch + canonical episode + channel/destination; notification type is excluded,
+so a later score-band change cannot resend the episode. Eligibility-suppressed
+episodes may send once after richer source evidence makes them eligible;
+already-sent and baseline-suppressed episodes never reopen.
 
-The default seed is disabled and uses a no-notification baseline. The safe local sequence is:
+The versioned `prestige-internships-v2` preset applies geography to the target
+that produced a job:
+
+| Tier | Cadence | Coverage | Intended source role |
+| ---- | ------- | -------- | -------------------- |
+| 1 | 3 minutes | Canada only | Direct company and complete ATS boards, including Google Careers, Shopify, and Wealthsimple through Ashby after their evidence gates pass |
+| 2 | 15 minutes | Canada and United States | Canada Job Bank plus Google Jobs after a successful operational smoke |
+| 3 | 60 minutes | Canada and United States | Unauthenticated LinkedIn public guest search, newest-first over 72 hours by default |
+
+The shipped preset target-enables `google_careers`, `shopify`,
+`ashby:wealthsimple`, `ashby:plaid`, `canadajobbank`, and `linkedin`. The watch
+itself remains globally disabled and uninitialized, so target-enabled does not
+start polling or permit notifications. Google Jobs, Microsoft, and every other
+unproven legacy direct-company target remain target-disabled.
+
+The rotating query scopes contain 19 internship/co-op terms. Google Careers and
+Canada Job Bank combine them with four Canadian locations (76 matrix entries),
+while Google Jobs and LinkedIn combine them with five Canada/US locations (95
+entries). Their per-run request caps are 12, 12, 12, and 8 respectively; the
+cursor advances so later entries are not permanently starved.
+
+Toronto, the GTA, and Waterloo are ranking preferences, not eligibility borders.
+Internships in every Canadian province and territory can qualify in Tier 1;
+Tier 2/3 can additionally qualify US locations. Unknown geography is retained
+with an explanation and suppressed from immediate notification.
+
+New presets are disabled and uninitialized. Registration or fixture coverage is
+not permission to poll a third-party service unattended: every new or repaired
+target remains disabled until its failure fixtures and an operator-authorized,
+disabled live smoke confirm its public surface, locations, application URLs, and
+hard-failure behavior.
+
+The safe local sequence is:
 
 ```bash
 cp .env.example .env
@@ -1085,15 +1135,59 @@ npm run db:seed
 npm run start:watcher:dev
 ```
 
-In a second terminal, baseline all configured tiers, test Discord, and only then enable scheduling:
+In a second terminal, preview the v2 preset against the paused watch. The first
+command is a read-only JSON diff; only `--apply` mutates the watch:
 
 ```bash
 npm run cli -- watch list --json
-npm run cli -- watch initialize <watch-id> --json
+npm run cli -- watch preset apply prestige-internships-v2 --watch <watch-id>
+npm run cli -- watch preset apply prestige-internships-v2 --watch <watch-id> --apply
+```
+
+Initialize only targets reported as added or materially changed. `--target` is
+repeatable; omitting it retains initialize-all behavior:
+
+```bash
+npm run cli -- watch initialize <watch-id> \
+  --target google_careers \
+  --target shopify \
+  --target ashby:wealthsimple \
+  --target ashby:plaid \
+  --target canadajobbank \
+  --target linkedin \
+  --json
+# Repeat the same targeted initialize command for two additional
+# no-notification observation cycles while the watch remains paused.
 npm run cli -- watch notifications-test <watch-id> --json
 npm run cli -- watch resume <watch-id> --json
 ```
 
-Set the complete webhook only in `DISCORD_WEBHOOK_URL`; never put it in watch JSON or source control. Redis is not required. See the [watcher application guide](apps/watcher/README.md), the copy-and-paste [local operations runbook](docs/runbooks/watcher-local.md), and the [Google Cloud deployment runbook](docs/runbooks/watcher-google-cloud.md). An example watch is in [examples/toronto-canada-software-internships.watch.json](examples/toronto-canada-software-internships.watch.json).
+Set the complete webhook only in `DISCORD_WEBHOOK_URL`; never put it in watch
+JSON or source control. Redis is not required. Keep the watch paused while
+applying a preset and targeted-baselining changed targets. Then run two
+no-notification observation cycles, inspect target outcomes, and resume only
+after operator review.
 
-The unattended seed enables Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash Canada, Coinbase, Figma, Vercel, Plaid through Ashby, and Canada Job Bank. Google Careers, Meta, Shopify, Google Jobs, and Wellfound are intentionally absent until their stale or fragile adapters are repaired. Do not enable a repaired source on a live watch until it has been initialized while the watch is disabled.
+See the [watcher application guide](apps/watcher/README.md), the copy-and-paste
+[local operations runbook](docs/runbooks/watcher-local.md), and the
+[Google Cloud deployment runbook](docs/runbooks/watcher-google-cloud.md). The
+[Canada/USA v2 example](examples/prestige-internships-v2-canada-usa.watch.json)
+is the current example. The older
+[Toronto/Canada example](examples/toronto-canada-software-internships.watch.json)
+is retained for compatibility but deprecated.
+
+LinkedIn coverage is unauthenticated and best effort. The watcher does not use a
+personal account, cookies, authenticated browser sessions, CAPTCHA bypass, or a
+claim of exact parity with personalized LinkedIn alerts. Meta and Wellfound
+direct adapters remain disabled; their jobs may still arrive through validated
+Tier 2/3 redundancy. Google Jobs fixture/failure handling is implemented, but its
+current live smoke returned an enable-JavaScript shell, so the unattended target
+remains disabled pending a successful operational smoke.
+
+Final source validation passed six deterministic suites (59 tests). Disabled
+live evidence returned two Canadian Google Careers roles, a marker-validated
+valid empty Shopify board, 37 Wealthsimple Ashby roles with a capped mapped
+sample, and a successful unauthenticated LinkedIn listing/detail result.
+Microsoft timed out and Google Jobs was classified blocked; both remain
+target-disabled. None of this bypasses the required target baselines and two
+no-notification observation cycles.

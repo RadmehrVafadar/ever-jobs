@@ -1,37 +1,59 @@
 import { Injectable } from "@nestjs/common";
-import { JobPostDto } from "@ever-jobs/models";
-import { JobWatch, ScoreBreakdown } from "../interfaces/watch.types";
+import type { JobPostDto } from "@ever-jobs/models";
+import type { JobWatch, ScoreBreakdown } from "../interfaces/watch.types";
+import { GeographyClassificationService } from "./geography-classification.service";
+import type { WatchSourceJob } from "./jobs-service-watch.executor";
 
-const TARGET_ROLE_TITLE =
-  /\b(?:software (?:engineer|developer|engineering|development)|backend (?:engineer|developer)|platform engineer|infrastructure engineer|cloud engineer|security engineer|application security|devops|site reliability|sre|full[- ]?stack (?:engineer|developer)|machine learning engineer|data engineer)\b/i;
+const EXPLICIT_ROLE_TITLE =
+  /\b(?:software (?:engineer(?:ing)?|developer|development)|back[- ]?end (?:engineer(?:ing)?|developer|development)|front[- ]?end (?:engineer(?:ing)?|developer|development)|full[- ]?stack (?:engineer(?:ing)?|developer|development)|mobile (?:software )?(?:engineer(?:ing)?|developer|development)|(?:ios|android) (?:software )?(?:engineer(?:ing)?|developer|development)|developer (?:experience|productivity)|dx (?:engineer(?:ing)?|developer)|platform (?:engineer(?:ing)?|developer)|cloud (?:engineer(?:ing)?|developer)|infrastructure (?:engineer(?:ing)?|developer)|site reliability (?:engineer(?:ing)?|developer)|sre|devops(?: engineer(?:ing)?)?|(?:application |app )?security (?:engineer(?:ing)?|developer)|cybersecurity(?: engineer(?:ing)?)?|data engineer(?:ing)?|machine learning (?:engineer(?:ing)?|developer)|ml (?:engineer(?:ing)?|developer)|artificial intelligence (?:engineer(?:ing)?|developer)|ai (?:engineer(?:ing)?|developer))\b/i;
+const INTERNSHIP_SHORTHAND_ROLE =
+  /\b(?:software|back[- ]?end|front[- ]?end|full[- ]?stack|mobile|ios|android|developer experience|dx|platform|cloud|infrastructure|site reliability|sre|devops|application security|appsec|cybersecurity|security|data engineer(?:ing)?|machine learning|ml|artificial intelligence|ai)\b/i;
 const SOFTWARE_ROLE =
   /\bsoftware (?:engineering|engineer|development|developer)\b/i;
 const SPECIALTY_ROLE =
-  /\b(?:backend|platform|infrastructure|cloud|security|devops|site reliability|sre)\b/i;
+  /\b(?:back[- ]?end|front[- ]?end|mobile|ios|android|developer experience|dx|platform|infrastructure|cloud|security|cybersecurity|devops|site reliability|sre)\b/i;
 const INTERNSHIP_INDICATOR =
-  /\b(?:internship|intern|co-?op|coop|student|university|campus|early career)\b/i;
-const CANADIAN_LOCATION =
-  /\b(?:canada|canadian|toronto|ontario|greater toronto|gta)\b|(?:^|,\s*)ON(?:\s*,|$)/i;
+  /\b(?:intern(?:ship)?s?|co(?:[-\u2010-\u2015 ]?op)s?)\b/i;
 const DIRECT_OR_ATS_SOURCE =
-  /^(?:google_careers|amazon|meta|microsoft|apple|nvidia|uber|stripe|openai|netflix|ibm|coinbase|doordash|plaid|figma|datadog|vercel|anthropic|databricks|greenhouse|lever|ashby|workday|smartrecruiters)$/i;
+  /^(?:google_careers|source-company-google|amazon|meta|microsoft|apple|nvidia|uber|stripe|openai|netflix|ibm|coinbase|doordash|plaid|figma|datadog|vercel|anthropic|databricks|greenhouse|lever|ashby|workday|smartrecruiters)$/i;
 
+interface ResolvedScoringInput {
+  job: JobPostDto;
+  target: { key: string; tier: 1 | 2 | 3 };
+}
+
+/**
+ * Scores only jobs that first satisfy the role, internship, and target-tier
+ * eligibility gates. Ranking preferences remain independent from eligibility:
+ * a Vancouver or eligible US job is not rejected merely for scoring zero
+ * Toronto/Waterloo preference points.
+ */
 @Injectable()
 export class JobScoringService {
-  score(job: JobPostDto, watch: JobWatch): ScoreBreakdown {
+  constructor(
+    private readonly geographyClassifier: GeographyClassificationService = new GeographyClassificationService(),
+  ) {}
+
+  score(job: JobPostDto, watch: JobWatch): ScoreBreakdown;
+  score(sourceJob: WatchSourceJob, watch: JobWatch): ScoreBreakdown;
+  score(input: JobPostDto | WatchSourceJob, watch: JobWatch): ScoreBreakdown {
+    const { job, target } = this.resolveInput(input, watch);
     const title = asText(job.title).toLowerCase();
     const description = asText(job.description).toLowerCase();
     const company = asText(job.companyName).toLowerCase();
     const locationText = this.locationText(job).toLowerCase();
-    const employmentEvidence = [
-      title,
+    const structuredEmploymentEvidence = [
       asText(job.employmentType),
       Array.isArray(job.jobType) ? job.jobType.join(" ") : asText(job.jobType),
-      asText(job.department),
     ].join(" ");
     const searchableText = `${title} ${description} ${company} ${locationText}`;
-    const reasons: string[] = [];
+    const reasons: string[] = [`Source target: ${target.key}`];
     const matched = new Set<string>();
     const missingRequired: string[] = [];
+    const geography = this.geographyClassifier.classify(job, target);
+    reasons.push(
+      `Geography: ${geography.geographyDecision}; country=${geography.matchedCountry ?? "unresolved"}; confidence=${geography.locationConfidence}`,
+    );
 
     const hardExclusion = this.exclusionReason(
       title,
@@ -40,103 +62,77 @@ export class JobScoringService {
       watch.excludedTerms,
     );
     if (hardExclusion) {
-      return {
-        total: 0,
-        role: 0,
-        internship: 0,
-        location: 0,
-        company: 0,
-        source: 0,
-        skills: 0,
-        matchedKeywords: [],
-        missingRequired: [],
+      return this.breakdown({
+        targetKey: target.key,
+        geography,
+        reasons,
         exclusionReason: hardExclusion,
-        reasons: [],
-      };
+      });
     }
 
-    const hasTargetRoleTitle = TARGET_ROLE_TITLE.test(title);
+    const titleHasInternship = INTERNSHIP_INDICATOR.test(title);
+    const hasTargetRoleTitle =
+      EXPLICIT_ROLE_TITLE.test(title) ||
+      (titleHasInternship && INTERNSHIP_SHORTHAND_ROLE.test(title));
     if (!hasTargetRoleTitle) missingRequired.push("target role in title");
 
+    // Internship eligibility intentionally ignores descriptions, departments,
+    // configured search terms, and generic student/campus language.
     const hasInternshipIndicator =
-      INTERNSHIP_INDICATOR.test(employmentEvidence) ||
-      watch.requiredTerms.some((term) =>
-        containsTerm(employmentEvidence, term),
-      );
+      titleHasInternship ||
+      INTERNSHIP_INDICATOR.test(structuredEmploymentEvidence);
     if (!hasInternshipIndicator) {
       missingRequired.push("internship or co-op indicator");
     }
-
-    const requiresCanada = watch.countryCodes.some((code) =>
-      ["CA", "CAN"].includes(code.trim().toUpperCase()),
-    );
-    const hasCanadianLocation = CANADIAN_LOCATION.test(locationText);
-    if (requiresCanada && !hasCanadianLocation) {
+    if (!geography.eligible && target.tier === 1) {
+      // Retained for persisted watches and clients that predate the explicit
+      // geographyDecision explanation fields.
       missingRequired.push("Canadian location");
     }
 
     let role = 0;
-    if (
-      hasTargetRoleTitle &&
-      INTERNSHIP_INDICATOR.test(title) &&
-      /\b(?:software|backend|platform|infrastructure|cloud|security|devops|sre|full[- ]?stack|machine learning|data)\b/i.test(
-        title,
-      )
-    ) {
+    if (hasTargetRoleTitle && titleHasInternship) {
       role += weight(watch, "exactInternshipTitle", 30);
       reasons.push("Exact target internship title");
       matched.add("software internship");
     }
-    if (SOFTWARE_ROLE.test(searchableText)) {
+    if (hasTargetRoleTitle && SOFTWARE_ROLE.test(title)) {
       role += weight(watch, "softwareEngineering", 20);
       matched.add("software engineering");
     }
-    if (SPECIALTY_ROLE.test(searchableText)) {
+    if (hasTargetRoleTitle && SPECIALTY_ROLE.test(title)) {
       role += weight(watch, "engineeringSpecialty", 15);
       matched.add("target engineering specialty");
     }
-    if (/\bfull[- ]?stack\b/i.test(searchableText)) {
+    if (hasTargetRoleTitle && /\bfull[- ]?stack\b/i.test(title)) {
       role += weight(watch, "fullStack", 10);
       matched.add("full-stack");
     }
     if (
-      /\b(?:machine learning|data engineer(?:ing)?)\b/i.test(searchableText)
+      hasTargetRoleTitle &&
+      /\b(?:machine learning|\bml\b|artificial intelligence|\bai\b|data engineer(?:ing)?)\b/i.test(
+        title,
+      )
     ) {
       role += weight(watch, "machineLearningData", 8);
-      matched.add("machine learning or data engineering");
+      matched.add("machine learning, AI, or data engineering");
     }
 
     let internship = 0;
     if (hasInternshipIndicator) {
       internship += weight(watch, "internshipIndicator", 25);
       matched.add("internship indicator");
-      reasons.push("Internship/co-op evidence");
+      reasons.push(
+        "Internship/co-op evidence in title or structured employment data",
+      );
     }
 
-    let location = 0;
-    if (/\btoronto\b/i.test(locationText)) {
-      location += weight(watch, "toronto", 25);
-      matched.add("Toronto");
-    } else if (/\b(?:gta|greater toronto)\b/i.test(locationText)) {
-      location += weight(watch, "greaterTorontoArea", 25);
-      matched.add("Greater Toronto Area");
-    } else if (/\bontario\b|(?:^|,\s*)ON(?:\s*,|$)/i.test(locationText)) {
-      location += weight(watch, "ontario", 18);
-      matched.add("Ontario");
-    } else if (/remote.*canada|canada.*remote/i.test(locationText)) {
-      location += weight(watch, "remoteCanada", 20);
-      matched.add("Remote Canada");
-    } else if (/\bcanada\b/i.test(locationText)) {
-      location += weight(watch, "canada", 12);
-      matched.add("Canada");
-    }
-    if (
-      /hybrid.*toronto|toronto.*hybrid|on-site.*toronto|toronto.*on-site/i.test(
-        locationText,
-      )
-    ) {
-      location += weight(watch, "torontoWorkplaceBonus", 5);
-    }
+    const location = this.locationPreferenceScore(
+      geography.preferences,
+      watch,
+      matched,
+      reasons,
+    );
 
     let companyScore = 0;
     if (/\b(?:google|amazon|meta)\b/i.test(company)) {
@@ -199,6 +195,12 @@ export class JobScoringService {
     skills = Math.min(skills, weight(watch, "skillsCap", 45));
 
     const total = role + internship + location + companyScore + source + skills;
+    const gateExclusion = !hasTargetRoleTitle
+      ? "not-software-engineering-role"
+      : !hasInternshipIndicator
+        ? "not-internship-or-co-op"
+        : geography.suppressionReason;
+
     return {
       total,
       role,
@@ -209,25 +211,134 @@ export class JobScoringService {
       skills,
       matchedKeywords: [...matched],
       missingRequired,
+      ...(gateExclusion ? { exclusionReason: gateExclusion } : {}),
       reasons,
+      sourceTargetKey: target.key,
+      ...(geography.matchedCountry
+        ? { matchedCountry: geography.matchedCountry }
+        : {}),
+      locationConfidence: geography.locationConfidence,
+      geographyDecision: geography.geographyDecision,
     };
   }
 
-  private locationText(job: JobPostDto): string {
-    if (typeof job.location === "string") {
-      return [job.location, asText(job.workFromHomeType)]
-        .filter(Boolean)
-        .join(" ");
+  private breakdown(input: {
+    targetKey: string;
+    geography: ReturnType<GeographyClassificationService["classify"]>;
+    reasons: string[];
+    exclusionReason: string;
+  }): ScoreBreakdown {
+    return {
+      total: 0,
+      role: 0,
+      internship: 0,
+      location: 0,
+      company: 0,
+      source: 0,
+      skills: 0,
+      matchedKeywords: [],
+      missingRequired: [],
+      exclusionReason: input.exclusionReason,
+      reasons: input.reasons,
+      sourceTargetKey: input.targetKey,
+      ...(input.geography.matchedCountry
+        ? { matchedCountry: input.geography.matchedCountry }
+        : {}),
+      locationConfidence: input.geography.locationConfidence,
+      geographyDecision: input.geography.geographyDecision,
+    };
+  }
+
+  private locationPreferenceScore(
+    preferences: ReturnType<
+      GeographyClassificationService["classify"]
+    >["preferences"],
+    watch: JobWatch,
+    matched: Set<string>,
+    reasons: string[],
+  ): number {
+    const candidates: Array<{ score: number; label: string }> = [];
+    if (preferences.includes("greater-toronto-area")) {
+      candidates.push({
+        score: weight(watch, "greaterTorontoArea", 25),
+        label: "Greater Toronto Area",
+      });
     }
-    return [
-      job.location?.city,
-      job.location?.state,
-      job.location?.country,
-      job.workFromHomeType,
-    ]
-      .map(asText)
-      .filter(Boolean)
-      .join(" ");
+    if (preferences.includes("toronto")) {
+      candidates.push({
+        score: weight(watch, "toronto", 25),
+        label: "Toronto",
+      });
+    }
+    if (preferences.includes("waterloo")) {
+      candidates.push({
+        score: weight(watch, "waterloo", 20),
+        label: "Waterloo",
+      });
+    }
+    if (preferences.includes("remote-canada")) {
+      candidates.push({
+        score: weight(watch, "remoteCanada", 12),
+        label: "Remote Canada",
+      });
+    }
+    const preferred = candidates.sort(
+      (left, right) => right.score - left.score,
+    )[0];
+    if (!preferred) return 0;
+    matched.add(preferred.label);
+    reasons.push(`Location preference: ${preferred.label}`);
+    return preferred.score;
+  }
+
+  private resolveInput(
+    input: JobPostDto | WatchSourceJob,
+    watch: JobWatch,
+  ): ResolvedScoringInput {
+    if (isWatchSourceJob(input)) {
+      return {
+        job: input.job,
+        target: { key: input.target.key, tier: input.target.tier },
+      };
+    }
+
+    const site = asText(input.site).trim();
+    const normalizedSite = normalizeSource(site);
+    const configuredTarget = watch.sourceTargets.find(
+      (candidate) => normalizeSource(asText(candidate.site)) === normalizedSite,
+    );
+    const configuredTier = Object.entries(watch.sourceTiers).find(
+      ([source]) => normalizeSource(source) === normalizedSite,
+    )?.[1];
+    const tier = normalizeTier(configuredTarget?.tier ?? configuredTier);
+    const key = configuredTarget
+      ? [asText(configuredTarget.site), configuredTarget.companySlug]
+          .filter(Boolean)
+          .join(":")
+      : site || "legacy-watch-source";
+    return { job: input, target: { key, tier } };
+  }
+
+  private locationText(job: JobPostDto): string {
+    const locations = Array.isArray(job.locations) ? job.locations : [];
+    const parts: unknown[] = locations.flatMap((location) => [
+      location?.city,
+      location?.state,
+      location?.country,
+    ]);
+    const legacyLocation = job.location as unknown;
+    if (typeof legacyLocation === "string") {
+      parts.push(legacyLocation);
+    } else if (legacyLocation && typeof legacyLocation === "object") {
+      const value = legacyLocation as {
+        city?: unknown;
+        state?: unknown;
+        country?: unknown;
+      };
+      parts.push(value.city, value.state, value.country);
+    }
+    parts.push(job.workFromHomeType, job.isRemote ? "Remote" : "");
+    return parts.map(asText).filter(Boolean).join(" ");
   }
 
   private exclusionReason(
@@ -237,30 +348,40 @@ export class JobScoringService {
     terms: string[],
   ): string | undefined {
     if (
-      /\b(?:senior|staff|principal|manager|director|architect)\b/i.test(title)
+      /\b(?:senior|staff|principal|manager|director|architect)\b|\bsr\.?(?=\s|$)/i.test(
+        title,
+      )
     ) {
       return "Excluded seniority in title";
     }
     if (
-      /\blead\s+(?:software|backend|platform|infrastructure|cloud|security|devops|site reliability|engineering)\b|\b(?:software|backend|platform|infrastructure|cloud|security|devops|site reliability|engineering)\s+lead\b/i.test(
+      /\blead\s+(?:software|back[- ]?end|front[- ]?end|platform|infrastructure|cloud|security|devops|site reliability|engineering)\b|\b(?:software|back[- ]?end|front[- ]?end|platform|infrastructure|cloud|security|devops|site reliability|engineering)\s+lead\b/i.test(
         title,
       )
     ) {
       return "Excluded lead role in title";
     }
-    if (/\b(?:5\+|7\+|10\+) years\b/i.test(`${title} ${description}`)) {
-      return "Excluded experience requirement";
-    }
     if (
-      /united states only|us only|usa only|must reside in the united states|no canadian applicants/i.test(
-        `${location} ${description}`,
+      /\b(?:new[- ]?grad(?:uate)?|early[- ]career|graduate (?:program|programme|role|position|software|engineering|developer))\b/i.test(
+        title,
       )
     ) {
-      return "Excluded location restriction";
+      return "Excluded new-graduate role in title";
+    }
+    if (/\b(?:experienced|mid[- ]?level)\b/i.test(title)) {
+      return "Excluded experienced role in title";
+    }
+    const experienceText = `${title} ${description}`;
+    if (
+      /\b(?:3|[4-9]|\d{2,})\+\s*(?:years?|yrs?)\b|\b(?:at least|minimum(?: of)?)\s+(?:3|[4-9]|\d{2,})\s*(?:years?|yrs?)\b|\b(?:3|[4-9]|\d{2,})\s*(?:years?|yrs?)\s+(?:of\s+)?(?:professional|industry|relevant|software|engineering|development|work)\s+experience\b/i.test(
+        experienceText,
+      )
+    ) {
+      return "Excluded experience requirement";
     }
     for (const term of terms) {
       // "lead" is only a seniority exclusion in role-title context. It must
-      // not exclude descriptions that say an intern will lead a small task.
+      // not exclude descriptions that say an intern will lead a scoped task.
       if (term.trim().toLowerCase() === "lead") continue;
       if (term && containsTerm(`${title} ${location}`, term)) {
         return `Excluded term: ${term}`;
@@ -268,6 +389,27 @@ export class JobScoringService {
     }
     return undefined;
   }
+}
+
+function isWatchSourceJob(
+  input: JobPostDto | WatchSourceJob,
+): input is WatchSourceJob {
+  if (!input || typeof input !== "object") return false;
+  const candidate = input as Partial<WatchSourceJob>;
+  return Boolean(
+    candidate.job &&
+    candidate.target &&
+    typeof candidate.target.key === "string" &&
+    [1, 2, 3].includes(candidate.target.tier),
+  );
+}
+
+function normalizeSource(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function normalizeTier(value: unknown): 1 | 2 | 3 {
+  return value === 2 || value === 3 ? value : 1;
 }
 
 function asText(value: unknown): string {

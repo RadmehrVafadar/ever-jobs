@@ -1,5 +1,84 @@
 # API Changelog
 
+## [Unreleased] — 2026-07-19 — Spec 6000
+
+### Added
+
+- `JobPostDto.locations?: LocationDto[]` preserves every normalized advertised
+  location. Existing singular `location` remains the primary compatibility
+  field and is populated from the first normalized location when needed.
+- Watch source targets accept optional `companyName`, nested `searchScope`
+  (`countryCodes`, `locations`, optional `searchTerms`, optional
+  `maxRequestsPerRun`), and target-level `initializedAt`.
+- Match/score explanations include `sourceTargetKey`, matched country, location
+  confidence, and geography decision/suppression reason.
+- `POST /api/watches/:id/initialize` accepts an optional JSON body:
+
+  ```json
+  { "targetKeys": ["google_careers", "linkedin"] }
+  ```
+
+  Omitted/empty keys retain initialize-all behavior. Unknown, disabled, or
+  duplicate keys return a validated client error. Successful targets receive an
+  independent baseline timestamp; failed siblings remain uninitialized.
+- Watch/run/health responses expose target outcomes and durable health:
+  successes, hard failures, valid empty runs, partial runs, consecutive hard
+  failures, last attempt/success/non-empty/degradation timestamps, and Tier 1
+  degradation. Any non-hard outcome resets the consecutive hard-failure streak.
+  Worker health uses `coverage.{status,tier1Degraded,degradedTargets,watches}`;
+  API health uses `watcherCoverage.{status,tier1Degraded,watches}`. Run target
+  results expose `status` (`succeeded|partial|failed`), `outcome`
+  (`success|empty|partial|hard_failure`), request/job/duration counts, flags,
+  streak, and success/non-empty timestamps.
+- Source-independent canonical episode identity groups equivalent observations
+  while preserving every source record. Notification uniqueness is watch +
+  canonical episode + channel/destination. Notification type is deliberately
+  excluded so a score-band change cannot resend.
+- URL/date-less canonical fallback episodes persist the first observation as a
+  rolling 14-day anchor; they are not split by UTC calendar buckets.
+- Reposts that reuse a stable source fingerprint after the fallback window keep
+  the old observation and create an episode-scoped observation snapshot.
+- Watch matches persist `notificationSuppressionReason` (`baseline` or
+  `eligibility`). Only eligibility suppression can promote to pending after a
+  richer eligible observation; sent and baseline-suppressed episodes remain
+  terminal.
+
+### Changed
+
+- Geography eligibility is target-tier-specific: Tier 1 accepts Canada; Tier
+  2/3 accept Canada or the United States. Location preference scoring is
+  separate from eligibility.
+- Internship eligibility requires title or structured employment-type evidence;
+  description-only student/intern mentions no longer qualify an ordinary
+  full-time role.
+- Query targets execute a bounded rotating term × location matrix instead of
+  forwarding only the first watch-level country/location.
+- Source failures that are HTTP, blocked, malformed, or schema-invalid are hard
+  failures, not successful empty results. A valid parsed zero-job response stays
+  a successful empty run. A partial request set remains a non-hard partial target
+  outcome and, like success/valid-empty, resets the hard-failure streak.
+
+### Compatibility and rollout
+
+- All fields and schema changes are additive. Legacy watches without target
+  scope/company/baseline fields inherit watch-level settings.
+- The shipped preset watch is globally disabled and uninitialized. Its final
+  target-enabled set is `google_careers`, `shopify`, `ashby:wealthsimple`,
+  `ashby:plaid`, `canadajobbank`, and `linkedin`. Target-enabled does not permit
+  polling or notifications while the watch is paused.
+- Google Jobs and every legacy direct-company target remain target-disabled.
+  Microsoft live smoke timed out; Google Jobs returned the classified
+  enable-JavaScript shell.
+- Six deterministic source suites passed (59 tests). Disabled live evidence
+  returned two Canadian Google Careers roles, a marker-validated valid empty
+  Shopify board, 37 Wealthsimple Ashby roles with a capped mapped sample, and a
+  successful unauthenticated LinkedIn listing/detail result.
+- Operators must targeted-baseline every target-enabled source and complete two
+  additional no-notification observation cycles before resuming. Registration,
+  tests, and live smoke do not enable notifications by themselves.
+
+---
+
 ### [v0.6.0-alpha] - 2026-02-25
 
 #### Added

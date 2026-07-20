@@ -1,0 +1,329 @@
+import { Site } from "@ever-jobs/models";
+import {
+  JobWatch,
+  WatchSearchScope,
+  WatchSourceTarget,
+} from "../interfaces/watch.types";
+
+export const PRESTIGE_INTERNSHIPS_V2_ID = "prestige-internships-v2";
+export const PRESTIGE_INTERNSHIPS_V2_VERSION = 2;
+export const PRESTIGE_INTERNSHIPS_V2_NAME =
+  "Prestige Software Internships — Canada and USA";
+
+export interface WatchPresetDefinition {
+  id: string;
+  version: number;
+  name: string;
+  description: string;
+  createWatch(): Partial<JobWatch>;
+}
+
+export const PRESTIGE_INTERNSHIP_SEARCH_TERMS = [
+  "software engineer intern",
+  "software developer intern",
+  "software engineering internship",
+  "software engineering co-op",
+  "software developer co-op",
+  "backend engineer intern",
+  "frontend engineer intern",
+  "full stack engineer intern",
+  "mobile engineer intern",
+  "developer experience intern",
+  "platform engineer intern",
+  "cloud engineer intern",
+  "infrastructure engineer intern",
+  "site reliability engineer intern",
+  "devops engineer intern",
+  "security engineer intern",
+  "data engineer intern",
+  "machine learning engineer intern",
+  "AI engineer intern",
+] as const;
+
+export const PRESTIGE_TIER_1_LOCATIONS = [
+  "Canada",
+  "Toronto, Ontario",
+  "Greater Toronto Area",
+  "Waterloo, Ontario",
+] as const;
+
+export const PRESTIGE_TIER_2_3_LOCATIONS = [
+  ...PRESTIGE_TIER_1_LOCATIONS,
+  "United States",
+] as const;
+
+const PRESTIGE_COMPANIES = [
+  "Google",
+  "Amazon",
+  "Meta",
+  "Shopify",
+  "Wealthsimple",
+  "Microsoft",
+  "Apple",
+  "Nvidia",
+  "Uber",
+  "Stripe",
+  "OpenAI",
+  "Datadog",
+  "DoorDash",
+  "Coinbase",
+  "Notion",
+  "Figma",
+  "Ramp",
+  "Plaid",
+  "Vercel",
+  "Netflix",
+  "IBM",
+  "RBC",
+  "TD",
+  "Scotiabank",
+  "BMO",
+  "CIBC",
+] as const;
+
+const PREFERRED_TERMS = [
+  "Python",
+  "Java",
+  "Go",
+  "C",
+  "C++",
+  "JavaScript",
+  "TypeScript",
+  "SQL",
+  "Bash",
+  "React",
+  "Next.js",
+  "Flask",
+  "Docker",
+  "Docker Compose",
+  "Kubernetes",
+  "Terraform",
+  "GitHub Actions",
+  "Google Cloud Platform",
+  "Apache Kafka",
+  "PostgreSQL",
+  "Linux",
+  "Auth0",
+  "Identity and Access Management",
+  "IAM",
+  "RBAC",
+  "Distributed Systems",
+  "Backend",
+  "Frontend",
+  "Full Stack",
+  "Mobile",
+  "Developer Experience",
+  "Platform",
+  "Cloud",
+  "Infrastructure",
+  "SRE",
+  "DevOps",
+  "Security",
+  "Data Engineering",
+  "Machine Learning",
+  "Artificial Intelligence",
+  "API",
+  "Authentication",
+  "Authorization",
+] as const;
+
+const EXCLUDED_TERMS = [
+  "senior",
+  "staff",
+  "principal",
+  "lead",
+  "manager",
+  "director",
+  "architect",
+  "5+ years",
+  "7+ years",
+  "10+ years",
+] as const;
+
+const LEGACY_DIRECT_TARGETS: ReadonlyArray<{
+  site: Site;
+  companyName: string;
+}> = [
+  { site: Site.AMAZON, companyName: "Amazon" },
+  { site: Site.MICROSOFT, companyName: "Microsoft" },
+  { site: Site.APPLE, companyName: "Apple" },
+  { site: Site.NVIDIA, companyName: "Nvidia" },
+  { site: Site.STRIPE, companyName: "Stripe" },
+  { site: Site.OPENAI, companyName: "OpenAI" },
+  { site: Site.DATADOG, companyName: "Datadog" },
+  { site: Site.DOORDASH, companyName: "DoorDash" },
+  { site: Site.COINBASE, companyName: "Coinbase" },
+  { site: Site.FIGMA, companyName: "Figma" },
+  { site: Site.VERCEL, companyName: "Vercel" },
+  { site: Site.META, companyName: "Meta" },
+  { site: Site.WELLFOUND, companyName: "Wellfound" },
+];
+
+function scope(
+  countryCodes: readonly string[],
+  locations: readonly string[],
+  options: {
+    searchTerms?: readonly string[];
+    maxRequestsPerRun?: number;
+  } = {},
+): WatchSearchScope {
+  return {
+    countryCodes: [...countryCodes],
+    locations: [...locations],
+    ...(options.searchTerms ? { searchTerms: [...options.searchTerms] } : {}),
+    ...(options.maxRequestsPerRun === undefined
+      ? {}
+      : { maxRequestsPerRun: options.maxRequestsPerRun }),
+  };
+}
+
+function target(
+  input: Omit<WatchSourceTarget, "initializedAt" | "lastRunAt" | "nextRunAt">,
+): WatchSourceTarget {
+  return {
+    ...input,
+    searchScope: input.searchScope
+      ? scope(
+          input.searchScope.countryCodes,
+          input.searchScope.locations,
+          input.searchScope,
+        )
+      : undefined,
+    initializedAt: null,
+    lastRunAt: null,
+    nextRunAt: null,
+  };
+}
+
+function sourceTargets(): WatchSourceTarget[] {
+  const canadaBoardScope = () => scope(["CA"], PRESTIGE_TIER_1_LOCATIONS);
+  const targets: WatchSourceTarget[] = [
+    target({
+      site: Site.GOOGLE_CAREERS,
+      companyName: "Google",
+      tier: 1,
+      intervalMinutes: 3,
+      enabled: true,
+      searchScope: scope(["CA"], PRESTIGE_TIER_1_LOCATIONS, {
+        searchTerms: PRESTIGE_INTERNSHIP_SEARCH_TERMS,
+        maxRequestsPerRun: 12,
+      }),
+    }),
+    target({
+      site: Site.SHOPIFY,
+      companyName: "Shopify",
+      tier: 1,
+      intervalMinutes: 3,
+      enabled: true,
+      searchScope: canadaBoardScope(),
+    }),
+    target({
+      site: Site.ASHBY,
+      companySlug: "wealthsimple",
+      companyName: "Wealthsimple",
+      tier: 1,
+      intervalMinutes: 3,
+      enabled: true,
+      searchScope: canadaBoardScope(),
+    }),
+    target({
+      site: Site.ASHBY,
+      companySlug: "plaid",
+      companyName: "Plaid",
+      tier: 1,
+      intervalMinutes: 3,
+      enabled: true,
+      searchScope: canadaBoardScope(),
+    }),
+    ...LEGACY_DIRECT_TARGETS.map(({ site, companyName }) =>
+      target({
+        site,
+        companyName,
+        tier: 1,
+        intervalMinutes: 3,
+        // These targets remain visible for rollout, but disabled until each
+        // adapter has Canada-wide fixture and smoke evidence.
+        enabled: false,
+        searchScope: canadaBoardScope(),
+      }),
+    ),
+    target({
+      site: Site.CANADAJOBBANK,
+      companyName: "Canada Job Bank",
+      tier: 2,
+      intervalMinutes: 15,
+      enabled: true,
+      searchScope: scope(["CA"], PRESTIGE_TIER_1_LOCATIONS, {
+        searchTerms: PRESTIGE_INTERNSHIP_SEARCH_TERMS,
+        maxRequestsPerRun: 12,
+      }),
+    }),
+    target({
+      site: Site.GOOGLE,
+      companyName: "Google Jobs",
+      tier: 2,
+      intervalMinutes: 15,
+      enabled: false,
+      searchScope: scope(["CA", "US"], PRESTIGE_TIER_2_3_LOCATIONS, {
+        searchTerms: PRESTIGE_INTERNSHIP_SEARCH_TERMS,
+        maxRequestsPerRun: 12,
+      }),
+    }),
+    target({
+      site: Site.LINKEDIN,
+      companyName: "LinkedIn public guest search",
+      tier: 3,
+      intervalMinutes: 60,
+      enabled: true,
+      searchScope: scope(["CA", "US"], PRESTIGE_TIER_2_3_LOCATIONS, {
+        searchTerms: PRESTIGE_INTERNSHIP_SEARCH_TERMS,
+        maxRequestsPerRun: 8,
+      }),
+    }),
+  ];
+  return targets;
+}
+
+export function prestigeInternshipsV2Watch(): Partial<JobWatch> {
+  const targets = sourceTargets();
+  const sources = [...new Set(targets.map(({ site }) => String(site)))];
+  return {
+    name: PRESTIGE_INTERNSHIPS_V2_NAME,
+    description:
+      "Versioned, target-scoped monitoring for software internships and co-ops across Canada, with Canada/USA discovery redundancy.",
+    enabled: false,
+    intervalMinutes: 3,
+    timezone: "America/Toronto",
+    sources,
+    sourceTargets: targets,
+    sourceTiers: Object.fromEntries(
+      targets.map(({ site, tier }) => [String(site), tier]),
+    ),
+    companySlugs: ["ashby:wealthsimple", "ashby:plaid"],
+    companies: [...PRESTIGE_COMPANIES],
+    searchTerms: [...PRESTIGE_INTERNSHIP_SEARCH_TERMS],
+    requiredTerms: ["intern", "internship", "co-op", "coop"],
+    preferredTerms: [...PREFERRED_TERMS],
+    excludedTerms: [...EXCLUDED_TERMS],
+    locations: [...PRESTIGE_TIER_2_3_LOCATIONS],
+    countryCodes: ["CA", "US"],
+    allowedWorkplaceTypes: ["remote", "hybrid", "on-site"],
+    allowedEmploymentTypes: ["internship", "co-op"],
+    minimumScore: 60,
+    urgentScore: 80,
+    digestScore: 40,
+    notificationChannels: [{ type: "discord", destinationRef: "default" }],
+    initializationMode: "baseline",
+    recentWindowMinutes: 180,
+  };
+}
+
+export const PRESTIGE_INTERNSHIPS_V2_PRESET: WatchPresetDefinition =
+  Object.freeze({
+    id: PRESTIGE_INTERNSHIPS_V2_ID,
+    version: PRESTIGE_INTERNSHIPS_V2_VERSION,
+    name: PRESTIGE_INTERNSHIPS_V2_NAME,
+    description:
+      "Canada-only Tier 1 coverage with Canada/USA Tier 2 and Tier 3 redundancy.",
+    createWatch: prestigeInternshipsV2Watch,
+  });

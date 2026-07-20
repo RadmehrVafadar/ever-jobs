@@ -81,6 +81,7 @@ import {
   name: "MySource",
   category: "job-board", // job-board | ats | company | niche | government | remote | regional | freelance
   // isAts: true,            // Set if requires companySlug
+  watchMode: "query",       // query = searched by term/location; board = complete board fetch
 })
 @Injectable()
 export class MySourceService implements IScraper {
@@ -108,7 +109,7 @@ export class MySourceModule {}
 
 ### 4. Register It
 
-Add to three files:
+Add to all four files:
 
 | File                                     | What to add                                                                                   |
 | ---------------------------------------- | --------------------------------------------------------------------------------------------- |
@@ -121,7 +122,46 @@ Add to three files:
 
 ### `@SourcePlugin()` Decorator
 
-Attaches `IPluginMetadata` to a class via `SetMetadata`. Consumed by `PluginDiscoveryService` at bootstrap.
+Attaches `IPluginMetadata` to a class via `SetMetadata`. Consumed by
+`PluginDiscoveryService` at bootstrap.
+
+The optional `watchMode` field describes acquisition behavior independently of
+plugin category:
+
+| `watchMode` | Meaning | Watcher behavior |
+| ----------- | ------- | ---------------- |
+| `board` | One scrape returns the complete configured company/ATS board | Fetch once for the target, then apply local role/geography eligibility |
+| `query` | The source is search-oriented and requires terms/locations | Build the target's bounded rotating search-term × location matrix |
+
+This field is about completeness, not prestige or cadence. A `company` plugin can
+still be `query` when its public careers surface needs a search request; a
+structured board can be `board`. Google Careers and Microsoft declare their
+actual mode explicitly rather than inheriting a direct-company guess.
+
+For backward compatibility, metadata without `watchMode` uses the legacy
+planner heuristic. New or repaired sources must declare the field so watcher
+behavior remains reviewable and replaceable.
+
+Registration, target enablement, and watch enablement are independent states. A
+registered plugin is callable; `sourceTarget.enabled` includes it in the preset's
+validated inventory; `watch.enabled` controls scheduling. The Spec 6000 preset
+therefore target-enables validated sources inside a globally disabled,
+uninitialized watch without polling them. Each target still needs its own
+baseline and two no-notification observation cycles before the operator resumes
+the watch.
+
+```typescript
+export type SourceWatchMode = "board" | "query";
+
+export interface IPluginMetadata {
+  site: Site;
+  name: string;
+  category: PluginCategory;
+  isAts?: boolean;
+  description?: string;
+  watchMode?: SourceWatchMode;
+}
+```
 
 ### `PluginDiscoveryService`
 

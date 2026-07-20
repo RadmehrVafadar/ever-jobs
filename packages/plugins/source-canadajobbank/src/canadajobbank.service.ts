@@ -29,6 +29,7 @@ import {
   site: Site.CANADAJOBBANK,
   name: "CanadaJobBank",
   category: "government",
+  watchMode: "query",
 })
 @Injectable()
 export class CanadaJobBankService implements IScraper {

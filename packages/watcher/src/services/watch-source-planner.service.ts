@@ -1,10 +1,21 @@
 import { Injectable } from "@nestjs/common";
 import { Site } from "@ever-jobs/models";
-import { JobWatch } from "../interfaces/watch.types";
+import {
+  JobWatch,
+  WatchSearchScope,
+  WatchSourceTarget as ConfiguredWatchSourceTarget,
+} from "../interfaces/watch.types";
 
 export type WatchSourceTier = 1 | 2 | 3;
 export type WatchSourceKind = "direct" | "ats" | "structured" | "fragile";
 export type WatchSourceMode = "board" | "query";
+
+export interface WatchSourceMetadata {
+  site: Site | string;
+  category?: string;
+  isAts?: boolean;
+  watchMode?: WatchSourceMode;
+}
 
 export const WATCH_SOURCE_TIER_INTERVAL_MINUTES: Readonly<
   Record<WatchSourceTier, number>
@@ -22,13 +33,21 @@ export interface WatchSourceTarget {
   tier: WatchSourceTier;
   kind: WatchSourceKind;
   mode: WatchSourceMode;
+  intervalMinutes: number;
   companySlug?: string;
+  companyName?: string;
+  searchScope: WatchSearchScope;
+  initializedAt?: Date | null;
 }
 
 export interface WatchSourceRequest {
   id: string;
   target: WatchSourceTarget;
   searchTerm?: string;
+  location?: string;
+  countryCodes: string[];
+  /** Stable zero-based position in the complete term x location matrix. */
+  matrixIndex: number;
 }
 
 export type WatchSourcePlanIssueCode =
@@ -38,7 +57,8 @@ export type WatchSourcePlanIssueCode =
   | "invalid-company-slug"
   | "unused-company-slug"
   | "invalid-tier"
-  | "missing-search-terms";
+  | "missing-search-terms"
+  | "missing-search-locations";
 
 export interface WatchSourcePlanIssue {
   code: WatchSourcePlanIssueCode;
@@ -60,7 +80,12 @@ export interface WatchSourcePlanOptions {
   now?: Date;
   lastRunAt?: Date | null;
   force?: boolean;
+  /** Compatibility alias; now caps the complete request matrix per target. */
   maxQueryTermsPerSource?: number;
+  maxRequestsPerRun?: number;
+  /** Deterministic test/operational seed representing successive run slots. */
+  rotationSeed?: number;
+  sourceMetadata?: readonly WatchSourceMetadata[];
   tierIntervalsMinutes?: Partial<Record<WatchSourceTier, number>>;
 }
 
@@ -77,7 +102,7 @@ interface ParsedCompanySlugs {
   issues: WatchSourcePlanIssue[];
 }
 
-const DEFAULT_MAX_QUERY_TERMS_PER_SOURCE = 4;
+const DEFAULT_MAX_REQUESTS_PER_SOURCE = 4;
 
 const ATS_SITES = new Set<Site>([
   Site.ASHBY,
@@ -130,6 +155,7 @@ const ATS_SITES = new Set<Site>([
 /** Direct integrations used by the default internship watch. */
 const DIRECT_SITES = new Set<Site>([
   Site.GOOGLE_CAREERS,
+  Site.SHOPIFY,
   Site.AMAZON,
   Site.META,
   Site.MICROSOFT,
@@ -198,6 +224,7 @@ for (const site of Object.values(Site)) {
 export class WatchSourcePlanner {
   plan(watch: JobWatch, options: WatchSourcePlanOptions = {}): WatchSourcePlan {
     const now = options.now ?? new Date();
+    const sourceMetadata = metadataBySite(options.sourceMetadata);
     const lastRunAt = options.lastRunAt ?? watch.lastRunAt ?? null;
     const intervals = {
       ...WATCH_SOURCE_TIER_INTERVAL_MINUTES,
@@ -209,10 +236,17 @@ export class WatchSourcePlanner {
     const issues: WatchSourcePlanIssue[] = [];
     const hasExplicitTargets = (watch.sourceTargets?.length ?? 0) > 0;
     const explicit = hasExplicitTargets
-      ? this.buildExplicitTargets(watch, now, Boolean(options.force), issues)
+      ? this.buildExplicitTargets(
+          watch,
+          now,
+          Boolean(options.force),
+          issues,
+          sourceMetadata,
+        )
       : null;
     const deduplicatedTargets = deduplicateTargets(
-      explicit?.targets ?? this.buildLegacyTargets(watch, issues),
+      explicit?.targets ??
+        this.buildLegacyTargets(watch, issues, sourceMetadata),
     );
     const targets = deduplicatedTargets.filter((target) =>
       explicit
@@ -230,8 +264,14 @@ export class WatchSourcePlanner {
     );
     const requests = this.buildRequests(
       targets,
-      watch.searchTerms,
-      options.maxQueryTermsPerSource ?? DEFAULT_MAX_QUERY_TERMS_PER_SOURCE,
+      {
+        now,
+        maximum:
+          options.maxRequestsPerRun ??
+          options.maxQueryTermsPerSource ??
+          DEFAULT_MAX_REQUESTS_PER_SOURCE,
+        rotationSeed: options.rotationSeed,
+      },
       issues,
     );
 
@@ -270,6 +310,7 @@ export class WatchSourcePlanner {
     now: Date,
     force: boolean,
     issues: WatchSourcePlanIssue[],
+    sourceMetadata: ReadonlyMap<Site, WatchSourceMetadata>,
   ): { targets: WatchSourceTarget[]; dueTargetKeys: Set<string> } {
     const targets: WatchSourceTarget[] = [];
     const dueTargetKeys = new Set<string>();
@@ -277,7 +318,7 @@ export class WatchSourcePlanner {
     for (const configuredTarget of watch.sourceTargets ?? []) {
       if (!configuredTarget.enabled) continue;
       const configuredSource = String(configuredTarget.site);
-      const parsed = this.parseSource(configuredSource);
+      const parsed = this.parseSource(configuredSource, sourceMetadata);
       if (!parsed) {
         issues.push({
           code: "unknown-source",
@@ -307,18 +348,23 @@ export class WatchSourcePlanner {
         continue;
       }
 
-      const target = this.toTarget(
-        parsed,
-        tier,
-        configuredTarget.companySlug?.trim(),
-      );
-      targets.push(target);
-
       const nextRunAt = validDate(configuredTarget.nextRunAt);
       const targetLastRunAt = validDate(configuredTarget.lastRunAt);
       const intervalMinutes = positiveNumber(configuredTarget.intervalMinutes)
         ? configuredTarget.intervalMinutes
         : WATCH_SOURCE_TIER_INTERVAL_MINUTES[tier];
+      const target = this.toTarget(
+        parsed,
+        tier,
+        intervalMinutes,
+        resolveSearchScope(configuredTarget.searchScope, watch),
+        inheritInitializedAt(configuredTarget, watch),
+        sourceMetadata.get(parsed.site),
+        configuredTarget.companySlug?.trim(),
+        configuredTarget.companyName?.trim(),
+      );
+      targets.push(target);
+
       const due =
         force ||
         (nextRunAt
@@ -335,10 +381,11 @@ export class WatchSourcePlanner {
   private buildLegacyTargets(
     watch: JobWatch,
     issues: WatchSourcePlanIssue[],
+    sourceMetadata: ReadonlyMap<Site, WatchSourceMetadata>,
   ): WatchSourceTarget[] {
     const parsedSources: ParsedSource[] = [];
     for (const configuredSource of uniqueNonEmpty(watch.sources)) {
-      const parsed = this.parseSource(configuredSource);
+      const parsed = this.parseSource(configuredSource, sourceMetadata);
       if (!parsed) {
         issues.push({
           code: "unknown-source",
@@ -356,14 +403,26 @@ export class WatchSourcePlanner {
         .filter((source) => source.kind === "ats")
         .map((source) => source.site),
     );
-    const slugConfig = this.parseCompanySlugs(watch.companySlugs ?? []);
+    const slugConfig = this.parseCompanySlugs(
+      watch.companySlugs ?? [],
+      sourceMetadata,
+    );
     issues.push(...slugConfig.issues);
 
     const targets: WatchSourceTarget[] = [];
     for (const parsed of parsedSources) {
       const tier = this.resolveTier(watch, parsed, issues);
       if (parsed.kind !== "ats") {
-        targets.push(this.toTarget(parsed, tier));
+        targets.push(
+          this.toTarget(
+            parsed,
+            tier,
+            WATCH_SOURCE_TIER_INTERVAL_MINUTES[tier],
+            resolveSearchScope(undefined, watch),
+            watch.initializedAt,
+            sourceMetadata.get(parsed.site),
+          ),
+        );
         continue;
       }
 
@@ -381,7 +440,17 @@ export class WatchSourcePlanner {
         continue;
       }
       for (const companySlug of uniqueNonEmpty(companySlugs)) {
-        targets.push(this.toTarget(parsed, tier, companySlug));
+        targets.push(
+          this.toTarget(
+            parsed,
+            tier,
+            WATCH_SOURCE_TIER_INTERVAL_MINUTES[tier],
+            resolveSearchScope(undefined, watch),
+            watch.initializedAt,
+            sourceMetadata.get(parsed.site),
+            companySlug,
+          ),
+        );
       }
     }
 
@@ -410,7 +479,10 @@ export class WatchSourcePlanner {
     return targets;
   }
 
-  private parseSource(configuredSource: string): ParsedSource | null {
+  private parseSource(
+    configuredSource: string,
+    sourceMetadata: ReadonlyMap<Site, WatchSourceMetadata>,
+  ): ParsedSource | null {
     const withoutScope = configuredSource.trim().replace(/^@ever-jobs\//i, "");
     const separator = withoutScope.indexOf(":");
     const sourceName =
@@ -428,7 +500,7 @@ export class WatchSourcePlanner {
       specialSite ?? SITE_BY_NORMALIZED_KEY.get(normalizeLookupKey(candidate));
     if (!site) return null;
 
-    let kind = this.kindForSite(site);
+    let kind = this.kindForSite(site, sourceMetadata.get(site));
     if (normalizedName.startsWith("source-company-")) kind = "direct";
     if (normalizedName.startsWith("source-ats-")) kind = "ats";
     if (kind !== "ats" && inlineCompanySlug) return null;
@@ -441,7 +513,10 @@ export class WatchSourcePlanner {
     };
   }
 
-  private parseCompanySlugs(companySlugs: string[]): ParsedCompanySlugs {
+  private parseCompanySlugs(
+    companySlugs: string[],
+    sourceMetadata: ReadonlyMap<Site, WatchSourceMetadata>,
+  ): ParsedCompanySlugs {
     const bySite = new Map<Site, string[]>();
     const bare: string[] = [];
     const issues: WatchSourcePlanIssue[] = [];
@@ -464,8 +539,12 @@ export class WatchSourcePlanner {
       }
 
       const prefix = rawValue.slice(0, separator);
-      const possibleSite = this.parseSource(prefix)?.site;
-      if (!possibleSite || !ATS_SITES.has(possibleSite)) {
+      const possibleSite = this.parseSource(prefix, sourceMetadata)?.site;
+      if (
+        !possibleSite ||
+        this.kindForSite(possibleSite, sourceMetadata.get(possibleSite)) !==
+          "ats"
+      ) {
         // A compound Workday slug can itself contain colons. If its prefix is
         // not an ATS name, preserve it as a bare slug for a single ATS target.
         bare.push(rawValue);
@@ -523,11 +602,21 @@ export class WatchSourcePlanner {
     return 2;
   }
 
-  private kindForSite(site: Site): WatchSourceKind {
-    if (ATS_SITES.has(site)) return "ats";
+  private kindForSite(
+    site: Site,
+    metadata?: WatchSourceMetadata,
+  ): WatchSourceKind {
+    if (
+      metadata?.isAts ||
+      metadata?.category === "ats" ||
+      ATS_SITES.has(site)
+    ) {
+      return "ats";
+    }
     if (DIRECT_SITES.has(site)) return "direct";
     if (FRAGILE_SITES.has(site)) return "fragile";
     if (STRUCTURED_SITES.has(site)) return "structured";
+    if (metadata?.category === "company") return "direct";
     // Unknown-but-real plugins are conservatively treated as structured.
     // Users can promote/demote them through sourceTiers without accidentally
     // polling a new integration every three minutes.
@@ -537,7 +626,12 @@ export class WatchSourcePlanner {
   private toTarget(
     source: ParsedSource,
     tier: WatchSourceTier,
+    intervalMinutes: number,
+    searchScope: WatchSearchScope,
+    initializedAt: Date | null | undefined,
+    metadata?: WatchSourceMetadata,
     companySlug?: string,
+    companyName?: string,
   ): WatchSourceTarget {
     return {
       key: companySlug ? `${source.site}:${companySlug}` : source.site,
@@ -546,67 +640,76 @@ export class WatchSourcePlanner {
       tier,
       kind: source.kind,
       mode:
-        source.kind === "direct" || source.kind === "ats" ? "board" : "query",
+        metadata?.watchMode ??
+        (source.kind === "direct" || source.kind === "ats" ? "board" : "query"),
+      intervalMinutes,
       companySlug,
+      companyName,
+      searchScope,
+      initializedAt,
     };
   }
 
   private buildRequests(
     targets: WatchSourceTarget[],
-    configuredTerms: string[],
-    maxQueryTermsPerSource: number,
+    options: { now: Date; maximum: number; rotationSeed?: number },
     issues: WatchSourcePlanIssue[],
   ): WatchSourceRequest[] {
-    const queryTargets = targets.filter((target) => target.mode === "query");
-    const searchTerms = this.selectSearchTerms(
-      configuredTerms,
-      maxQueryTermsPerSource,
-    );
-    if (queryTargets.length > 0 && searchTerms.length === 0) {
-      issues.push({
-        code: "missing-search-terms",
-        source: queryTargets.map((target) => target.key).join(","),
-        message:
-          "Query-style sources require at least one non-empty search term",
-        severity: "error",
-      });
-    }
-
     const requests: WatchSourceRequest[] = [];
     for (const target of targets) {
       if (target.mode === "board") {
-        requests.push({ id: target.key, target });
+        requests.push({
+          id: target.key,
+          target,
+          countryCodes: [...target.searchScope.countryCodes],
+          matrixIndex: 0,
+        });
         continue;
       }
-      for (const [index, searchTerm] of searchTerms.entries()) {
-        requests.push({
-          id: `${target.key}:query-${index + 1}`,
+
+      const searchTerms = uniqueNonEmpty(target.searchScope.searchTerms);
+      const locations = uniqueNonEmpty(target.searchScope.locations);
+      if (searchTerms.length === 0) {
+        issues.push({
+          code: "missing-search-terms",
+          source: target.key,
+          message: `Query-style source "${target.key}" requires at least one non-empty search term`,
+          severity: "error",
+        });
+        continue;
+      }
+      if (locations.length === 0) {
+        issues.push({
+          code: "missing-search-locations",
+          source: target.key,
+          message: `Query-style source "${target.key}" requires at least one non-empty location`,
+          severity: "error",
+        });
+        continue;
+      }
+
+      const matrix = searchTerms.flatMap((searchTerm) =>
+        locations.map((location) => ({ searchTerm, location })),
+      );
+      const complete = matrix.map(
+        ({ searchTerm, location }, matrixIndex): WatchSourceRequest => ({
+          id: `${target.key}:matrix-${matrixIndex + 1}`,
           target,
           searchTerm,
-        });
-      }
+          location,
+          countryCodes: [...target.searchScope.countryCodes],
+          matrixIndex,
+        }),
+      );
+      const maximum = positiveInteger(
+        target.searchScope.maxRequestsPerRun ?? options.maximum,
+        DEFAULT_MAX_REQUESTS_PER_SOURCE,
+      );
+      requests.push(
+        ...rotateMatrixRequests(complete, target, maximum, options),
+      );
     }
     return requests;
-  }
-
-  private selectSearchTerms(
-    configuredTerms: string[],
-    maximum: number,
-  ): string[] {
-    const terms = uniqueNonEmpty(configuredTerms);
-    const budget = Math.max(0, Math.floor(maximum));
-    if (terms.length <= budget) return terms;
-    if (budget === 0) return [];
-    if (budget === 1) return [terms[0]];
-
-    const selected = new Set<string>();
-    for (let index = 0; index < budget; index++) {
-      const sourceIndex = Math.round(
-        (index * (terms.length - 1)) / (budget - 1),
-      );
-      selected.add(terms[sourceIndex]);
-    }
-    return [...selected];
   }
 }
 
@@ -633,6 +736,85 @@ function uniqueTiers(tiers: WatchSourceTier[]): WatchSourceTier[] {
   return [...new Set(tiers)].sort((left, right) => left - right);
 }
 
+function metadataBySite(
+  values: readonly WatchSourceMetadata[] | undefined,
+): ReadonlyMap<Site, WatchSourceMetadata> {
+  const result = new Map<Site, WatchSourceMetadata>();
+  for (const value of values ?? []) {
+    const site = SITE_BY_NORMALIZED_KEY.get(
+      normalizeLookupKey(String(value.site)),
+    );
+    if (site) result.set(site, value);
+  }
+  return result;
+}
+
+function resolveSearchScope(
+  configured: WatchSearchScope | undefined,
+  watch: JobWatch,
+): WatchSearchScope {
+  const countryCodes = uniqueNonEmpty(
+    configured?.countryCodes ?? watch.countryCodes,
+  ).map((countryCode) => countryCode.toUpperCase());
+  const locations = uniqueNonEmpty(configured?.locations ?? watch.locations);
+  const searchTerms = uniqueNonEmpty(
+    configured?.searchTerms ?? watch.searchTerms,
+  );
+  return {
+    countryCodes: countryCodes.length > 0 ? countryCodes : ["CA"],
+    locations: locations.length > 0 ? locations : ["Canada"],
+    searchTerms,
+    ...(configured?.maxRequestsPerRun === undefined
+      ? {}
+      : { maxRequestsPerRun: configured.maxRequestsPerRun }),
+  };
+}
+
+function inheritInitializedAt(
+  target: ConfiguredWatchSourceTarget,
+  watch: JobWatch,
+): Date | null | undefined {
+  return target.initializedAt === undefined
+    ? watch.initializedAt
+    : target.initializedAt;
+}
+
+function rotateMatrixRequests(
+  requests: WatchSourceRequest[],
+  target: WatchSourceTarget,
+  maximum: number,
+  options: { now: Date; rotationSeed?: number },
+): WatchSourceRequest[] {
+  if (requests.length <= maximum) return requests;
+  const intervalMs = Math.max(1, target.intervalMinutes) * 60_000;
+  const defaultSeed = Number.isFinite(options.now.getTime())
+    ? Math.floor(options.now.getTime() / intervalMs)
+    : 0;
+  const rotationSeed = Number.isFinite(options.rotationSeed)
+    ? Math.trunc(options.rotationSeed as number)
+    : defaultSeed;
+  const start = modulo(
+    stableStringHash(target.key) + rotationSeed * maximum,
+    requests.length,
+  );
+  return Array.from(
+    { length: maximum },
+    (_value, offset) => requests[(start + offset) % requests.length],
+  );
+}
+
+function stableStringHash(value: string): number {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+  return hash;
+}
+
+function modulo(value: number, divisor: number): number {
+  return ((value % divisor) + divisor) % divisor;
+}
+
 function validDate(value: Date | null | undefined): Date | null {
   if (!value) return null;
   const date = value instanceof Date ? value : new Date(value);
@@ -641,4 +823,8 @@ function validDate(value: Date | null | undefined): Date | null {
 
 function positiveNumber(value: number): boolean {
   return Number.isFinite(value) && value > 0;
+}
+
+function positiveInteger(value: number, fallback: number): number {
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : fallback;
 }

@@ -1,0 +1,647 @@
+{
+  "name": "Prestige Software Internships — Canada and USA",
+  "description": "Versioned, target-scoped monitoring for software internships and co-ops across Canada, with Canada/USA discovery redundancy.",
+  "enabled": false,
+  "intervalMinutes": 3,
+  "timezone": "America/Toronto",
+  "initializationMode": "baseline",
+  "recentWindowMinutes": 180,
+  "minimumScore": 60,
+  "urgentScore": 80,
+  "digestScore": 40,
+  "notificationChannels": [{ "type": "discord", "destinationRef": "default" }],
+  "sources": [
+    "google_careers",
+    "shopify",
+    "ashby",
+    "amazon",
+    "microsoft",
+    "apple",
+    "nvidia",
+    "stripe",
+    "openai",
+    "datadog",
+    "doordash",
+    "coinbase",
+    "figma",
+    "vercel",
+    "meta",
+    "wellfound",
+    "canadajobbank",
+    "google",
+    "linkedin"
+  ],
+  "sourceTiers": {
+    "google_careers": 1,
+    "shopify": 1,
+    "ashby": 1,
+    "amazon": 1,
+    "microsoft": 1,
+    "apple": 1,
+    "nvidia": 1,
+    "stripe": 1,
+    "openai": 1,
+    "datadog": 1,
+    "doordash": 1,
+    "coinbase": 1,
+    "figma": 1,
+    "vercel": 1,
+    "meta": 1,
+    "wellfound": 1,
+    "canadajobbank": 2,
+    "google": 2,
+    "linkedin": 3
+  },
+  "companySlugs": ["ashby:wealthsimple", "ashby:plaid"],
+  "sourceTargets": [
+    {
+      "site": "google_careers",
+      "companyName": "Google",
+      "tier": 1,
+      "intervalMinutes": 3,
+      "enabled": true,
+      "searchScope": {
+        "countryCodes": ["CA"],
+        "locations": [
+          "Canada",
+          "Toronto, Ontario",
+          "Greater Toronto Area",
+          "Waterloo, Ontario"
+        ],
+        "searchTerms": [
+          "software engineer intern",
+          "software developer intern",
+          "software engineering internship",
+          "software engineering co-op",
+          "software developer co-op",
+          "backend engineer intern",
+          "frontend engineer intern",
+          "full stack engineer intern",
+          "mobile engineer intern",
+          "developer experience intern",
+          "platform engineer intern",
+          "cloud engineer intern",
+          "infrastructure engineer intern",
+          "site reliability engineer intern",
+          "devops engineer intern",
+          "security engineer intern",
+          "data engineer intern",
+          "machine learning engineer intern",
+          "AI engineer intern"
+        ],
+        "maxRequestsPerRun": 12
+      },
+      "initializedAt": null,
+      "lastRunAt": null,
+      "nextRunAt": null
+    },
+    {
+      "site": "shopify",
+      "companyName": "Shopify",
+      "tier": 1,
+      "intervalMinutes": 3,
+      "enabled": true,
+      "searchScope": {
+        "countryCodes": ["CA"],
+        "locations": [
+          "Canada",
+          "Toronto, Ontario",
+          "Greater Toronto Area",
+          "Waterloo, Ontario"
+        ]
+      },
+      "initializedAt": null,
+      "lastRunAt": null,
+      "nextRunAt": null
+    },
+    {
+      "site": "ashby",
+      "companySlug": "wealthsimple",
+      "companyName": "Wealthsimple",
+      "tier": 1,
+      "intervalMinutes": 3,
+      "enabled": true,
+      "searchScope": {
+        "countryCodes": ["CA"],
+        "locations": [
+          "Canada",
+          "Toronto, Ontario",
+          "Greater Toronto Area",
+          "Waterloo, Ontario"
+        ]
+      },
+      "initializedAt": null,
+      "lastRunAt": null,
+      "nextRunAt": null
+    },
+    {
+      "site": "ashby",
+      "companySlug": "plaid",
+      "companyName": "Plaid",
+      "tier": 1,
+      "intervalMinutes": 3,
+      "enabled": true,
+      "searchScope": {
+        "countryCodes": ["CA"],
+        "locations": [
+          "Canada",
+          "Toronto, Ontario",
+          "Greater Toronto Area",
+          "Waterloo, Ontario"
+        ]
+      },
+      "initializedAt": null,
+      "lastRunAt": null,
+      "nextRunAt": null
+    },
+    {
+      "site": "amazon",
+      "companyName": "Amazon",
+      "tier": 1,
+      "intervalMinutes": 3,
+      "enabled": false,
+      "searchScope": {
+        "countryCodes": ["CA"],
+        "locations": [
+          "Canada",
+          "Toronto, Ontario",
+          "Greater Toronto Area",
+          "Waterloo, Ontario"
+        ]
+      },
+      "initializedAt": null,
+      "lastRunAt": null,
+      "nextRunAt": null
+    },
+    {
+      "site": "microsoft",
+      "companyName": "Microsoft",
+      "tier": 1,
+      "intervalMinutes": 3,
+      "enabled": false,
+      "searchScope": {
+        "countryCodes": ["CA"],
+        "locations": [
+          "Canada",
+          "Toronto, Ontario",
+          "Greater Toronto Area",
+          "Waterloo, Ontario"
+        ]
+      },
+      "initializedAt": null,
+      "lastRunAt": null,
+      "nextRunAt": null
+    },
+    {
+      "site": "apple",
+      "companyName": "Apple",
+      "tier": 1,
+      "intervalMinutes": 3,
+      "enabled": false,
+      "searchScope": {
+        "countryCodes": ["CA"],
+        "locations": [
+          "Canada",
+          "Toronto, Ontario",
+          "Greater Toronto Area",
+          "Waterloo, Ontario"
+        ]
+      },
+      "initializedAt": null,
+      "lastRunAt": null,
+      "nextRunAt": null
+    },
+    {
+      "site": "nvidia",
+      "companyName": "Nvidia",
+      "tier": 1,
+      "intervalMinutes": 3,
+      "enabled": false,
+      "searchScope": {
+        "countryCodes": ["CA"],
+        "locations": [
+          "Canada",
+          "Toronto, Ontario",
+          "Greater Toronto Area",
+          "Waterloo, Ontario"
+        ]
+      },
+      "initializedAt": null,
+      "lastRunAt": null,
+      "nextRunAt": null
+    },
+    {
+      "site": "stripe",
+      "companyName": "Stripe",
+      "tier": 1,
+      "intervalMinutes": 3,
+      "enabled": false,
+      "searchScope": {
+        "countryCodes": ["CA"],
+        "locations": [
+          "Canada",
+          "Toronto, Ontario",
+          "Greater Toronto Area",
+          "Waterloo, Ontario"
+        ]
+      },
+      "initializedAt": null,
+      "lastRunAt": null,
+      "nextRunAt": null
+    },
+    {
+      "site": "openai",
+      "companyName": "OpenAI",
+      "tier": 1,
+      "intervalMinutes": 3,
+      "enabled": false,
+      "searchScope": {
+        "countryCodes": ["CA"],
+        "locations": [
+          "Canada",
+          "Toronto, Ontario",
+          "Greater Toronto Area",
+          "Waterloo, Ontario"
+        ]
+      },
+      "initializedAt": null,
+      "lastRunAt": null,
+      "nextRunAt": null
+    },
+    {
+      "site": "datadog",
+      "companyName": "Datadog",
+      "tier": 1,
+      "intervalMinutes": 3,
+      "enabled": false,
+      "searchScope": {
+        "countryCodes": ["CA"],
+        "locations": [
+          "Canada",
+          "Toronto, Ontario",
+          "Greater Toronto Area",
+          "Waterloo, Ontario"
+        ]
+      },
+      "initializedAt": null,
+      "lastRunAt": null,
+      "nextRunAt": null
+    },
+    {
+      "site": "doordash",
+      "companyName": "DoorDash",
+      "tier": 1,
+      "intervalMinutes": 3,
+      "enabled": false,
+      "searchScope": {
+        "countryCodes": ["CA"],
+        "locations": [
+          "Canada",
+          "Toronto, Ontario",
+          "Greater Toronto Area",
+          "Waterloo, Ontario"
+        ]
+      },
+      "initializedAt": null,
+      "lastRunAt": null,
+      "nextRunAt": null
+    },
+    {
+      "site": "coinbase",
+      "companyName": "Coinbase",
+      "tier": 1,
+      "intervalMinutes": 3,
+      "enabled": false,
+      "searchScope": {
+        "countryCodes": ["CA"],
+        "locations": [
+          "Canada",
+          "Toronto, Ontario",
+          "Greater Toronto Area",
+          "Waterloo, Ontario"
+        ]
+      },
+      "initializedAt": null,
+      "lastRunAt": null,
+      "nextRunAt": null
+    },
+    {
+      "site": "figma",
+      "companyName": "Figma",
+      "tier": 1,
+      "intervalMinutes": 3,
+      "enabled": false,
+      "searchScope": {
+        "countryCodes": ["CA"],
+        "locations": [
+          "Canada",
+          "Toronto, Ontario",
+          "Greater Toronto Area",
+          "Waterloo, Ontario"
+        ]
+      },
+      "initializedAt": null,
+      "lastRunAt": null,
+      "nextRunAt": null
+    },
+    {
+      "site": "vercel",
+      "companyName": "Vercel",
+      "tier": 1,
+      "intervalMinutes": 3,
+      "enabled": false,
+      "searchScope": {
+        "countryCodes": ["CA"],
+        "locations": [
+          "Canada",
+          "Toronto, Ontario",
+          "Greater Toronto Area",
+          "Waterloo, Ontario"
+        ]
+      },
+      "initializedAt": null,
+      "lastRunAt": null,
+      "nextRunAt": null
+    },
+    {
+      "site": "meta",
+      "companyName": "Meta",
+      "tier": 1,
+      "intervalMinutes": 3,
+      "enabled": false,
+      "searchScope": {
+        "countryCodes": ["CA"],
+        "locations": [
+          "Canada",
+          "Toronto, Ontario",
+          "Greater Toronto Area",
+          "Waterloo, Ontario"
+        ]
+      },
+      "initializedAt": null,
+      "lastRunAt": null,
+      "nextRunAt": null
+    },
+    {
+      "site": "wellfound",
+      "companyName": "Wellfound",
+      "tier": 1,
+      "intervalMinutes": 3,
+      "enabled": false,
+      "searchScope": {
+        "countryCodes": ["CA"],
+        "locations": [
+          "Canada",
+          "Toronto, Ontario",
+          "Greater Toronto Area",
+          "Waterloo, Ontario"
+        ]
+      },
+      "initializedAt": null,
+      "lastRunAt": null,
+      "nextRunAt": null
+    },
+    {
+      "site": "canadajobbank",
+      "companyName": "Canada Job Bank",
+      "tier": 2,
+      "intervalMinutes": 15,
+      "enabled": true,
+      "searchScope": {
+        "countryCodes": ["CA"],
+        "locations": [
+          "Canada",
+          "Toronto, Ontario",
+          "Greater Toronto Area",
+          "Waterloo, Ontario"
+        ],
+        "searchTerms": [
+          "software engineer intern",
+          "software developer intern",
+          "software engineering internship",
+          "software engineering co-op",
+          "software developer co-op",
+          "backend engineer intern",
+          "frontend engineer intern",
+          "full stack engineer intern",
+          "mobile engineer intern",
+          "developer experience intern",
+          "platform engineer intern",
+          "cloud engineer intern",
+          "infrastructure engineer intern",
+          "site reliability engineer intern",
+          "devops engineer intern",
+          "security engineer intern",
+          "data engineer intern",
+          "machine learning engineer intern",
+          "AI engineer intern"
+        ],
+        "maxRequestsPerRun": 12
+      },
+      "initializedAt": null,
+      "lastRunAt": null,
+      "nextRunAt": null
+    },
+    {
+      "site": "google",
+      "companyName": "Google Jobs",
+      "tier": 2,
+      "intervalMinutes": 15,
+      "enabled": false,
+      "searchScope": {
+        "countryCodes": ["CA", "US"],
+        "locations": [
+          "Canada",
+          "Toronto, Ontario",
+          "Greater Toronto Area",
+          "Waterloo, Ontario",
+          "United States"
+        ],
+        "searchTerms": [
+          "software engineer intern",
+          "software developer intern",
+          "software engineering internship",
+          "software engineering co-op",
+          "software developer co-op",
+          "backend engineer intern",
+          "frontend engineer intern",
+          "full stack engineer intern",
+          "mobile engineer intern",
+          "developer experience intern",
+          "platform engineer intern",
+          "cloud engineer intern",
+          "infrastructure engineer intern",
+          "site reliability engineer intern",
+          "devops engineer intern",
+          "security engineer intern",
+          "data engineer intern",
+          "machine learning engineer intern",
+          "AI engineer intern"
+        ],
+        "maxRequestsPerRun": 12
+      },
+      "initializedAt": null,
+      "lastRunAt": null,
+      "nextRunAt": null
+    },
+    {
+      "site": "linkedin",
+      "companyName": "LinkedIn public guest search",
+      "tier": 3,
+      "intervalMinutes": 60,
+      "enabled": true,
+      "searchScope": {
+        "countryCodes": ["CA", "US"],
+        "locations": [
+          "Canada",
+          "Toronto, Ontario",
+          "Greater Toronto Area",
+          "Waterloo, Ontario",
+          "United States"
+        ],
+        "searchTerms": [
+          "software engineer intern",
+          "software developer intern",
+          "software engineering internship",
+          "software engineering co-op",
+          "software developer co-op",
+          "backend engineer intern",
+          "frontend engineer intern",
+          "full stack engineer intern",
+          "mobile engineer intern",
+          "developer experience intern",
+          "platform engineer intern",
+          "cloud engineer intern",
+          "infrastructure engineer intern",
+          "site reliability engineer intern",
+          "devops engineer intern",
+          "security engineer intern",
+          "data engineer intern",
+          "machine learning engineer intern",
+          "AI engineer intern"
+        ],
+        "maxRequestsPerRun": 8
+      },
+      "initializedAt": null,
+      "lastRunAt": null,
+      "nextRunAt": null
+    }
+  ],
+  "companies": [
+    "Google",
+    "Amazon",
+    "Meta",
+    "Shopify",
+    "Wealthsimple",
+    "Microsoft",
+    "Apple",
+    "Nvidia",
+    "Uber",
+    "Stripe",
+    "OpenAI",
+    "Datadog",
+    "DoorDash",
+    "Coinbase",
+    "Notion",
+    "Figma",
+    "Ramp",
+    "Plaid",
+    "Vercel",
+    "Netflix",
+    "IBM",
+    "RBC",
+    "TD",
+    "Scotiabank",
+    "BMO",
+    "CIBC"
+  ],
+  "searchTerms": [
+    "software engineer intern",
+    "software developer intern",
+    "software engineering internship",
+    "software engineering co-op",
+    "software developer co-op",
+    "backend engineer intern",
+    "frontend engineer intern",
+    "full stack engineer intern",
+    "mobile engineer intern",
+    "developer experience intern",
+    "platform engineer intern",
+    "cloud engineer intern",
+    "infrastructure engineer intern",
+    "site reliability engineer intern",
+    "devops engineer intern",
+    "security engineer intern",
+    "data engineer intern",
+    "machine learning engineer intern",
+    "AI engineer intern"
+  ],
+  "requiredTerms": ["intern", "internship", "co-op", "coop"],
+  "preferredTerms": [
+    "Python",
+    "Java",
+    "Go",
+    "C",
+    "C++",
+    "JavaScript",
+    "TypeScript",
+    "SQL",
+    "Bash",
+    "React",
+    "Next.js",
+    "Flask",
+    "Docker",
+    "Docker Compose",
+    "Kubernetes",
+    "Terraform",
+    "GitHub Actions",
+    "Google Cloud Platform",
+    "Apache Kafka",
+    "PostgreSQL",
+    "Linux",
+    "Auth0",
+    "Identity and Access Management",
+    "IAM",
+    "RBAC",
+    "Distributed Systems",
+    "Backend",
+    "Frontend",
+    "Full Stack",
+    "Mobile",
+    "Developer Experience",
+    "Platform",
+    "Cloud",
+    "Infrastructure",
+    "SRE",
+    "DevOps",
+    "Security",
+    "Data Engineering",
+    "Machine Learning",
+    "Artificial Intelligence",
+    "API",
+    "Authentication",
+    "Authorization"
+  ],
+  "excludedTerms": [
+    "senior",
+    "staff",
+    "principal",
+    "lead",
+    "manager",
+    "director",
+    "architect",
+    "5+ years",
+    "7+ years",
+    "10+ years"
+  ],
+  "locations": [
+    "Canada",
+    "Toronto, Ontario",
+    "Greater Toronto Area",
+    "Waterloo, Ontario",
+    "United States"
+  ],
+  "countryCodes": ["CA", "US"],
+  "allowedWorkplaceTypes": ["remote", "hybrid", "on-site"],
+  "allowedEmploymentTypes": ["internship", "co-op"]
+}

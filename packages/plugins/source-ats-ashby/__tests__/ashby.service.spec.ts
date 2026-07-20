@@ -173,8 +173,37 @@ describe("AshbyService — Spec 719", () => {
         city: "Mountain View, CA; Seattle, WA",
         country: "United States",
       });
+      expect(job?.locations).toHaveLength(3);
+      expect(job?.locations).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ city: "Mountain View", state: "CA" }),
+          expect.objectContaining({ city: "Seattle", state: "WA" }),
+          expect.objectContaining({ city: "Remote", country: "United States" }),
+        ]),
+      );
       expect(job?.isRemote).toBe(true);
       expect(job?.workFromHomeType).toBe("Remote");
+    });
+
+    it("preserves a country-only board location in locations[]", async () => {
+      const raw = clone(BOARD_RAW) as any;
+      raw.jobs[0].location = "Canada";
+      raw.jobs[0].address = null;
+      raw.jobs[0].secondaryLocations = [];
+      mockGet.mockResolvedValueOnce({ data: raw });
+
+      const result = await new AshbyService().scrape({
+        siteType: [Site.ASHBY],
+        companySlug: SLUG,
+      } as ScraperInputDto);
+      const job = result.jobs.find(
+        (candidate) => candidate.id === `ashby-${BOARD_RAW.jobs[0].id}`,
+      );
+
+      expect(job?.location).toMatchObject({ country: "Canada" });
+      expect(job?.locations).toEqual([
+        expect.objectContaining({ country: "Canada" }),
+      ]);
     });
   });
 

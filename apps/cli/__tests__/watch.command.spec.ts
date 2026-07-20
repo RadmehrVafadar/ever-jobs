@@ -1,4 +1,9 @@
-import { JobWatch, WatchRepository } from "@ever-jobs/watcher";
+import {
+  JobWatch,
+  PRESTIGE_INTERNSHIPS_V2_ID,
+  WatchPresetService,
+  WatchRepository,
+} from "@ever-jobs/watcher";
 import { WatchCommand } from "../src/commands/watch.command";
 
 describe("WatchCommand", () => {
@@ -22,7 +27,11 @@ describe("WatchCommand", () => {
       listNotifications: jest.fn(),
     } as unknown as jest.Mocked<WatchRepository>;
     execution = { runWatch: jest.fn().mockResolvedValue({ id: "run-1" }) };
-    command = new WatchCommand(repository, execution as never);
+    command = new WatchCommand(
+      repository,
+      execution as never,
+      new WatchPresetService(repository),
+    );
     stdout = jest.spyOn(process.stdout, "write").mockImplementation(() => true);
   });
 
@@ -59,7 +68,62 @@ describe("WatchCommand", () => {
 
     await command.run(["initialize", "watch-1"], { json: true });
 
-    expect(execution.runWatch).toHaveBeenCalledWith("watch-1", "baseline");
+    expect(execution.runWatch).toHaveBeenCalledWith("watch-1", "baseline", {
+      trigger: "initialize",
+      forceSources: true,
+    });
+  });
+
+  it("validates and forwards repeatable initialization targets", async () => {
+    repository.getWatch.mockResolvedValue(
+      watchFixture({
+        sourceTargets: [
+          {
+            site: "ashby",
+            companySlug: "wealthsimple",
+            tier: 1,
+            intervalMinutes: 3,
+            enabled: true,
+          },
+          {
+            site: "google_careers",
+            tier: 1,
+            intervalMinutes: 3,
+            enabled: false,
+          },
+        ],
+      }),
+    );
+
+    await command.run(["initialize", "watch-1"], {
+      target: ["ashby:wealthsimple"],
+      json: true,
+    });
+
+    expect(execution.runWatch).toHaveBeenCalledWith("watch-1", "baseline", {
+      trigger: "initialize",
+      forceSources: true,
+      targetKeys: ["ashby:wealthsimple"],
+    });
+    await expect(
+      command.run(["initialize", "watch-1"], {
+        target: ["google_careers"],
+      }),
+    ).rejects.toThrow("disabled");
+  });
+
+  it("previews preset application without updating the watch", async () => {
+    repository.getWatch.mockResolvedValue(watchFixture());
+
+    await command.run(["preset", "apply", PRESTIGE_INTERNSHIPS_V2_ID], {
+      watch: "watch-1",
+      json: true,
+    });
+
+    expect(repository.updateWatch).not.toHaveBeenCalled();
+    expect(stdout).toHaveBeenCalledWith(
+      expect.stringContaining('"dryRun": true'),
+    );
   });
 
   it("updates only an allowed match workflow status", async () => {

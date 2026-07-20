@@ -54,6 +54,16 @@ describe("WatchExecutionService durable pipeline", () => {
     await expect(repository.listNotifications({})).resolves.toMatchObject({
       total: 0,
     });
+    const baselineMatches = await repository.listMatches({ watchId: watch.id });
+    expect(baselineMatches.items).toHaveLength(3);
+    expect(baselineMatches.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          notificationState: "suppressed",
+          notificationSuppressionReason: "baseline",
+        }),
+      ]),
+    );
 
     now = new Date("2026-07-14T12:03:00.000Z");
     jobs = [...jobs, internship("new-1", "Original new-job description")];
@@ -95,6 +105,19 @@ describe("WatchExecutionService durable pipeline", () => {
     expect(deliveries.items[0]).toEqual(
       expect.objectContaining({ status: "sent", attemptCount: 1 }),
     );
+    const matchesAfterEdit = await repository.listMatches({
+      watchId: watch.id,
+    });
+    expect(
+      matchesAfterEdit.items.filter(
+        (match) => match.notificationSuppressionReason === "baseline",
+      ),
+    ).toHaveLength(3);
+    expect(
+      matchesAfterEdit.items.filter(
+        (match) => match.notificationState === "sent",
+      ),
+    ).toHaveLength(1);
     const editedObservation = (
       await repository.listObservedJobs({})
     ).items.find((job) => job.externalJobId === "new-1");
@@ -146,6 +169,17 @@ describe("WatchExecutionService durable pipeline", () => {
     await expect(repository.listObservedJobs({})).resolves.toMatchObject({
       total: 1,
     });
+    const persistedWatch = await repository.getWatch(watch.id);
+    expect(
+      persistedWatch?.sourceTargets.find(
+        (target) => target.site === Site.GOOGLE_CAREERS,
+      )?.initializedAt,
+    ).toEqual(now);
+    expect(
+      persistedWatch?.sourceTargets.find(
+        (target) => target.site === Site.AMAZON,
+      )?.initializedAt,
+    ).toBeUndefined();
   });
 
   it("skips a malformed job instead of failing the whole run", async () => {
@@ -234,6 +268,370 @@ describe("WatchExecutionService durable pipeline", () => {
 
     deferred.resolve(sourceResult([]));
     await expect(activeRun).resolves.toMatchObject({ status: "completed" });
+  });
+
+  it("keeps cross-source observations but sends one canonical notification", async () => {
+    const initializedAt = new Date("2026-07-14T11:00:00.000Z");
+    const now = new Date("2026-07-14T12:00:00.000Z");
+    const direct = internship("direct-1", "Official employer detail");
+    direct.applyUrl =
+      "https://careers.google.com/jobs/results/1?utm_source=direct";
+    direct.jobUrl = direct.applyUrl;
+    const aggregate = internship("aggregate-1", "Aggregator detail");
+    aggregate.site = Site.GOOGLE;
+    aggregate.jobUrl = "https://www.google.com/search?q=google+intern";
+    aggregate.applyUrl =
+      "https://careers.google.com/jobs/results/1?utm_source=aggregate";
+    const repository = new InMemoryWatchRepository();
+    const watch = await repository.createWatch(
+      pipelineWatch({
+        initializedAt,
+        sources: [Site.GOOGLE_CAREERS, Site.GOOGLE],
+        sourceTargets: [
+          sourceTarget(Site.GOOGLE_CAREERS, 1, initializedAt),
+          sourceTarget(Site.GOOGLE, 2, initializedAt),
+        ],
+        notificationChannels: [{ type: "discord", destinationRef: "default" }],
+      }),
+    );
+    const provider = successfulProvider();
+    const execution = executionService(
+      repository,
+      fakeExecutor(() => multiSourceResult([direct, aggregate], initializedAt)),
+      provider,
+      () => now,
+      "canonical-worker",
+    );
+
+    const run = await execution.runWatch(watch.id);
+
+    expect(run).toEqual(
+      expect.objectContaining({
+        status: "completed",
+        newJobsDetected: 2,
+        matchesCreated: 1,
+        notificationsSent: 1,
+      }),
+    );
+    await expect(repository.listObservedJobs({})).resolves.toMatchObject({
+      total: 2,
+    });
+    await expect(
+      repository.listMatches({ watchId: watch.id }),
+    ).resolves.toMatchObject({
+      total: 1,
+    });
+    await expect(
+      repository.listNotifications({ watchId: watch.id }),
+    ).resolves.toMatchObject({
+      total: 1,
+    });
+    expect(provider.send).toHaveBeenCalledTimes(1);
+  });
+
+  it("notifies when a richer direct observation makes a suppressed canonical episode eligible", async () => {
+    let now = new Date("2026-07-14T12:00:00.000Z");
+    const initializedAt = new Date("2026-07-14T11:00:00.000Z");
+    const employerUrl = "https://careers.google.com/jobs/results/recovered-1";
+    const seattle = {
+      city: "Seattle",
+      state: "Washington",
+      country: "United States",
+      displayLocation: () => "Seattle, Washington, United States",
+    };
+    const aggregate = internship(
+      "aggregate-recovered-1",
+      "Thin aggregate observation",
+    );
+    aggregate.site = Site.GOOGLE;
+    aggregate.location = seattle;
+    aggregate.applyUrl = employerUrl;
+    aggregate.jobUrl = "https://www.google.com/search?q=recovered+intern";
+    const direct = internship(
+      "direct-recovered-1",
+      "Richer official employer observation",
+    );
+    direct.location = seattle;
+    direct.applyUrl = employerUrl;
+    direct.jobUrl = employerUrl;
+
+    const aggregateTarget = plannedTarget(Site.GOOGLE, 1, initializedAt);
+    const directTarget = plannedTarget(Site.GOOGLE_CAREERS, 2, initializedAt);
+    let result = oneTargetResult(aggregate, aggregateTarget);
+    const executor = fakeExecutor(() => result);
+    const provider = successfulProvider();
+    const repository = new InMemoryWatchRepository();
+    const watch = await repository.createWatch(
+      pipelineWatch({
+        initializedAt,
+        sources: [Site.GOOGLE, Site.GOOGLE_CAREERS],
+        sourceTargets: [
+          sourceTarget(Site.GOOGLE, 1, initializedAt),
+          sourceTarget(Site.GOOGLE_CAREERS, 2, initializedAt),
+        ],
+        notificationChannels: [{ type: "discord", destinationRef: "default" }],
+      }),
+    );
+    const execution = executionService(
+      repository,
+      executor,
+      provider,
+      () => now,
+      "eligibility-recovery-worker",
+    );
+
+    const suppressedRun = await execution.runWatch(watch.id);
+    expect(suppressedRun).toEqual(
+      expect.objectContaining({
+        matchesCreated: 1,
+        notificationsSent: 0,
+      }),
+    );
+    const suppressedMatch = (
+      await repository.listMatches({
+        watchId: watch.id,
+      })
+    ).items[0];
+    expect(suppressedMatch).toEqual(
+      expect.objectContaining({
+        notificationState: "suppressed",
+        notificationSuppressionReason: "eligibility",
+      }),
+    );
+    expect(provider.send).not.toHaveBeenCalled();
+
+    now = new Date("2026-07-14T12:03:00.000Z");
+    result = oneTargetResult(direct, directTarget);
+    const recoveredRun = await execution.runWatch(watch.id);
+
+    expect(recoveredRun).toEqual(
+      expect.objectContaining({
+        matchesCreated: 0,
+        notificationsSent: 1,
+      }),
+    );
+    expect(provider.send).toHaveBeenCalledTimes(1);
+    const sentMessage = (provider.send as jest.Mock).mock.calls[0]?.[0];
+    expect(sentMessage).toEqual(
+      expect.objectContaining({
+        job: expect.objectContaining({
+          externalJobId: "direct-recovered-1",
+          source: Site.GOOGLE_CAREERS,
+        }),
+        match: expect.objectContaining({
+          id: suppressedMatch.id,
+          notificationState: "pending",
+          notificationSuppressionReason: null,
+        }),
+      }),
+    );
+    await expect(
+      repository.listNotifications({ watchId: watch.id }),
+    ).resolves.toMatchObject({ total: 1 });
+    await expect(
+      repository.listMatches({ watchId: watch.id }),
+    ).resolves.toMatchObject({
+      total: 1,
+      items: [
+        expect.objectContaining({
+          notificationState: "sent",
+          notificationSuppressionReason: null,
+        }),
+      ],
+    });
+  });
+
+  it("does not resend a canonical episode when its notification band changes", async () => {
+    const now = new Date("2026-07-14T12:00:00.000Z");
+    const repository = new InMemoryWatchRepository();
+    const watch = await repository.createWatch(
+      pipelineWatch({
+        notificationChannels: [{ type: "discord", destinationRef: "default" }],
+      }),
+    );
+    const observed = await repository.upsertObservedJob({
+      fingerprint: "band-change-observation",
+      source: Site.GOOGLE,
+      title: "Software Developer Intern",
+      normalizedTitle: "software developer intern",
+      canonicalKey: "canonical-job",
+      canonicalEpisodeKey: "canonical-episode",
+      firstSeenAt: now,
+      lastSeenAt: now,
+    });
+    const matched = await repository.upsertMatch({
+      watchId: watch.id,
+      observedJobId: observed.job.id,
+      canonicalEpisodeKey: "canonical-episode",
+      score: 85,
+      scoreBreakdown: scoreBreakdown(85),
+      matchedTerms: ["software internship"],
+      status: "new",
+      firstMatchedAt: now,
+      lastMatchedAt: now,
+      notificationState: "pending",
+    });
+    const provider = successfulProvider();
+    const dispatcher = new NotificationDispatcher(repository, [provider], {
+      ownerId: "band-change-worker",
+      maxAttempts: 3,
+      claimTtlMs: 30_000,
+      retryBaseDelayMs: 1_000,
+      retryMaxDelayMs: 10_000,
+      now: () => now,
+      random: () => 0,
+    });
+    const message = {
+      idempotencyKey: "",
+      watch,
+      job: observed.job,
+      match: matched.match,
+      detectedAt: now,
+    };
+
+    await expect(
+      dispatcher.dispatch({ ...message, type: "urgent" }),
+    ).resolves.toBe(1);
+    await expect(
+      dispatcher.dispatch({ ...message, type: "standard" }),
+    ).resolves.toBe(0);
+    expect(provider.send).toHaveBeenCalledTimes(1);
+    await expect(
+      repository.listNotifications({ watchId: watch.id }),
+    ).resolves.toMatchObject({
+      total: 1,
+    });
+  });
+
+  it("degrades Tier 1 after three hard failures and recovers on a valid empty success", async () => {
+    let now = new Date("2026-07-14T12:00:00.000Z");
+    let outcome: "failed" | "succeeded" = "failed";
+    const repository = new InMemoryWatchRepository();
+    const initializedAt = new Date("2026-07-14T11:00:00.000Z");
+    const watch = await repository.createWatch(
+      pipelineWatch({
+        initializedAt,
+        sourceTargets: [sourceTarget(Site.GOOGLE_CAREERS, 1, initializedAt)],
+      }),
+    );
+    const execution = executionService(
+      repository,
+      fakeExecutor(() => singleTargetResult(outcome, initializedAt)),
+      successfulProvider(),
+      () => now,
+      "health-worker",
+    );
+
+    let run = await execution.runWatch(watch.id);
+    expect(run.coverageDegraded).toBe(false);
+    now = new Date(now.getTime() + 3 * 60_000);
+    run = await execution.runWatch(watch.id);
+    expect(run.coverageDegraded).toBe(false);
+    now = new Date(now.getTime() + 3 * 60_000);
+    run = await execution.runWatch(watch.id);
+    expect(run.coverageDegraded).toBe(true);
+    expect(run.targetResults?.[0]).toEqual(
+      expect.objectContaining({
+        outcome: "hard_failure",
+        consecutiveHardFailures: 3,
+        degraded: true,
+      }),
+    );
+
+    outcome = "succeeded";
+    now = new Date(now.getTime() + 3 * 60_000);
+    run = await execution.runWatch(watch.id);
+    expect(run.coverageDegraded).toBe(false);
+    const health = (await repository.getWatch(watch.id))?.targetHealth?.[
+      Site.GOOGLE_CAREERS
+    ];
+    expect(health).toEqual(
+      expect.objectContaining({
+        successCount: 1,
+        hardFailureCount: 3,
+        emptyRunCount: 1,
+        consecutiveHardFailures: 0,
+        degradedAt: null,
+      }),
+    );
+  });
+
+  it("breaks the hard-failure streak on a partial target outcome", async () => {
+    let now = new Date("2026-07-14T12:00:00.000Z");
+    const outcomes: Array<"failed" | "partial"> = [
+      "failed",
+      "partial",
+      "failed",
+      "failed",
+    ];
+    const repository = new InMemoryWatchRepository();
+    const initializedAt = new Date("2026-07-14T11:00:00.000Z");
+    const watch = await repository.createWatch(
+      pipelineWatch({
+        initializedAt,
+        sourceTargets: [sourceTarget(Site.GOOGLE_CAREERS, 1, initializedAt)],
+      }),
+    );
+    const execution = executionService(
+      repository,
+      fakeExecutor(() =>
+        singleTargetResult(outcomes.shift() ?? "failed", initializedAt),
+      ),
+      successfulProvider(),
+      () => now,
+      "partial-health-worker",
+    );
+
+    for (let index = 0; index < 4; index += 1) {
+      const run = await execution.runWatch(watch.id);
+      expect(run.coverageDegraded).toBe(false);
+      now = new Date(now.getTime() + 3 * 60_000);
+    }
+    expect(
+      (await repository.getWatch(watch.id))?.targetHealth?.[
+        Site.GOOGLE_CAREERS
+      ],
+    ).toEqual(
+      expect.objectContaining({
+        partialRunCount: 1,
+        hardFailureCount: 3,
+        consecutiveHardFailures: 2,
+      }),
+    );
+  });
+
+  it("anchors the watch scheduler deadline to target completion cadence", async () => {
+    const startedAt = new Date("2026-07-14T12:00:00.000Z");
+    const completedAt = new Date("2026-07-14T12:00:30.000Z");
+    let now = startedAt;
+    const initializedAt = new Date("2026-07-14T11:00:00.000Z");
+    const repository = new InMemoryWatchRepository();
+    const watch = await repository.createWatch(
+      pipelineWatch({
+        initializedAt,
+        sourceTargets: [sourceTarget(Site.GOOGLE_CAREERS, 1, initializedAt)],
+      }),
+    );
+    const execution = executionService(
+      repository,
+      fakeExecutor(() => {
+        now = completedAt;
+        return singleTargetResult("succeeded", initializedAt);
+      }),
+      successfulProvider(),
+      () => now,
+      "cadence-worker",
+    );
+
+    await execution.runWatch(watch.id);
+
+    const persisted = await repository.getWatch(watch.id);
+    const expected = new Date(completedAt.getTime() + 3 * 60_000);
+    expect(persisted?.sourceTargets[0].nextRunAt).toEqual(expected);
+    expect(persisted?.nextRunAt).toEqual(expected);
+    expect(persisted?.nextRunAt).not.toEqual(
+      new Date(startedAt.getTime() + 3 * 60_000),
+    );
   });
 });
 
@@ -352,12 +750,17 @@ function pipelineWatch(overrides: Partial<JobWatch> = {}): Partial<JobWatch> {
   };
 }
 
-function sourceTarget(site: Site) {
+function sourceTarget(
+  site: Site,
+  tier: 1 | 2 | 3 = 1,
+  initializedAt?: Date | null,
+) {
   return {
     site,
-    tier: 1 as const,
-    intervalMinutes: 3,
+    tier,
+    intervalMinutes: tier === 1 ? 3 : tier === 2 ? 15 : 60,
     enabled: true,
+    initializedAt,
   };
 }
 
@@ -378,7 +781,13 @@ function sourceResult(
     targets.push(plannedTarget(options.partialFailure));
   return {
     status: failed ? "partial" : "completed",
-    jobs,
+    jobs: jobs.map((job) => ({
+      job,
+      target: targets[0],
+      requestId: `${targets[0].key}:board`,
+      countryCodes: ["CA"],
+      matrixIndex: 0,
+    })),
     sourcesRequested: targets.map((target) => target.key),
     sourcesSucceeded: [Site.GOOGLE_CAREERS],
     sourcesFailed: failed ? [failed.source] : [],
@@ -406,14 +815,168 @@ function sourceResult(
   };
 }
 
-function plannedTarget(site: Site) {
+function plannedTarget(
+  site: Site,
+  tier: 1 | 2 | 3 = 1,
+  initializedAt?: Date | null,
+) {
   return {
     key: site,
     configuredSource: site,
     site,
-    tier: 1 as const,
-    kind: "direct" as const,
-    mode: "board" as const,
+    tier,
+    kind: (site === Site.GOOGLE ? "structured" : "direct") as
+      | "structured"
+      | "direct",
+    mode: (site === Site.GOOGLE ? "query" : "board") as "query" | "board",
+    intervalMinutes: tier === 1 ? 3 : tier === 2 ? 15 : 60,
+    searchScope: {
+      countryCodes: ["CA"],
+      locations: ["Toronto, Ontario"],
+      searchTerms: ["software developer intern"],
+    },
+    initializedAt,
+  };
+}
+
+function multiSourceResult(
+  jobs: JobPostDto[],
+  initializedAt: Date,
+): WatchSourcesExecutionResult {
+  const targets = [
+    plannedTarget(Site.GOOGLE_CAREERS, 1, initializedAt),
+    plannedTarget(Site.GOOGLE, 2, initializedAt),
+  ];
+  return {
+    status: "completed",
+    jobs: jobs.map((job, index) => ({
+      job,
+      target: targets[index],
+      requestId: `${targets[index].key}:request`,
+      searchTerm: "software developer intern",
+      location: "Toronto, Ontario",
+      countryCodes: ["CA"],
+      matrixIndex: 0,
+    })),
+    sourcesRequested: targets.map((target) => target.key),
+    sourcesSucceeded: targets.map((target) => target.key),
+    sourcesFailed: [],
+    failures: [],
+    requestResults: [],
+    sourceResults: targets.map((target) => ({
+      source: target.key,
+      status: "succeeded" as const,
+      requests: 1,
+      requestsSucceeded: 1,
+      requestsFailed: 0,
+      jobsFetched: 1,
+      durationMs: 10,
+    })),
+    plan: {
+      dueTiers: [1, 2],
+      skippedTiers: [3],
+      targets,
+      skippedTargets: [],
+      requests: [],
+      issues: [],
+    },
+  };
+}
+
+function oneTargetResult(
+  job: JobPostDto,
+  target: ReturnType<typeof plannedTarget>,
+): WatchSourcesExecutionResult {
+  return {
+    status: "completed",
+    jobs: [
+      {
+        job,
+        target,
+        requestId: `${target.key}:request`,
+        searchTerm: "software developer intern",
+        location: "Seattle, Washington",
+        countryCodes: target.tier === 1 ? ["CA"] : ["CA", "US"],
+        matrixIndex: 0,
+      },
+    ],
+    sourcesRequested: [target.key],
+    sourcesSucceeded: [target.key],
+    sourcesFailed: [],
+    failures: [],
+    requestResults: [],
+    sourceResults: [
+      {
+        source: target.key,
+        status: "succeeded",
+        requests: 1,
+        requestsSucceeded: 1,
+        requestsFailed: 0,
+        jobsFetched: 1,
+        durationMs: 10,
+      },
+    ],
+    plan: {
+      dueTiers: [target.tier],
+      skippedTiers: ([1, 2, 3] as const).filter((tier) => tier !== target.tier),
+      targets: [target],
+      skippedTargets: [],
+      requests: [],
+      issues: [],
+    },
+  };
+}
+
+function singleTargetResult(
+  status: "succeeded" | "partial" | "failed",
+  initializedAt: Date,
+): WatchSourcesExecutionResult {
+  const target = plannedTarget(Site.GOOGLE_CAREERS, 1, initializedAt);
+  const requestsSucceeded = status === "failed" ? 0 : 1;
+  const requestsFailed = status === "succeeded" ? 0 : 1;
+  return {
+    status:
+      status === "succeeded"
+        ? "completed"
+        : status === "partial"
+          ? "partial"
+          : "failed",
+    jobs: [],
+    sourcesRequested: [target.key],
+    sourcesSucceeded: status === "succeeded" ? [target.key] : [],
+    sourcesFailed: status === "succeeded" ? [] : [target.key],
+    failures:
+      status === "succeeded"
+        ? []
+        : [
+            {
+              source: target.key,
+              requestId: `${target.key}:request`,
+              category: "source",
+              error: "source unavailable",
+              retryable: true,
+            },
+          ],
+    requestResults: [],
+    sourceResults: [
+      {
+        source: target.key,
+        status,
+        requests: requestsSucceeded + requestsFailed,
+        requestsSucceeded,
+        requestsFailed,
+        jobsFetched: 0,
+        durationMs: 10,
+      },
+    ],
+    plan: {
+      dueTiers: [1],
+      skippedTiers: [2, 3],
+      targets: [target],
+      skippedTargets: [],
+      requests: [],
+      issues: [],
+    },
   };
 }
 
@@ -452,4 +1015,19 @@ async function waitFor(predicate: () => boolean): Promise<void> {
   throw new Error(
     "Condition was not met before the deterministic test deadline",
   );
+}
+
+function scoreBreakdown(total: number) {
+  return {
+    total,
+    role: 30,
+    internship: 25,
+    location: 25,
+    company: 0,
+    source: 10,
+    skills: 0,
+    matchedKeywords: ["software internship"],
+    missingRequired: [],
+    reasons: ["Exact internship title match"],
+  };
 }

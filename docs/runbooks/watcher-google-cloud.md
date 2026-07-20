@@ -1,10 +1,25 @@
 # Google Cloud Watcher Deployment Runbook
 
-This runbook deploys the existing watcher container to Google Cloud without changing its scheduling model. The recommended shape is a private Cloud Run service connected to Cloud SQL for PostgreSQL, with secrets in Secret Manager, instance-based billing, one minimum instance, and one maximum instance.
+This runbook deploys the watcher container and Spec 6000's target-aware
+internship coverage to Google Cloud without changing its scheduling model. The
+recommended shape is a private Cloud Run service connected to Cloud SQL for
+PostgreSQL, with secrets in Secret Manager, instance-based billing, one minimum
+instance, and one maximum instance.
 
 Complete and validate the [local watcher runbook](watcher-local.md) first. The worker must baseline successfully and deliver a Discord test locally before cloud deployment is treated as ready.
 
-The cloud deployment does not change source readiness. The active defaults are Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash Canada, Coinbase, Figma, Vercel, Plaid through Ashby slug `plaid`, and Canada Job Bank. Google Careers, Meta, Shopify, Google Jobs, and Wellfound remain intentionally disabled until their adapters are repaired and independently baselined.
+The cloud deployment does not change source readiness. Registration and fixtures
+alone never authorize unattended polling. The shipped preset target-enables
+`google_careers`, `shopify`, `ashby:wealthsimple`, `ashby:plaid`,
+`canadajobbank`, and `linkedin` inside a globally disabled, uninitialized watch.
+Target-enabled does not poll or notify while the watch is paused. Google Jobs,
+Microsoft, Meta, Wellfound, and every other unproven legacy direct source remain
+target-disabled. The preset preview is authoritative for the installed revision.
+
+Recorded evidence is six deterministic source suites/59 tests; Google Careers
+two live Canadian roles; Shopify marker-validated valid empty; Wealthsimple 37
+live Ashby roles with a capped mapped sample; LinkedIn public pass; Microsoft
+timeout; and Google Jobs classified blocked by the enable-JavaScript shell.
 
 ## 1. Deployment decision
 
@@ -34,12 +49,13 @@ Private Cloud Run service (min 1, max 1, instance CPU)
   -> /health and /metrics (authenticated/private)
   -> in-process scheduler
        -> Cloud SQL for PostgreSQL
-       -> public direct-company and ATS endpoints
+       -> public direct-company, ATS, and validated query endpoints
        -> Discord webhook
 
 Trusted admin workstation or separately deployed Ever Jobs API
   -> migrations and seed
-  -> baseline initialize
+  -> preset dry-run/apply while paused
+  -> selected target baseline initialize
   -> notification test
   -> pause/resume and inspection
 ```
@@ -111,7 +127,18 @@ npm run db:seed
 
 Do not paste the database password into shared logs or commit a cloud admin `.env` file. Remove the temporary local secret after the release task.
 
-The seed creates a new default watch disabled and uninitialized. That invariant allows the Cloud Run scheduler to start safely before baseline. Re-running the seed preserves the operational state of an existing watch. The deployment command below sets `WATCHER_SEED_DEFAULT=false` because this release step already created the intended row.
+Spec 6000's migration is additive: it retains singular `location` while adding
+normalized location arrays, canonical episode identity, notification identity,
+and target health/baseline state. Existing watch JSON without `companyName`,
+`searchScope`, or target `initializedAt` inherits watch-level settings. Do not
+roll back these columns after a target rollback; disable the target instead.
+
+The seed creates `prestige-internships-v2` disabled and uninitialized for a new
+installation. Re-running seed preserves the operational state of an existing
+watch and legacy seed compatibility. This invariant allows the Cloud Run
+scheduler to start safely before baseline. The deployment command below sets
+`WATCHER_SEED_DEFAULT=false` because this release step already created the
+intended row.
 
 For a mature CI/CD pipeline, package migration execution as an explicit, audited release step that uses the same repository revision as the image. Do not hide migrations in the worker entry point: multiple replacing revisions could then race schema mutation, and an incompatible failure would repeatedly crash the worker.
 
@@ -170,7 +197,12 @@ Read the private service's `/health` endpoint using an identity with Cloud Run I
 - healthy application and database;
 - scheduler enabled and started;
 - Discord configuration present;
+- aggregate Tier 1 coverage state and target-health availability;
 - a current timestamp.
+
+Worker health exposes the aggregate as
+`coverage.{status,tier1Degraded,degradedTargets,watches}`. The separately
+deployed API uses `watcherCoverage.{status,tier1Degraded,watches}`.
 
 Inspect startup logs for configuration-validation failures without printing secret values. Verify `ever_jobs_watcher_scheduler_last_poll_timestamp_seconds` advances on `/metrics` through an authenticated monitoring path.
 
@@ -183,14 +215,35 @@ From the trusted CLI environment using the production database and Discord secre
 
 ```bash
 npm run cli -- watch list --json
-npm run cli -- watch initialize <watch-id> --json
+npm run cli -- watch preset apply prestige-internships-v2 --watch <watch-id>
+npm run cli -- watch preset apply prestige-internships-v2 --watch <watch-id> --apply
+npm run cli -- watch initialize <watch-id> \
+  --target google_careers \
+  --target shopify \
+  --target ashby:wealthsimple \
+  --target ashby:plaid \
+  --target canadajobbank \
+  --target linkedin \
+  --json
+# Repeat the same targeted initialize command for two additional
+# no-notification observation cycles while the watch remains paused.
 npm run cli -- watch notifications-test <watch-id> --json
 npm run cli -- watch resume <watch-id> --json
 ```
 
-Review initialization source failures before `resume`. The production baseline must complete with zero notifications. If an important source fails, keep the watch disabled, correct it, and initialize again.
+The first preset command is a side-effect-free diff. `--apply` requires a paused
+watch and preserves destinations, thresholds, history, and unrelated operator
+edits. Review its added/materially changed target keys and initialize only those
+targets. Unknown, disabled, or duplicate keys are validation errors.
 
-Once resumed, wait for at least two Tier 1 intervals and inspect:
+The production baseline must complete with zero notifications. Each required
+target must have its own successful baseline. A target hard failure leaves it
+uninitialized even when siblings succeed; correct and rerun that target or keep
+it disabled. A valid empty target is successful but must remain visible through
+its empty-run count and last non-empty time.
+
+Before resume, inspect the initial target baselines and both additional
+no-notification observation cycles:
 
 ```bash
 npm run cli -- watch runs <watch-id> --json
@@ -199,7 +252,13 @@ npm run cli -- watch deliveries <watch-id> --json
 npm run cli -- watch metrics <watch-id> --json
 ```
 
-No notification is expected if no newly detected job meets the immediate threshold. Run history proves the pipeline is active.
+Inspect normalized location arrays, external employer application URLs,
+geography explanations, and target outcomes. No notification is expected if no
+newly detected canonical episode meets the immediate threshold. Run history
+proves activity only when expected targets show success/valid-empty/partial
+rather than hard failure. Verify both observation cycles, including Tier 1,
+completed without notifications and aggregate coverage is not degraded. Only
+then test Discord and resume.
 
 ## 9. Monitoring and alerts
 
@@ -210,12 +269,23 @@ Monitor all of these signals:
 - Cloud SQL connection count, CPU, storage, and availability;
 - scheduler last-poll timestamp freshness;
 - scheduled run count and terminal failures;
-- source success rate and duration by source;
+- target outcomes, request counts, duration, and hard-failure streak by target;
+- aggregate Tier 1 coverage degradation;
+- target last-success and last-non-empty timestamps;
 - new jobs and duplicate suppression;
 - Discord delivery failures and retry exhaustion;
 - detection and notification latency histograms.
 
 The worker's `/metrics` endpoint emits Prometheus text. Use an authenticated collector compatible with private Cloud Run or bridge the series into Cloud Monitoring. Do not expose the service publicly only for scraping.
+
+Coverage-specific series are:
+
+- `ever_jobs_watcher_target_runs_total{watch,target,tier,outcome}`
+- `ever_jobs_watcher_target_consecutive_hard_failures{watch,target,tier}`
+- `ever_jobs_watcher_target_degraded{watch,target,tier}`
+- `ever_jobs_watcher_target_last_success_timestamp_seconds{watch,target,tier}`
+- `ever_jobs_watcher_target_last_non_empty_timestamp_seconds{watch,target,tier}`
+- `ever_jobs_watcher_tier1_coverage_degraded{watch}`
 
 Run and delivery records in PostgreSQL remain the durable operational audit trail. In-process metric counters restart with a new instance.
 
@@ -224,12 +294,25 @@ Suggested alerts include:
 - `/health` unavailable or unhealthy for a sustained interval;
 - scheduler poll timestamp older than two expected poll periods;
 - no successful Tier 1 run for more than two configured Tier 1 intervals plus normal run duration;
+- `ever_jobs_watcher_tier1_coverage_degraded{watch} == 1` for a sustained
+  collection interval;
+- a Tier 1 target reaching three consecutive hard failures or remaining without
+  success for more than two expected target intervals plus normal duration;
+- a material sustained collapse in successful `jobsFetched` relative to that
+  target's historical baseline or an unexpectedly stale last-non-empty timestamp;
 - database connection saturation;
 - notification terminal failures greater than zero;
 - a source's success rate falling materially below its baseline;
 - p95 detection or notification latency exceeding the operator's target.
 
-Do not treat one source failure as total worker failure. The executor intentionally records partial failures while allowing other sources to complete.
+Any non-hard outcome (`success`, valid `empty`, or `partial`) resets the target's
+hard-failure streak. A fully successful zero-job target increments
+`emptyRunCount`; a partial target increments `partialRunCount`; neither is a hard
+failure. There is intentionally no universal hard-coded result-collapse
+percentage: set a target-specific Cloud Monitoring policy from historical
+`jobsFetched` and `lastNonEmptyAt`. Do not treat one target failure as total
+worker failure; successful siblings remain useful. Do treat aggregate Tier 1
+degradation as a coverage incident.
 
 ## 10. Releases, rollback, and replica overlap
 
@@ -239,10 +322,19 @@ For each release:
 2. Apply compatible migrations once.
 3. Deploy a new Cloud Run revision with the same secret references.
 4. Verify startup, database, scheduler, and Discord configuration health.
-5. Verify poll freshness and one scheduled run before completing rollout.
-6. Keep the previous image digest for application rollback.
+5. Preview the v2 preset, apply it only while paused, and baseline only
+   added/materially changed targets.
+6. Run and inspect two additional no-notification observation cycles, including
+   Tier 1, before resuming and enabling notifications.
+7. Keep the previous image digest for application rollback.
 
-Cloud Run revision replacement can briefly overlap old and new instances even with a maximum of one steady-state instance. PostgreSQL leases prevent both revisions from executing the same watch concurrently. Notification idempotency prevents a completed delivery from being recreated for the same notification identity.
+Cloud Run revision replacement can briefly overlap old and new instances even with a maximum of one steady-state instance. PostgreSQL leases prevent both revisions from executing the same watch concurrently. Notification identity is watch + canonical episode + channel/destination and excludes notification type, so a score-band change or overlapping revision cannot recreate a completed delivery.
+
+For a source regression, pause the watch and disable the individual target. Do
+not delete observations, canonical episodes, target health, or additive columns.
+Reapply the previous target set only after reviewing the preset diff, then resume
+the unaffected targets. Application-image rollback remains available, but schema
+and public-contract additions are backward-compatible and stay deployed.
 
 An application rollback does not automatically reverse a database migration. Migrations must be backward-compatible across the deployment window. For a destructive schema rollback, restore from a tested backup or apply a separate forward repair migration according to the database recovery plan.
 
@@ -283,7 +375,9 @@ The present watcher still starts an HTTP server, so a worker pool would run that
 - Keep Cloud SQL off the public internet when practical; use supported socket/private networking paths.
 - Bound Cloud SQL connection pools and source concurrency before increasing replica counts.
 - Review each external source's terms and rate limits. Do not bypass authentication, anti-bot controls, CAPTCHAs, or access controls.
-- Do not add automated LinkedIn login, browser-session reuse, or application submission to this deployment.
+- LinkedIn uses only its unauthenticated public guest surface with a bounded
+  newest-first 72-hour window. Do not add automated login, personal cookies,
+  browser-session reuse, CAPTCHA/challenge bypass, or application submission.
 
 ## 14. Honest limitations
 
@@ -291,7 +385,18 @@ The present watcher still starts an HTTP server, so a worker pool would run that
 - Cloud Run does not guarantee a particular minimum instance will live forever; durable state makes restarts safe but cannot eliminate the pause.
 - Source publication times may be delayed or missing. The watcher records first observation rather than fabricating a publication timestamp.
 - Live source schemas, availability, IP policies, and rate limits are outside Ever Jobs' control.
-- Baseline cannot cover a source that failed. Enabling after a partial baseline accepts possible alerts for older jobs when that source recovers.
+- Registration or fixture coverage alone never permits unattended polling.
+  Target-enabled sources remain inert in the paused watch until their targeted
+  baselines and two no-notification observation cycles pass.
+- Target baseline cannot cover a hard-failed source. Successful siblings retain
+  their baseline, but the failed target must remain disabled or be reinitialized
+  successfully before resume.
+- LinkedIn guest coverage is best effort and cannot exactly reproduce a
+  personalized account alert.
+- Canonical episodes suppress cross-source duplicate delivery while retaining
+  all source observations; source data can still be incomplete or disagree. A
+  URL/date-less fallback is anchored at first observation and reused for a
+  rolling 14 days; UTC calendar boundaries do not split it.
 - Discord retry state is durable, but a prolonged provider outage delays notification.
 - The system cannot guarantee that the user is the first applicant.
 - The system does not submit applications.

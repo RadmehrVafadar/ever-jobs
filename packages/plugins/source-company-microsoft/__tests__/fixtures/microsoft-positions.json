@@ -1,0 +1,19 @@
+{
+  "data": {
+    "positions": [
+      {
+        "id": "1842001",
+        "displayJobId": "1842001",
+        "name": "Software Engineering Intern",
+        "locations": [
+          "Vancouver, British Columbia, Canada",
+          "Toronto, Ontario, Canada",
+          "Redmond, Washington, United States"
+        ],
+        "department": "Engineering",
+        "postedTs": 1784332800,
+        "positionUrl": "/en-us/job/1842001/software-engineering-intern"
+      }
+    ]
+  }
+}

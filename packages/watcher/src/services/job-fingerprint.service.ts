@@ -1,6 +1,17 @@
 import { createHash } from "crypto";
 import { Injectable } from "@nestjs/common";
-import { JobPostDto } from "@ever-jobs/models";
+import {
+  normalizeLocationIdentity,
+  parseLocationText,
+} from "@ever-jobs/common";
+import { JobPostDto, LocationDto } from "@ever-jobs/models";
+
+export const CANONICAL_EPISODE_WINDOW_MS = 14 * 24 * 60 * 60 * 1_000;
+
+export interface CanonicalFingerprintOptions {
+  /** The source target is an employer-owned company or ATS listing. */
+  employerOwnedListing?: boolean;
+}
 
 @Injectable()
 export class JobFingerprintService {
@@ -94,27 +105,144 @@ export class JobFingerprintService {
       return this.hash(["external", source, externalId].join("|"));
     }
     return this.hash(
-      ["source-record", source, this.canonicalIdentity(job)].join("|"),
+      [
+        "source-record",
+        source,
+        this.canonicalIdentity(job, { employerOwnedListing: true }),
+      ].join("|"),
     );
   }
 
   /** A source-independent grouping key; source observations remain preserved. */
-  canonicalFingerprint(job: JobPostDto): string {
-    return this.hash(["canonical-job", this.canonicalIdentity(job)].join("|"));
+  canonicalFingerprint(
+    job: JobPostDto,
+    options: CanonicalFingerprintOptions = {},
+  ): string {
+    return this.hash(
+      ["canonical-job", this.canonicalIdentity(job, options)].join("|"),
+    );
   }
 
-  private canonicalIdentity(job: JobPostDto): string {
-    const location =
-      typeof job.location === "string"
-        ? job.location
-        : [job.location?.city, job.location?.state, job.location?.country]
-            .filter(Boolean)
-            .join(" ");
+  /**
+   * Notification/match identity for one posting episode.
+   *
+   * Employer URLs keep a posting stable across sources. A genuine source date
+   * is the next-best discriminator. Sources that expose neither start an
+   * observation-anchored episode; persistence reuses that key for 14 days.
+   */
+  canonicalEpisodeFingerprint(
+    job: JobPostDto,
+    observedAt: Date,
+    options: CanonicalFingerprintOptions = {},
+  ): string {
+    const employerUrl = this.canonicalEmployerUrl(job, options);
+    const publicationDate = this.normalizedPublicationDate(job.datePosted);
+    const observationAnchor = Number.isFinite(observedAt.getTime())
+      ? observedAt.toISOString()
+      : new Date(0).toISOString();
+    const discriminator = employerUrl
+      ? `url:${employerUrl}`
+      : publicationDate
+        ? `published:${publicationDate}`
+        : `observed:${observationAnchor}`;
+    return this.hash(
+      [
+        "canonical-episode",
+        this.canonicalCoreIdentity(job),
+        discriminator,
+      ].join("|"),
+    );
+  }
+
+  usesObservationEpisodeAnchor(
+    job: JobPostDto,
+    options: CanonicalFingerprintOptions = {},
+  ): boolean {
+    return (
+      !this.canonicalEmployerUrl(job, options) &&
+      !this.normalizedPublicationDate(job.datePosted)
+    );
+  }
+
+  canonicalLocationKeys(job: JobPostDto): string[] {
+    const extended = job as JobPostDto & { locations?: unknown[] | null };
+    const candidates = [
+      ...(Array.isArray(extended.locations) ? extended.locations : []),
+      ...(extended.locations?.length ? [] : [job.location]),
+    ];
     return [
-      this.normalizeText(job.companyName),
-      this.normalizeText(job.title),
-      this.normalizeLocation(location),
-      this.canonicalizeUrl(job.applyUrl ?? job.jobUrlDirect ?? job.jobUrl),
+      ...new Set(
+        candidates
+          .map((location) => this.canonicalLocationKey(location))
+          .filter(Boolean),
+      ),
+    ].sort((left, right) => left.localeCompare(right));
+  }
+
+  private canonicalIdentity(
+    job: JobPostDto,
+    options: CanonicalFingerprintOptions,
+  ): string {
+    return [
+      this.canonicalCoreIdentity(job),
+      this.canonicalEmployerUrl(job, options),
     ].join("|");
   }
+
+  private canonicalCoreIdentity(job: JobPostDto): string {
+    return [
+      this.normalizeCanonicalText(job.companyName),
+      this.normalizeCanonicalText(job.title),
+      this.canonicalLocationKeys(job).join("\u001f"),
+    ].join("|");
+  }
+
+  private canonicalEmployerUrl(
+    job: JobPostDto,
+    options: CanonicalFingerprintOptions,
+  ): string {
+    const externalEmployerUrl = firstNonEmpty(job.applyUrl, job.jobUrlDirect);
+    if (externalEmployerUrl) return this.canonicalizeUrl(externalEmployerUrl);
+    if (options.employerOwnedListing) {
+      return this.canonicalizeUrl(job.jobUrl);
+    }
+    return "";
+  }
+
+  private normalizedPublicationDate(value: unknown): string {
+    if (!value) return "";
+    const date = value instanceof Date ? value : new Date(String(value));
+    return Number.isFinite(date.getTime())
+      ? date.toISOString().slice(0, 10)
+      : "";
+  }
+
+  private normalizeCanonicalText(value: unknown): string {
+    return this.normalizeText(value)
+      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  private canonicalLocationKey(value: unknown): string {
+    if (typeof value === "string") {
+      const parsed = parseLocationText(value).location;
+      return parsed
+        ? normalizeLocationIdentity(parsed)
+        : this.normalizeLocation(value);
+    }
+    if (!value || typeof value !== "object") return "";
+    const location = value as LocationDto;
+    if (!location.city && !location.state && !location.country) return "";
+    return normalizeLocationIdentity(location);
+  }
+}
+
+function firstNonEmpty(...values: unknown[]): string {
+  for (const value of values) {
+    if (typeof value !== "string") continue;
+    const trimmed = value.trim();
+    if (trimmed) return trimmed;
+  }
+  return "";
 }

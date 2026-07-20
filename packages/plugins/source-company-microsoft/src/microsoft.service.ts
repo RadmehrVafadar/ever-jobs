@@ -23,6 +23,7 @@ import { EightfoldSearchResponse, EightfoldPosition } from "./microsoft.types";
   site: Site.MICROSOFT,
   name: "Microsoft",
   category: "company",
+  watchMode: "query",
 })
 @Injectable()
 export class MicrosoftService implements IScraper {
@@ -71,14 +72,7 @@ export class MicrosoftService implements IScraper {
         consecutiveEmpty = 0;
         for (const p of positions) {
           if (jobs.length >= maxResults) break;
-          try {
-            const job = this.mapToJobPost(p);
-            if (job) jobs.push(job);
-          } catch (err: any) {
-            this.logger.warn(
-              `Microsoft: failed to map position: ${err.message}`,
-            );
-          }
+          jobs.push(this.mapToJobPost(p));
         }
 
         start += MICROSOFT_PAGE_SIZE;
@@ -94,11 +88,37 @@ export class MicrosoftService implements IScraper {
     return { jobs };
   }
 
-  private mapToJobPost(p: EightfoldPosition): JobPostDto | null {
-    if (typeof p.name !== "string" || !p.name.trim()) return null;
+  private mapToJobPost(p: EightfoldPosition): JobPostDto {
+    if (!p || typeof p !== "object") {
+      throw new Error(
+        "Microsoft returned an invalid position: expected an object",
+      );
+    }
+    if (typeof p.name !== "string" || !p.name.trim()) {
+      throw new Error(
+        "Microsoft returned an invalid position: expected a non-empty name",
+      );
+    }
+    if (
+      p.locations !== undefined &&
+      (!Array.isArray(p.locations) ||
+        p.locations.some((location) => typeof location !== "string"))
+    ) {
+      throw new Error(
+        "Microsoft returned an invalid position: expected locations[] of strings",
+      );
+    }
 
-    const locStr = p.locations?.[0] ?? "";
-    const locParts = locStr.split(",").map((s) => s.trim());
+    const seenLocations = new Set<string>();
+    const locations = (p.locations ?? [])
+      .map((value) => value.trim())
+      .filter((value) => {
+        const key = value.toLowerCase();
+        if (!value || seenLocations.has(key)) return false;
+        seenLocations.add(key);
+        return true;
+      })
+      .map((value) => this.toLocation(value));
 
     const url = p.positionUrl
       ? `${MICROSOFT_BASE_URL}${p.positionUrl}`
@@ -110,11 +130,8 @@ export class MicrosoftService implements IScraper {
       title: p.name,
       companyName: "Microsoft",
       jobUrl: url,
-      location: new LocationDto({
-        city: locParts[0] ?? null,
-        state: locParts[1] ?? null,
-        country: locParts[2] ?? null,
-      }),
+      location: locations[0] ?? null,
+      locations,
       department: p.department ?? undefined,
       datePosted: p.postedTs
         ? new Date(p.postedTs * 1000).toISOString().split("T")[0]
@@ -123,6 +140,15 @@ export class MicrosoftService implements IScraper {
         p.displayJobId === null || p.displayJobId === undefined
           ? undefined
           : String(p.displayJobId),
+    });
+  }
+
+  private toLocation(value: string): LocationDto {
+    const parts = value.split(",").map((part) => part.trim());
+    return new LocationDto({
+      city: parts[0] || null,
+      state: parts.length > 2 ? parts[1] || null : null,
+      country: parts.length > 1 ? parts[parts.length - 1] || null : null,
     });
   }
 

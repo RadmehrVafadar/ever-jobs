@@ -30,6 +30,72 @@ describe("WatchValidationService", () => {
     ]);
   });
 
+  it("validates nested target scope while keeping legacy target fields optional", () => {
+    const result = service.parseCreate({
+      name: "Scoped internships",
+      sourceTargets: [
+        {
+          site: Site.ASHBY,
+          tier: 1,
+          intervalMinutes: 3,
+          companySlug: "wealthsimple",
+          companyName: "Wealthsimple",
+          initializedAt: null,
+          searchScope: {
+            countryCodes: ["ca", "us"],
+            locations: ["Canada", "United States"],
+            searchTerms: ["software intern"],
+            maxRequestsPerRun: 8,
+          },
+          enabled: true,
+        },
+        {
+          site: Site.GOOGLE_CAREERS,
+          tier: 1,
+          intervalMinutes: 3,
+          enabled: true,
+        },
+      ],
+    });
+
+    expect(result.sourceTargets).toEqual([
+      expect.objectContaining({
+        companyName: "Wealthsimple",
+        initializedAt: null,
+        searchScope: expect.objectContaining({
+          countryCodes: ["CA", "US"],
+          maxRequestsPerRun: 8,
+        }),
+      }),
+      expect.not.objectContaining({
+        companyName: expect.anything(),
+        searchScope: expect.anything(),
+        initializedAt: expect.anything(),
+      }),
+    ]);
+  });
+
+  it("rejects empty or unbounded nested target scopes", () => {
+    expect(() =>
+      service.parseCreate({
+        name: "empty scope",
+        sourceTargets: [
+          {
+            site: Site.GOOGLE,
+            tier: 2,
+            intervalMinutes: 15,
+            enabled: true,
+            searchScope: {
+              countryCodes: [],
+              locations: [],
+              maxRequestsPerRun: 1_001,
+            },
+          },
+        ],
+      }),
+    ).toThrow(BadRequestException);
+  });
+
   it("rejects package IDs masquerading as Site values", () => {
     expect(() =>
       service.parseCreate({

@@ -24,15 +24,18 @@ import {
   DiscordNotificationProvider,
   JobWatch,
   Page,
+  RunWatchOptions,
   WATCH_REPOSITORY,
   WatchExecutionService,
   WatchRepository,
   WatchValidationService,
+  validateWatchTargetKeys,
 } from "@ever-jobs/watcher";
 import { AdminAuth } from "../auth/admin-auth.decorator";
 import {
   CreateWatchDto,
   DiscordNotificationTestDto,
+  InitializeWatchDto,
   NotificationDeliveryQueryDto,
   ObservedJobQueryDto,
   UpdateMatchStatusDto,
@@ -75,7 +78,7 @@ export class WatchesController {
 
   @Post("default")
   @ApiOperation({
-    summary: "Create the safe Toronto/Canada internship watch",
+    summary: "Create the safe prestige Canada/USA internship watch",
     description:
       "Creates the repository default disabled and in baseline mode. Initialize it before resuming.",
   })
@@ -134,9 +137,17 @@ export class WatchesController {
   @ApiOperation({
     summary: "Baseline current jobs without sending notifications",
   })
-  async initialize(@Param("id") id: string): Promise<unknown> {
-    await this.requireWatch(id);
-    return this.executeWatch(id, "baseline");
+  async initialize(
+    @Param("id") id: string,
+    @Body() body: InitializeWatchDto = {},
+  ): Promise<unknown> {
+    const watch = await this.requireWatch(id);
+    const targetKeys = validateWatchTargetKeys(watch, body.targetKeys);
+    return this.executeWatch(id, "baseline", {
+      trigger: "initialize",
+      forceSources: true,
+      ...(targetKeys.length > 0 ? { targetKeys } : {}),
+    });
   }
 
   @Post(":id/pause")
@@ -242,9 +253,12 @@ export class WatchesController {
   private async executeWatch(
     id: string,
     mode: "baseline" | "recent-only",
+    options?: RunWatchOptions,
   ): Promise<unknown> {
     try {
-      return await this.execution.runWatch(id, mode);
+      return options
+        ? await this.execution.runWatch(id, mode, options)
+        : await this.execution.runWatch(id, mode);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "";
       if (message.toLocaleLowerCase("en-CA").includes("already running")) {

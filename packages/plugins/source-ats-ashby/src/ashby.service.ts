@@ -39,6 +39,7 @@ import {
   name: "Ashby",
   category: "ats",
   isAts: true,
+  watchMode: "board",
 })
 @Injectable()
 export class AshbyService implements IScraper {
@@ -276,6 +277,7 @@ export class AshbyService implements IScraper {
       companyName: companySlug,
       jobUrl: job.jobUrl ?? `https://jobs.ashbyhq.com/${companySlug}/${job.id}`,
       location: parsedLocations.location,
+      locations: parsedLocations.locations,
       description,
       compensation,
       datePosted,

@@ -1,11 +1,14 @@
 export * from "./watcher.module";
 export * from "./interfaces/watch.types";
 export * from "./services/job-fingerprint.service";
+export * from "./services/geography-classification.service";
 export * from "./services/job-scoring.service";
 export * from "./services/watch-execution.service";
 export * from "./services/daily-digest.service";
 export * from "./services/default-watch";
 export * from "./services/default-watch-seeder.service";
+export * from "./services/prestige-internships-v2.preset";
+export * from "./services/watch-preset.service";
 export * from "./services/notification-dispatcher.service";
 export * from "./services/discord-notification.provider";
 export * from "./services/webhook-notification.provider";
@@ -16,6 +19,7 @@ export {
 } from "./services/watch-source-planner.service";
 export type {
   WatchSourceKind,
+  WatchSourceMetadata,
   WatchSourceMode,
   WatchSourcePlan,
   WatchSourcePlanIssue,

@@ -24,7 +24,10 @@ stored here.
 
 ## Numbering
 
-`NNN` is a 3-digit zero-padded incrementing ID. Slugs are kebab-case. Examples:
+Feature IDs are numeric, zero-padded to at least three digits, and allocated
+inside the current fork's reserved band in `.specify/ranges.json`. Run
+`npm run spec:next` from the repository root; do not infer a global maximum or
+mint an ID from another fork's band. Slugs are kebab-case. Examples:
 
 - `001-plugin-architecture-foundation`
 - `002-source-pipeline-batching`

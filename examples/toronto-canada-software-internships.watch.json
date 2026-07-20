@@ -1,6 +1,6 @@
 {
   "name": "Toronto and Canada Software Internships",
-  "description": "Low-latency direct-company and ATS monitoring for Canadian software internships and co-op roles.",
+  "description": "DEPRECATED: legacy Toronto/Canada example retained for compatibility. Use prestige-internships-v2-canada-usa.watch.json for new watches.",
   "enabled": false,
   "intervalMinutes": 3,
   "timezone": "America/Toronto",

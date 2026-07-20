@@ -1,11 +1,9 @@
 import "dotenv/config";
 import {
-  defaultInternshipWatch,
+  prestigeInternshipsV2Watch,
   PrismaWatchRepository,
   WatcherPrismaService,
 } from "@ever-jobs/watcher";
-
-const DEFAULT_WATCH_NAME = "Toronto and Canada Software Internships";
 
 async function seed(): Promise<void> {
   if (!process.env.DATABASE_URL) {
@@ -15,13 +13,12 @@ async function seed(): Promise<void> {
   await prisma.$connect();
   const repository = new PrismaWatchRepository(prisma);
   try {
-    const existing = (await repository.listWatches()).find(
-      (watch) => watch.name === DEFAULT_WATCH_NAME,
-    );
-    // Seeding is create-only. A repeated deploy must never overwrite source
-    // cadence, thresholds, initialization state, or other user edits.
+    const watches = await repository.listWatches();
+    // Seeding is fresh-install-only. A repeated deploy must never duplicate or
+    // overwrite legacy/custom watches, cadence, thresholds, or baseline state.
     const watch =
-      existing ?? (await repository.createWatch(defaultInternshipWatch()));
+      watches[0] ??
+      (await repository.createWatch(prestigeInternshipsV2Watch()));
 
     process.stdout.write(
       JSON.stringify(

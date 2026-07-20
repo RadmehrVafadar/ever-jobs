@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger, Optional } from "@nestjs/common";
-import { randomUUID } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import {
   JobNotificationMessage,
   NotificationDelivery,
@@ -7,7 +7,6 @@ import {
   NotificationProvider,
   NotificationResult,
   NotificationStatus,
-  NotificationType,
   WATCH_REPOSITORY,
   WatchRepository,
 } from "../interfaces/watch.types";
@@ -67,8 +66,7 @@ export class NotificationDispatcher {
       const destinationRef = this.destinationRef(destination);
       const key = this.idempotencyKey(
         message.watch.id,
-        message.job.id,
-        message.type,
+        message.match.canonicalEpisodeKey ?? message.job.id,
         destination.type,
         destinationRef,
       );
@@ -292,12 +290,14 @@ export class NotificationDispatcher {
 
   private idempotencyKey(
     watchId: string,
-    observedJobId: string,
-    type: NotificationType,
+    canonicalEpisodeKey: string,
     channel: string,
     destinationRef: string,
   ): string {
-    return [watchId, observedJobId, type, channel, destinationRef].join(":");
+    const value = [watchId, canonicalEpisodeKey, channel, destinationRef].join(
+      "\u001f",
+    );
+    return `watch-v2:${createHash("sha256").update(value).digest("hex")}`;
   }
 
   private retryDelayMs(attempt: number): number {

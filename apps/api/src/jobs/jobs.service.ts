@@ -327,4 +327,9 @@ export class JobsService implements OnModuleInit {
   listRegisteredSources(): string[] {
     return this.registry.listSiteKeys();
   }
+
+  /** Source planning metadata exposed through the watcher bridge. */
+  listSourceMetadata() {
+    return this.registry.listSources();
+  }
 }

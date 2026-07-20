@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { Counter, Gauge, Histogram, Registry } from "prom-client";
+import { JobWatch } from "../interfaces/watch.types";
 
 /**
  * Metrics owned by the watcher worker. A private registry prevents duplicate
@@ -21,6 +22,12 @@ export class WatcherMetricsService {
   readonly notificationLatency: Histogram;
   readonly schedulerLastPoll: Gauge;
   readonly schedulerActiveRuns: Gauge;
+  readonly targetRunsTotal: Counter;
+  readonly targetConsecutiveHardFailures: Gauge;
+  readonly targetDegraded: Gauge;
+  readonly targetLastSuccess: Gauge;
+  readonly targetLastNonEmpty: Gauge;
+  readonly tier1CoverageDegraded: Gauge;
 
   constructor() {
     this.runsTotal = new Counter({
@@ -99,6 +106,139 @@ export class WatcherMetricsService {
       help: "Number of watch runs active in this process.",
       registers: [this.registry],
     });
+    this.targetRunsTotal = new Counter({
+      name: "ever_jobs_watcher_target_runs_total",
+      help: "Watcher target runs by durable outcome.",
+      labelNames: ["watch", "target", "tier", "outcome"],
+      registers: [this.registry],
+    });
+    this.targetConsecutiveHardFailures = new Gauge({
+      name: "ever_jobs_watcher_target_consecutive_hard_failures",
+      help: "Current consecutive hard failures for a watch target.",
+      labelNames: ["watch", "target", "tier"],
+      registers: [this.registry],
+    });
+    this.targetDegraded = new Gauge({
+      name: "ever_jobs_watcher_target_degraded",
+      help: "Whether a watch target is degraded (1) or healthy (0).",
+      labelNames: ["watch", "target", "tier"],
+      registers: [this.registry],
+    });
+    this.targetLastSuccess = new Gauge({
+      name: "ever_jobs_watcher_target_last_success_timestamp_seconds",
+      help: "Unix timestamp of the latest fully successful target run.",
+      labelNames: ["watch", "target", "tier"],
+      registers: [this.registry],
+    });
+    this.targetLastNonEmpty = new Gauge({
+      name: "ever_jobs_watcher_target_last_non_empty_timestamp_seconds",
+      help: "Unix timestamp of the latest target run that returned jobs.",
+      labelNames: ["watch", "target", "tier"],
+      registers: [this.registry],
+    });
+    this.tier1CoverageDegraded = new Gauge({
+      name: "ever_jobs_watcher_tier1_coverage_degraded",
+      help: "Whether any enabled Tier 1 target in a watch is degraded.",
+      labelNames: ["watch"],
+      registers: [this.registry],
+    });
+  }
+
+  observeTargetResult(
+    watchId: string,
+    result: {
+      targetKey: string;
+      tier: number;
+      outcome: string;
+      consecutiveHardFailures: number;
+      degraded: boolean;
+      lastSuccessAt?: Date | null;
+      lastNonEmptyAt?: Date | null;
+    },
+  ): void {
+    const labels = {
+      watch: watchId,
+      target: result.targetKey,
+      tier: String(result.tier),
+    };
+    this.targetRunsTotal.inc({ ...labels, outcome: result.outcome });
+    this.targetConsecutiveHardFailures.set(
+      labels,
+      result.consecutiveHardFailures,
+    );
+    this.targetDegraded.set(labels, result.degraded ? 1 : 0);
+    if (result.lastSuccessAt) {
+      this.targetLastSuccess.set(
+        labels,
+        result.lastSuccessAt.getTime() / 1_000,
+      );
+    }
+    if (result.lastNonEmptyAt) {
+      this.targetLastNonEmpty.set(
+        labels,
+        result.lastNonEmptyAt.getTime() / 1_000,
+      );
+    }
+  }
+
+  setTier1CoverageDegraded(watchId: string, degraded: boolean): void {
+    this.tier1CoverageDegraded.set({ watch: watchId }, degraded ? 1 : 0);
+  }
+
+  /** Rehydrates current-state gauges from durable watch state after restarts. */
+  syncTargetHealth(watches: readonly JobWatch[]): void {
+    this.targetConsecutiveHardFailures.reset();
+    this.targetDegraded.reset();
+    this.targetLastSuccess.reset();
+    this.targetLastNonEmpty.reset();
+    this.tier1CoverageDegraded.reset();
+
+    for (const watch of watches) {
+      const activeTierOneKeys = new Set<string>(
+        watch.sourceTargets.length > 0
+          ? watch.sourceTargets
+              .filter((target) => target.enabled && target.tier === 1)
+              .map((target) =>
+                target.companySlug
+                  ? `${String(target.site)}:${target.companySlug}`
+                  : String(target.site),
+              )
+          : Object.values(watch.targetHealth ?? {})
+              .filter((health) => health.tier === 1)
+              .map((health) => health.targetKey),
+      );
+      let coverageDegraded = false;
+      for (const health of Object.values(watch.targetHealth ?? {})) {
+        const labels = {
+          watch: watch.id,
+          target: health.targetKey,
+          tier: String(health.tier),
+        };
+        const degraded =
+          health.tier === 1 && health.consecutiveHardFailures >= 3;
+        this.targetConsecutiveHardFailures.set(
+          labels,
+          health.consecutiveHardFailures,
+        );
+        this.targetDegraded.set(labels, degraded ? 1 : 0);
+        if (health.lastSuccessAt) {
+          this.targetLastSuccess.set(
+            labels,
+            health.lastSuccessAt.getTime() / 1_000,
+          );
+        }
+        if (health.lastNonEmptyAt) {
+          this.targetLastNonEmpty.set(
+            labels,
+            health.lastNonEmptyAt.getTime() / 1_000,
+          );
+        }
+        if (degraded && activeTierOneKeys.has(health.targetKey)) {
+          coverageDegraded = true;
+        }
+      }
+      this.setTier1CoverageDegraded(watch.id, coverageDegraded);
+    }
   }
 
   async render(): Promise<string> {

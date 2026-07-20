@@ -1,8 +1,16 @@
 # Local Watcher Operations Runbook
 
-This runbook takes a clean Ever Jobs checkout to a continuously running local watcher that checks direct company and ATS sources every three minutes and sends strong-match notifications to Discord. It also documents the safe baseline procedure, normal operations, Docker execution, and failure recovery.
+This runbook takes a clean Ever Jobs checkout to a continuously running local
+watcher for software internships and co-ops. It covers the dry-run-first v2
+preset, per-target baseline, 3/15/60 cadence, Canada/US geography, Discord,
+Docker, target-health alerts, rollback, and failure recovery.
 
-The detailed component reference is in the [watcher application guide](../../apps/watcher/README.md). The functional contract is in [Spec 016](../../.specify/specs/016-realtime-job-watcher/spec.md).
+The detailed component reference is in the
+[watcher application guide](../../apps/watcher/README.md). The base functional
+contract is [Spec 016](../../.specify/specs/016-realtime-job-watcher/spec.md);
+[Spec 6000](../../.specify/specs/6000-prestige-internship-coverage-expansion/spec.md)
+defines the target-aware coverage expansion and takes precedence only for its
+listed amendments.
 
 ## 1. Operating model
 
@@ -10,39 +18,64 @@ The watcher is a long-running NestJS HTTP process with an in-process scheduler. 
 
 There are three independently due source tiers:
 
-| Tier   | Default interval | Purpose                                                                           |
-| ------ | ---------------- | --------------------------------------------------------------------------------- |
-| Tier 1 | 3 minutes        | Direct company career sources and structured ATS boards                           |
-| Tier 2 | 15 minutes       | Structured secondary APIs and feeds                                               |
-| Tier 3 | 60 minutes       | Explicitly configured expensive, rate-limited, browser-backed, or fragile sources |
+| Tier | Default interval | Eligibility geography | Purpose |
+| ---- | ---------------- | --------------------- | ------- |
+| Tier 1 | 3 minutes | Canada only | Fixture-backed direct company and complete ATS targets |
+| Tier 2 | 15 minutes | Canada and United States | Canada Job Bank and validated Google Jobs redundancy |
+| Tier 3 | 60 minutes | Canada and United States | Validated unauthenticated LinkedIn public guest redundancy |
 
 The scheduler polls PostgreSQL every 15 seconds by default. Therefore, the normal start delay after a tier becomes due is up to one scheduler poll, subject to another run holding the lease, database availability, process load, and jitter. The interval is a target cadence rather than an end-to-end notification guarantee.
 
 ### Default source readiness
 
-The default watch intentionally schedules only the accepted unattended set:
+`prestige-internships-v2` carries the intended target inventory, but its preview
+and source-audit record are authoritative for enablement. A plugin being
+registered is not an unattended-readiness claim.
 
-| Enabled target                                                                     | Tier | Notes                                                                    |
-| ---------------------------------------------------------------------------------- | ---- | ------------------------------------------------------------------------ |
-| Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, Coinbase, Figma, Vercel | 1    | Existing direct-company adapters                                         |
-| DoorDash                                                                           | 1    | DoorDash Canada public Greenhouse board through the company adapter      |
-| Plaid                                                                              | 1    | Generic Ashby board slug `plaid`, not the stale Plaid Greenhouse wrapper |
-| Canada Job Bank                                                                    | 2    | Structured Canadian source                                               |
+| Target | Tier | Intended path | Shipped preset state and remaining gate |
+| ------ | ---- | ------------- | --------------------------------------- |
+| Google Careers | 1 | Official Careers results/details, Canada query scope | **target-enabled inside the disabled/uninitialized watch**; deterministic validation passed and live smoke returned two Canadian roles; baseline and two observation cycles remain |
+| Shopify | 1 | Official server-rendered careers pages | **target-enabled inside the disabled/uninitialized watch**; deterministic validation passed and live board was marker-validated empty; baseline and two observation cycles remain |
+| Wealthsimple | 1 | `ashby:wealthsimple`, branded through the maintained Ashby plugin | **enabled target** inside the disabled preset watch; baseline before resume |
+| Plaid | 1 | `ashby:plaid` through the maintained Ashby plugin | **enabled target** inside the disabled preset watch; baseline before resume |
+| Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel, Meta, Wellfound | 1 | legacy direct-company inventory with Canada post-filter scope | **target-disabled**; each requires fixture-backed Canada-wide evidence and its own live/baseline gate; Microsoft live smoke timed out |
+| Canada Job Bank | 2 | Structured Canadian query source | **enabled target** inside the disabled preset watch; 12 of 76 matrix requests per run |
+| Google Jobs | 2 | Canada/US query redundancy | **disabled**; fixtures/failure handling pass, but live smoke returned an enable-JavaScript shell |
+| LinkedIn public guest | 3 | Canada/US newest-first 72-hour query | **target-enabled inside the disabled/uninitialized watch**; listing/detail fixtures and unauthenticated live smoke pass; baseline and operator review remain |
 
-Google Careers, Meta Careers, Shopify, Google Jobs, and Wellfound are desired but disabled/absent. Their current repository paths are stale or too fragile for the unattended default: Google Careers' retired v3 endpoint returns 404; Meta no longer exposes the expected `__NEXT_DATA__`; Shopify's old Greenhouse slug is stale and its current Ashby board slug is not public; Google Jobs and Wellfound require adapter repair and fixture-backed validation.
+The exact target-enabled set is `google_careers`, `shopify`,
+`ashby:wealthsimple`, `ashby:plaid`, `canadajobbank`, and `linkedin`. Target-
+enabled does not start polling or notifications while the watch is paused.
+Google Jobs and every legacy direct-company target remain target-disabled.
 
-If one is repaired later, keep the watch paused, add and enable the new target, run `initialize`, inspect that target's baseline, and only then resume. A target that is absent or disabled cannot be baselined.
+Recorded source evidence is six deterministic suites/59 tests; Google Careers
+two live Canadian roles; Shopify valid empty; Wealthsimple 37 live Ashby roles
+with a capped mapped sample; LinkedIn public listing/detail pass; Microsoft
+timeout; and Google Jobs classified blocked by the enable-JavaScript shell.
+
+The preset has 19 search terms. Google Careers and Canada Job Bank each have 76
+term/location entries across four Canadian locations. Google Jobs and LinkedIn
+each have 95 entries across five Canada/US locations. The rotating per-run caps
+are 12, 12, 12, and 8 respectively.
+
+Do not enable a target to make the matrix look complete. Perform the source live
+smoke before target enablement, then keep the global watch paused. Inspect all
+normalized locations and employer application URLs, apply the preset, targeted-
+baseline added/materially changed targets, and run two additional
+no-notification observation cycles before resume.
 
 Every scheduled run follows this order:
 
 1. Acquire the watch's PostgreSQL execution lease.
 2. Determine which source tiers are due.
-3. Query configured sources with bounded concurrency, timeout, retry, and jitter.
-4. Normalize and fingerprint jobs, then persist observations.
-5. Persist explainable watch matches.
-6. Create and send eligible idempotent notification deliveries.
-7. Persist run totals, source failures, duration, and latency.
-8. Release the lease and schedule the next tier due time.
+3. Build each query target's bounded rotating term × location request slice.
+4. Query sources with bounded concurrency, timeout, retry, and jitter.
+5. Normalize all locations and persist source observations plus canonical episodes.
+6. Apply target-tier geography eligibility separately from preference ranking.
+7. Persist explainable matches and canonical-episode-idempotent deliveries.
+8. Persist run totals, target success/empty/partial/hard-failure outcomes,
+   duration, and latency.
+9. Release the lease and schedule the next tier due time.
 
 ## 2. Prerequisites
 
@@ -112,7 +145,12 @@ Seed the default watch:
 npm run db:seed
 ```
 
-The seed creates `Toronto and Canada Software Internships` only when it is missing. A newly created seed is disabled, has no `nextRunAt`, uses `baseline` initialization, and points its Discord channel at the environment reference `default`. Re-running the seed returns the existing watch without overwriting its configuration, initialization state, or run timestamps.
+On a database with no watches, the seed creates `Prestige Software Internships —
+Canada and USA` from `prestige-internships-v2`. It is globally disabled,
+uninitialized, has no `nextRunAt`, uses `baseline` initialization, and points its
+Discord channel at the environment reference `default`. If any watch already
+exists, the seed returns the first existing watch without creating, upgrading,
+or overwriting legacy/custom configuration, initialization state, or timestamps.
 
 Keep the printed watch ID. If it scrolls out of view, retrieve it later:
 
@@ -134,6 +172,11 @@ The command should remain running. In another terminal, verify health:
 curl http://localhost:3002/health
 ```
 
+Inspect `coverage.status`, `coverage.tier1Degraded`,
+`coverage.degradedTargets`, and `coverage.watches`. When checking the separately
+deployed API health endpoint, the equivalent summary is
+`watcherCoverage.{status,tier1Degraded,watches}`.
+
 PowerShell equivalent:
 
 ```powershell
@@ -151,7 +194,9 @@ If `WATCHER_ENABLED=false`, the process can be healthy for diagnostics but will 
 
 ## 6. Baseline before enabling alerts
 
-Do not resume a fresh watch before baseline initialization. The baseline records all jobs currently returned by all configured tiers without notifying them.
+Do not resume a fresh or upgraded watch before preset review and baseline. The
+baseline records current jobs without notifying them and is tracked separately
+for each source target.
 
 Identify the watch and inspect it:
 
@@ -160,20 +205,59 @@ npm run cli -- watch list --json
 npm run cli -- watch show <watch-id> --json
 ```
 
-Run initialization:
+Preview the versioned preset. This command emits a JSON diff and changes no
+state:
 
 ```bash
-npm run cli -- watch initialize <watch-id> --json
+npm run cli -- watch preset apply prestige-internships-v2 --watch <watch-id>
 ```
 
-Initialization is a forced manual execution: it queries every configured source tier now rather than waiting for the 3/15/60-minute cadence. Depending on source count and timeouts, this can take longer than a normal Tier 1 run.
+Confirm the watch is paused and inspect targets classified as unchanged, added,
+materially changed, disabled, or operator-only. Applying requires an explicit
+flag:
+
+```bash
+npm run cli -- watch preset apply prestige-internships-v2 \
+  --watch <watch-id> \
+  --apply
+```
+
+Preset merge preserves notification destinations, score thresholds, history,
+and unrelated operator edits. It rejects an enabled watch. Material target
+changes include site, company slug/name, tier, interval, or search scope.
+
+Run initialization only for target keys reported as added or materially changed:
+
+```bash
+npm run cli -- watch initialize <watch-id> \
+  --target google_careers \
+  --target shopify \
+  --target ashby:wealthsimple \
+  --target ashby:plaid \
+  --target canadajobbank \
+  --target linkedin \
+  --json
+```
+
+`--target` is repeatable. Omit it to force every enabled target now rather than
+waiting for its 3/15/60-minute cadence. Unknown, disabled, or duplicate keys are
+validated errors. Depending on target count, query-matrix budgets, and timeouts,
+initialize-all can take longer than a normal Tier 1 run.
 
 Review the returned and persisted run summary, especially:
 
 - `sourcesRequested`, `sourcesSucceeded`, and `sourcesFailed`;
 - `jobsFetched`, `jobsNormalized`, and `newJobsDetected`;
 - run status and error summary;
+- each target's hard-failure versus valid-empty classification and
+  `initializedAt` value, including partial request outcomes;
+- normalized `locations`, matched country/confidence, geography decision, and
+  external employer application URL samples;
 - that `notificationsSent` is zero.
+
+Repeat the same targeted initialization command for two additional observation
+cycles while the watch remains paused. Both runs must send zero notifications;
+inspect their target outcomes before considering resume.
 
 Inspect run history when needed:
 
@@ -181,9 +265,15 @@ Inspect run history when needed:
 npm run cli -- watch runs <watch-id> --json
 ```
 
-If an important source failed, fix its configuration or transient failure and run `initialize` again while the watch remains disabled. A source absent from baseline has no prior observations; jobs returned on its first later success can correctly look new and may notify.
+If a required target hard-failed, leave it disabled or correct the source and run
+targeted initialization again while the watch remains paused. Successful sibling
+targets keep their baseline. A hard-failed target never receives
+`initializedAt`, and a blocked/malformed response must not be accepted as an
+empty success.
 
-Baseline mode prevents an initial flood; it cannot infer jobs from sources that never completed.
+Baseline mode prevents an initial flood; it cannot infer jobs from a target that
+never completed. A valid parsed empty board may initialize successfully, but its
+empty-run count and last non-empty time remain visible for collapse monitoring.
 
 ## 7. Test Discord without creating a fake match
 
@@ -205,7 +295,7 @@ If it fails:
 
 Do not print the environment variable or include the URL in diagnostic output.
 
-## 8. Enable the three-minute pipeline
+## 8. Enable the reviewed 3/15/60 pipeline
 
 After a satisfactory baseline and Discord test, resume the watch:
 
@@ -213,7 +303,10 @@ After a satisfactory baseline and Discord test, resume the watch:
 npm run cli -- watch resume <watch-id> --json
 ```
 
-Resume sets `enabled=true` and makes the watch schedulable. The next scheduler poll picks up a due watch; subsequent Tier 1 executions follow the watch's three-minute interval. Tier 2 and Tier 3 run only when their independent due times arrive.
+Resume sets `enabled=true` and makes the watch schedulable. The next scheduler
+poll picks up a due watch; subsequent Tier 1 executions follow the three-minute
+interval. Tier 2 and Tier 3 run only when independently due. Unproven targets
+must still be disabled; resuming the watch does not waive a target smoke gate.
 
 Allow at least two Tier 1 intervals, then inspect operations:
 
@@ -225,7 +318,11 @@ npm run cli -- watch deliveries <watch-id> --json
 npm run cli -- watch metrics <watch-id> --json
 ```
 
-No Discord message is expected when no newly observed job exceeds the immediate threshold. That is a successful quiet run, not a scheduler failure. Run history and `lastRunAt` are the evidence that polling occurred.
+No Discord message is expected when no newly observed canonical episode exceeds
+the immediate threshold. That is a successful quiet run only when run history
+shows the expected target succeeded or returned a valid empty result. A hard
+failure, stale last-success time, or degraded Tier 1 state is not a successful
+zero-result cycle.
 
 Use a manual normal run when you need an immediate check without changing scheduling:
 
@@ -282,8 +379,30 @@ Important series include:
 - `ever_jobs_watcher_notification_latency_seconds`
 - `ever_jobs_watcher_scheduler_last_poll_timestamp_seconds`
 - `ever_jobs_watcher_scheduler_active_runs`
+- `ever_jobs_watcher_target_runs_total{watch,target,tier,outcome}`
+- `ever_jobs_watcher_target_consecutive_hard_failures{watch,target,tier}`
+- `ever_jobs_watcher_target_degraded{watch,target,tier}`
+- `ever_jobs_watcher_target_last_success_timestamp_seconds{watch,target,tier}`
+- `ever_jobs_watcher_target_last_non_empty_timestamp_seconds{watch,target,tier}`
+- `ever_jobs_watcher_tier1_coverage_degraded{watch}`
 
-Alert operationally when the health endpoint is unavailable, the database or scheduler becomes unhealthy, the scheduler's last-poll timestamp goes stale, scheduled runs stop appearing, or notification failures accumulate. A single source failure should be investigated through run history without treating the whole worker as down.
+Retain the target key/tier labels in alerts. Alert operationally when:
+
+- health is unavailable, the database/scheduler is unhealthy, or poll freshness
+  exceeds two expected polling periods;
+- aggregate Tier 1 coverage reports degraded;
+- a Tier 1 target reaches three consecutive hard failures;
+- a target has no success for more than two of its expected intervals plus
+  normal run duration;
+- a normally non-empty target's result count collapses unexpectedly across
+  consecutive successful runs;
+- notification terminal failures or retry exhaustion accumulate.
+
+A valid parsed empty result increments the empty-run counter and is not a hard
+failure. Investigate it against `lastNonEmptyAt` and the target's historical
+baseline rather than paging on every naturally empty board. One target failure
+does not erase successful siblings or make the whole worker unavailable, but a
+degraded Tier 1 signal is an explicit coverage incident.
 
 Prometheus in-process counters reset on restart. PostgreSQL run and delivery history is durable and remains the audit source.
 
@@ -311,7 +430,11 @@ npm run db:generate
 Run CLI management commands from the host against the same local database:
 
 ```bash
-npm run cli -- watch initialize <watch-id> --json
+npm run cli -- watch preset apply prestige-internships-v2 --watch <watch-id>
+npm run cli -- watch preset apply prestige-internships-v2 --watch <watch-id> --apply
+npm run cli -- watch initialize <watch-id> --target <target-key> --json
+# Repeat targeted initialization for the full enabled set for two additional
+# no-notification observation cycles; inspect both before continuing.
 npm run cli -- watch notifications-test <watch-id> --json
 npm run cli -- watch resume <watch-id> --json
 ```
@@ -369,17 +492,41 @@ Medium-quality matches are held for the daily digest; low scores are persisted s
 
 ### A source repeatedly fails
 
-Inspect its run error summary and request duration. Do not shorten intervals or bypass access controls to compensate. Prefer a public direct company or ATS source, respect its rate limits and terms, and remove or move a fragile source to Tier 3 when appropriate.
+Inspect the target result's `status`, `outcome`, request success/failure counts,
+sanitized error, duration, `consecutiveHardFailures`, and `degraded`. A target with
+zero successful requests is a hard failure. A fully successful target with zero
+jobs is a valid empty run; investigate repeated empties against
+`lastNonEmptyAt` and historical `jobsFetched` rather than rewriting the result as
+a failure. A partial target has at least one successful request and at least one
+failed request; it increments `partialRunCount`. Success, valid empty, and
+partial outcomes all reset `consecutiveHardFailures` because none is a target
+hard failure.
 
-Do not enable Google Careers, Meta Careers, Shopify, Google Jobs, or Wellfound simply to eliminate a missing-company warning. They are intentionally absent from the current default until their documented adapter gaps are repaired. Plaid must use Ashby slug `plaid`; DoorDash uses the maintained DoorDash Canada board path.
+Do not shorten intervals, add credentials, reuse cookies, bypass access controls,
+or enable a target merely to remove a warning. Disable the individual target,
+repair its public path, rerun fixtures and failure cases, perform the disabled
+smoke, and baseline that target before enabling it again. Meta and Wellfound
+direct remain disabled. Wealthsimple and Plaid use Ashby slugs `wealthsimple`
+and `plaid`; no private or guessed board endpoint is allowed.
 
 ### A duplicate Discord message appears
 
-Check whether it is actually a different external job ID, a distinct destination, or a different notification type such as a digest. Normal immediate delivery uses a unique database idempotency key derived from watch, observed job, notification type, and destination. Preserve the database when restarting; a fresh database has no prior idempotency records.
+Check whether it is a distinct canonical episode, destination, or channel.
+Normal delivery identity is watch + canonical episode + channel/destination,
+independent of source observation and notification type. A standard, urgent, or
+digest band change cannot resend the same episode to the same destination.
+Inspect the canonical key, normalized sorted locations, external employer
+application URL, and `canonicalEpisodeStartedAt`. A URL/date-less fallback
+episode is anchored at first observation and reused for a rolling 14 days; UTC
+calendar boundaries do not split it. Preserve the database when restarting; a
+fresh database has no canonical or delivery history.
 
 ### Initialization reported source failures
 
-Keep the watch disabled, resolve the failures, and initialize again. Enabling despite a partial baseline accepts the possibility that old postings from the missing source will be classified as newly observed later.
+Keep the watch paused. Successful targets retain their baseline; failed targets
+remain uninitialized. Resolve or explicitly disable each failed target and rerun
+`watch initialize <id> --target <key>`. Never treat a partial overall run as
+evidence that every target was baselined.
 
 ### The three-minute target is missed
 
@@ -393,12 +540,17 @@ Check scheduler poll freshness, previous run duration, source timeouts/retries, 
 - [ ] The seed printed the newly created or already-existing intended watch.
 - [ ] `/health` reports healthy database and started scheduler.
 - [ ] Discord configuration is reported as present.
-- [ ] `initialize` completed with zero notifications.
-- [ ] Important source failures from baseline were resolved or explicitly accepted.
-- [ ] The watch contains only the accepted default sources, or every added source has its own successful disabled baseline.
+- [ ] `watch preset apply prestige-internships-v2 --watch <id>` was reviewed as a dry run before `--apply`.
+- [ ] The preset was applied only while the watch was paused.
+- [ ] Every added/materially changed enabled target has its own successful `initializedAt` and baseline sent zero notifications.
+- [ ] Hard-failed targets were repaired and re-baselined or explicitly left disabled.
+- [ ] Every enabled Tier 1 target has fixture-backed Canada-wide query/post-filter evidence.
+- [ ] New/repaired targets completed an operator-authorized live smoke while disabled; normalized locations and employer application URLs were inspected.
 - [ ] The Discord configuration test reached the correct channel.
 - [ ] The watch was resumed only after baseline and provider testing.
-- [ ] At least two Tier 1 scheduled runs appear in history.
+- [ ] Two additional no-notification observation runs appear in history for the
+      target-enabled set, including both Tier 1 cycles.
+- [ ] `ever_jobs_watcher_tier1_coverage_degraded{watch}` is zero and no enabled Tier 1 target is degraded.
 - [ ] Delivery and match queries work.
 - [ ] The webhook URL exists only in local environment/secret storage.
 
@@ -407,7 +559,16 @@ Check scheduler poll freshness, previous run duration, source timeouts/retries, 
 - The system improves early discovery but cannot promise a job will be detected within exactly three minutes or that the user will be the first applicant.
 - External career sites can change schemas, throttle requests, block an IP, omit publication dates, or stop responding.
 - Source terms of service and rate limits remain the operator's responsibility. The watcher does not bypass authentication, CAPTCHAs, or access controls.
-- Description edits update the existing observation and do not become new-job alerts; genuinely new external IDs may represent reposts and are kept distinct.
+- LinkedIn public guest search uses no account, cookies, or authenticated browser
+  session, defaults to a 72-hour recent window, and cannot exactly reproduce a
+  personalized LinkedIn alert.
+- Every source observation is retained. Equivalent cross-source discoveries map
+  to one canonical episode. When employer URL/publication date are unavailable,
+  a first-observation-anchored rolling 14-day episode may later permit a genuine
+  repost; UTC calendar boundaries never split the active episode.
+- Result-count collapse has no hard-coded universal threshold. Operators compare
+  successful `jobsFetched` history and `lastNonEmptyAt` to a target-specific
+  baseline and alert on a material sustained drop.
 - Discord outages can delay notifications; retry attempts and terminal failures are persisted.
 - The default daily digest is scheduled at 08:00 `America/Toronto`, including daylight-saving transitions.
 - No application is submitted automatically.

@@ -137,6 +137,61 @@ describe("InMemoryWatchRepository contract", () => {
       }),
     ).rejects.toThrow("Notification claim is not active");
   });
+
+  it("reuses a persisted observation anchor for 14 days without calendar-boundary splits", async () => {
+    const repository = new InMemoryWatchRepository();
+    const watch = await repository.createWatch({ id: "anchored-watch" });
+    const start = new Date("2026-07-13T23:59:59.000Z");
+    const withinWindow = new Date("2026-07-27T23:59:58.000Z");
+    const afterWindow = new Date("2026-07-28T00:00:00.000Z");
+    const persist = (fingerprint: string, episode: string, seenAt: Date) =>
+      repository.persistObservationAndMatch({
+        observedJob: {
+          fingerprint,
+          source: fingerprint,
+          title: "Software Engineer Intern",
+          normalizedTitle: "software engineer intern",
+          canonicalKey: "canonical-core",
+          canonicalEpisodeKey: episode,
+          canonicalEpisodeStartedAt: seenAt,
+          firstSeenAt: seenAt,
+          lastSeenAt: seenAt,
+        },
+        canonicalEpisodeAnchorWindowMs: 14 * 24 * 60 * 60 * 1_000,
+        match: {
+          watchId: watch.id,
+          canonicalEpisodeKey: episode,
+          score: 90,
+          scoreBreakdown: scoreBreakdown(90),
+          matchedTerms: ["software internship"],
+          status: "new",
+          firstMatchedAt: seenAt,
+          lastMatchedAt: seenAt,
+          notificationState: "pending",
+        },
+      });
+
+    const first = await persist("source-a", "episode-a", start);
+    const second = await persist(
+      "source-b",
+      "would-cross-calendar-bucket",
+      withinWindow,
+    );
+    // The upstream source identity remains stable across the repost. The
+    // repository must preserve the first episode's observation and allocate
+    // an episode-scoped observation for the new canonical match.
+    const third = await persist("source-a", "episode-c", afterWindow);
+
+    expect(second.job.canonicalEpisodeKey).toBe("episode-a");
+    expect(second.job.canonicalEpisodeStartedAt).toEqual(start);
+    expect(second.match.id).toBe(first.match.id);
+    expect(second.isNewMatch).toBe(false);
+    expect(third.job.canonicalEpisodeKey).toBe("episode-c");
+    expect(third.job.id).not.toBe(first.job.id);
+    expect(third.job.fingerprint).not.toBe(first.job.fingerprint);
+    expect(third.isNewMatch).toBe(true);
+    expect(third.match.id).not.toBe(first.match.id);
+  });
 });
 
 function scoreBreakdown(total: number) {

@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  BadRequestException,
   Inject,
   Injectable,
   Logger,
@@ -7,7 +8,7 @@ import {
   Optional,
 } from "@nestjs/common";
 import { randomUUID } from "crypto";
-import { JobPostDto } from "@ever-jobs/models";
+import { JobPostDto, LocationDto } from "@ever-jobs/models";
 import {
   JobWatch,
   ObservedJob,
@@ -16,13 +17,19 @@ import {
   WatchInitializationMode,
   WatchRepository,
   WatchRun,
+  WatchTargetHealth,
+  WatchTargetRunResult,
 } from "../interfaces/watch.types";
-import { JobFingerprintService } from "./job-fingerprint.service";
+import {
+  CANONICAL_EPISODE_WINDOW_MS,
+  JobFingerprintService,
+} from "./job-fingerprint.service";
 import { JobScoringService } from "./job-scoring.service";
 import { NotificationDispatcher } from "./notification-dispatcher.service";
 import {
   ExecuteWatchSourcesInput,
   JobsServiceWatchExecutor,
+  WatchSourceJob,
   WatchSourcesExecutionResult,
 } from "./jobs-service-watch.executor";
 import { WatcherMetricsService } from "./watcher-metrics.service";
@@ -40,6 +47,7 @@ export interface RunWatchOptions {
   trigger?: "scheduled" | "manual" | "initialize";
   requireDue?: boolean;
   forceSources?: boolean;
+  targetKeys?: string[];
 }
 
 const DEFAULT_OPTIONS: WatchExecutionOptions = {
@@ -75,6 +83,7 @@ export class WatchExecutionService {
   ): Promise<WatchRun> {
     const watch = await this.repo.getWatch(watchId);
     if (!watch) throw new NotFoundException(`Watch not found: ${watchId}`);
+    const executionWatch = this.selectTargets(watch, runOptions.targetKeys);
 
     const startedAt = this.options.now();
     const leaseToken = randomUUID();
@@ -115,16 +124,17 @@ export class WatchExecutionService {
     heartbeat.unref?.();
 
     let run: WatchRun | null = null;
-    const effectiveMode =
-      mode ?? (watch.initializedAt ? undefined : watch.initializationMode);
     try {
       run = await this.repo.createRun({
         watchId,
         startedAt,
-        sourcesRequested: watch.sources,
+        sourcesRequested:
+          executionWatch.sourceTargets.length > 0
+            ? executionWatch.sourceTargets.map(targetKey)
+            : executionWatch.sources,
       });
       const sourceResult = await this.executeSources({
-        watch,
+        watch: executionWatch,
         now: startedAt,
         lastRunAt: watch.lastRunAt,
         force: runOptions.forceSources ?? runOptions.trigger !== "scheduled",
@@ -140,21 +150,39 @@ export class WatchExecutionService {
       let notificationsSent = 0;
       let jobsNormalized = 0;
 
-      for (const job of uniqueJobs) {
+      for (const sourceJob of uniqueJobs) {
+        const { job, target } = sourceJob;
         try {
           if (typeof job.title !== "string" || !job.title.trim()) continue;
           jobsNormalized += 1;
-          const breakdown = this.scoring.score(job, watch);
-          const observedInput = this.toObserved(job, this.options.now());
+          const breakdown = this.scoring.score(sourceJob, watch);
+          const targetMode = this.initializationModeForTarget(
+            watch,
+            target.initializedAt,
+            mode,
+          );
+          const observedInput = this.toObserved(sourceJob, this.options.now());
           const notificationState = this.initialNotificationState(
-            effectiveMode,
+            targetMode,
             breakdown,
             watch,
           );
+          const notificationSuppressionReason =
+            this.initialNotificationSuppressionReason(
+              targetMode,
+              breakdown,
+              watch,
+            );
           const persisted = await this.repo.persistObservationAndMatch({
             observedJob: observedInput,
+            canonicalEpisodeAnchorWindowMs:
+              observedInput.canonicalEpisodeStartedAt
+                ? CANONICAL_EPISODE_WINDOW_MS
+                : undefined,
             match: {
               watchId,
+              canonicalEpisodeKey: observedInput.canonicalEpisodeKey,
+              sourceTargetKey: target.key,
               score: breakdown.total,
               scoreBreakdown: breakdown,
               matchedTerms: breakdown.matchedKeywords,
@@ -163,6 +191,7 @@ export class WatchExecutionService {
               firstMatchedAt: this.options.now(),
               lastMatchedAt: this.options.now(),
               notificationState,
+              notificationSuppressionReason,
             },
           });
 
@@ -191,8 +220,8 @@ export class WatchExecutionService {
 
           if (
             this.shouldNotify(
-              effectiveMode,
-              persisted.isNewMatch,
+              targetMode,
+              persisted.match.notificationState,
               breakdown,
               watch,
               job,
@@ -225,15 +254,23 @@ export class WatchExecutionService {
         watch,
         sourceResult,
         completedAt,
+        mode,
       );
-      const initializedAt =
-        effectiveMode === "baseline" && sourceResult.status !== "failed"
-          ? (watch.initializedAt ?? completedAt)
-          : watch.initializedAt;
+      const { targetHealth, targetResults, coverageDegraded } =
+        this.advanceTargetHealth(watch, sourceResult, completedAt);
+      const initializedAt = this.watchInitializedAt(
+        watch,
+        sourceTargets,
+        sourceResult,
+        completedAt,
+        mode,
+      );
       await this.repo.updateWatch(watch.id, {
         initializedAt,
         lastRunAt: completedAt,
+        nextRunAt: this.nextWatchRunAt(watch, sourceTargets, completedAt),
         sourceTargets,
+        targetHealth,
       });
 
       const status =
@@ -249,6 +286,8 @@ export class WatchExecutionService {
         sourcesRequested: sourceResult.sourcesRequested,
         sourcesSucceeded: sourceResult.sourcesSucceeded,
         sourcesFailed: sourceResult.sourcesFailed,
+        targetResults,
+        coverageDegraded,
         jobsFetched: sourceResult.jobs.length,
         jobsNormalized,
         newJobsDetected,
@@ -269,6 +308,10 @@ export class WatchExecutionService {
                 .slice(0, 2_000)
             : null,
       });
+      for (const targetResult of targetResults) {
+        this.metrics?.observeTargetResult(watch.id, targetResult);
+      }
+      this.metrics?.setTier1CoverageDegraded(watch.id, coverageDegraded);
       this.observeRun(completedRun, sourceResult);
       return completedRun;
     } catch (error: unknown) {
@@ -310,17 +353,18 @@ export class WatchExecutionService {
   }
 
   private uniqueJobs(
-    jobs: JobPostDto[],
+    jobs: WatchSourceJob[],
     failures: string[] = [],
-  ): JobPostDto[] {
-    const byFingerprint = new Map<string, JobPostDto>();
-    for (const job of jobs) {
+  ): WatchSourceJob[] {
+    const byFingerprint = new Map<string, WatchSourceJob>();
+    for (const sourceJob of jobs) {
       try {
+        const { job } = sourceJob;
         if (!job || typeof job.title !== "string" || !job.title.trim()) {
           failures.push("missing or non-string title");
           continue;
         }
-        byFingerprint.set(this.fingerprintService.fingerprint(job), job);
+        byFingerprint.set(this.fingerprintService.fingerprint(job), sourceJob);
       } catch (error: unknown) {
         failures.push(safeError(error));
       }
@@ -330,7 +374,7 @@ export class WatchExecutionService {
 
   private shouldNotify(
     mode: WatchInitializationMode | undefined,
-    isNewMatch: boolean,
+    notificationState: "pending" | "sent" | "failed" | "suppressed",
     breakdown: ScoreBreakdown,
     watch: JobWatch,
     job: JobPostDto,
@@ -339,8 +383,8 @@ export class WatchExecutionService {
       return false;
     if (breakdown.total < watch.minimumScore || mode === "baseline")
       return false;
+    if (notificationState !== "pending") return false;
     if (mode === "notify-all") return true;
-    if (!isNewMatch) return false;
     if (mode === "recent-only") {
       if (!job.datePosted) return true;
       const postedAt = new Date(job.datePosted).getTime();
@@ -368,20 +412,42 @@ export class WatchExecutionService {
     return "pending";
   }
 
+  private initialNotificationSuppressionReason(
+    mode: WatchInitializationMode | undefined,
+    breakdown: ScoreBreakdown,
+    watch: JobWatch,
+  ): "baseline" | "eligibility" | null {
+    if (mode === "baseline") return "baseline";
+    if (
+      breakdown.exclusionReason ||
+      breakdown.missingRequired.length > 0 ||
+      breakdown.total < watch.digestScore
+    ) {
+      return "eligibility";
+    }
+    return null;
+  }
+
   private toObserved(
-    job: JobPostDto,
+    sourceJob: WatchSourceJob,
     now: Date,
   ): Omit<ObservedJob, "id" | "createdAt" | "updatedAt"> {
-    const location =
-      typeof job.location === "string"
-        ? job.location
-        : [job.location?.city, job.location?.state, job.location?.country]
-            .filter(Boolean)
-            .join(", ");
+    const { job, target } = sourceJob;
+    const locations = storedLocations(job);
+    const location = locationText(locations[0] ?? job.location);
     const publishedAt = job.datePosted ? new Date(job.datePosted) : null;
+    const canonicalOptions = {
+      employerOwnedListing: target.kind === "direct" || target.kind === "ats",
+    };
+    const usesObservationAnchor =
+      this.fingerprintService.usesObservationEpisodeAnchor(
+        job,
+        canonicalOptions,
+      );
     return {
       fingerprint: this.fingerprintService.fingerprint(job),
       source: String(job.site ?? "unknown"),
+      sourceTargetKey: target.key,
       sourceType: job.atsType ?? null,
       externalJobId: stringOrNull(job.id ?? job.atsId),
       company: stringOrNull(job.companyName),
@@ -390,6 +456,17 @@ export class WatchExecutionService {
       normalizedTitle: this.fingerprintService.normalizeText(job.title),
       location: location || null,
       normalizedLocation: this.fingerprintService.normalizeLocation(location),
+      locations,
+      canonicalKey: this.fingerprintService.canonicalFingerprint(
+        job,
+        canonicalOptions,
+      ),
+      canonicalEpisodeKey: this.fingerprintService.canonicalEpisodeFingerprint(
+        job,
+        now,
+        canonicalOptions,
+      ),
+      canonicalEpisodeStartedAt: usesObservationAnchor ? now : null,
       workplaceType: job.isRemote
         ? "remote"
         : normalizeOptional(job.workFromHomeType),
@@ -417,21 +494,231 @@ export class WatchExecutionService {
     watch: JobWatch,
     result: WatchSourcesExecutionResult,
     completedAt: Date,
+    requestedMode?: WatchInitializationMode,
   ): JobWatch["sourceTargets"] {
-    const executed = new Set(result.plan.targets.map((target) => target.key));
+    const plannedByKey = new Map(
+      result.plan.targets.map((target) => [target.key, target] as const),
+    );
+    const summariesByKey = new Map(
+      result.sourceResults.map((summary) => [summary.source, summary] as const),
+    );
     return (watch.sourceTargets ?? []).map((target) => {
-      const key = target.companySlug
-        ? `${String(target.site)}:${target.companySlug}`
-        : String(target.site);
-      if (!executed.has(key)) return target;
+      const key = targetKey(target);
+      const planned = plannedByKey.get(key);
+      if (!planned) return target;
+      const summary = summariesByKey.get(key);
+      const targetMode = this.initializationModeForTarget(
+        watch,
+        planned.initializedAt,
+        requestedMode,
+      );
+      const initializedAt =
+        targetMode === "baseline" && summary?.status === "succeeded"
+          ? (target.initializedAt ?? completedAt)
+          : target.initializedAt;
       return {
         ...target,
+        initializedAt,
         lastRunAt: completedAt,
         nextRunAt: new Date(
           completedAt.getTime() + target.intervalMinutes * 60_000,
         ),
       };
     });
+  }
+
+  private selectTargets(
+    watch: JobWatch,
+    requestedKeys: string[] | undefined,
+  ): JobWatch {
+    if (requestedKeys === undefined || requestedKeys.length === 0) return watch;
+
+    const keys = requestedKeys.map((key) => key.trim());
+    if (keys.some((key) => !key)) {
+      throw new BadRequestException(
+        "WATCH_TARGET_UNKNOWN: target keys must be non-empty",
+      );
+    }
+    if (new Set(keys).size !== keys.length) {
+      throw new BadRequestException(
+        "WATCH_TARGET_DUPLICATE: target keys must be unique",
+      );
+    }
+    if ((watch.sourceTargets?.length ?? 0) === 0) {
+      throw new BadRequestException(`WATCH_TARGET_UNKNOWN: ${keys.join(", ")}`);
+    }
+
+    const configured = new Map(
+      watch.sourceTargets.map((target) => [targetKey(target), target] as const),
+    );
+    const selected = keys.map((key) => {
+      const target = configured.get(key);
+      if (!target) {
+        throw new BadRequestException(`WATCH_TARGET_UNKNOWN: ${key}`);
+      }
+      if (!target.enabled) {
+        throw new BadRequestException(`WATCH_TARGET_DISABLED: ${key}`);
+      }
+      return target;
+    });
+
+    return { ...watch, sourceTargets: selected };
+  }
+
+  private initializationModeForTarget(
+    watch: JobWatch,
+    initializedAt: Date | null | undefined,
+    requestedMode?: WatchInitializationMode,
+  ): WatchInitializationMode | undefined {
+    if (requestedMode === "baseline") return "baseline";
+    const effectiveInitializedAt =
+      initializedAt === undefined ? watch.initializedAt : initializedAt;
+    if (!effectiveInitializedAt) return "baseline";
+    return requestedMode;
+  }
+
+  private advanceTargetHealth(
+    watch: JobWatch,
+    result: WatchSourcesExecutionResult,
+    completedAt: Date,
+  ): {
+    targetHealth: Record<string, WatchTargetHealth>;
+    targetResults: WatchTargetRunResult[];
+    coverageDegraded: boolean;
+  } {
+    const plannedByKey = new Map(
+      [...result.plan.targets, ...result.plan.skippedTargets].map(
+        (target) => [target.key, target] as const,
+      ),
+    );
+    const targetHealth: Record<string, WatchTargetHealth> = {
+      ...(watch.targetHealth ?? {}),
+    };
+    const targetResults: WatchTargetRunResult[] = [];
+
+    for (const summary of result.sourceResults) {
+      const planned = plannedByKey.get(summary.source);
+      const previous = targetHealth[summary.source];
+      const tier = planned?.tier ?? previous?.tier ?? 3;
+      const succeeded = summary.status === "succeeded";
+      const hardFailure = summary.status === "failed";
+      const nonEmpty = summary.jobsFetched > 0;
+      const consecutiveHardFailures = hardFailure
+        ? (previous?.consecutiveHardFailures ?? 0) + 1
+        : 0;
+      const degraded = tier === 1 && consecutiveHardFailures >= 3;
+      const health: WatchTargetHealth = {
+        targetKey: summary.source,
+        tier,
+        successCount: (previous?.successCount ?? 0) + (succeeded ? 1 : 0),
+        hardFailureCount:
+          (previous?.hardFailureCount ?? 0) + (hardFailure ? 1 : 0),
+        emptyRunCount:
+          (previous?.emptyRunCount ?? 0) + (succeeded && !nonEmpty ? 1 : 0),
+        partialRunCount:
+          (previous?.partialRunCount ?? 0) +
+          (summary.status === "partial" ? 1 : 0),
+        consecutiveHardFailures,
+        lastAttemptAt: completedAt,
+        lastSuccessAt: succeeded
+          ? completedAt
+          : (previous?.lastSuccessAt ?? null),
+        lastNonEmptyAt: nonEmpty
+          ? completedAt
+          : (previous?.lastNonEmptyAt ?? null),
+        degradedAt: degraded ? (previous?.degradedAt ?? completedAt) : null,
+      };
+      targetHealth[summary.source] = health;
+      targetResults.push({
+        targetKey: summary.source,
+        tier,
+        status: summary.status,
+        outcome: hardFailure
+          ? "hard_failure"
+          : summary.status === "partial"
+            ? "partial"
+            : nonEmpty
+              ? "success"
+              : "empty",
+        requests: summary.requests,
+        requestsSucceeded: summary.requestsSucceeded,
+        requestsFailed: summary.requestsFailed,
+        jobsFetched: summary.jobsFetched,
+        durationMs: summary.durationMs,
+        empty: succeeded && !nonEmpty,
+        hardFailure,
+        consecutiveHardFailures,
+        degraded,
+        lastSuccessAt: health.lastSuccessAt,
+        lastNonEmptyAt: health.lastNonEmptyAt,
+      });
+    }
+
+    const activeTierOneKeys = new Set<string>(
+      watch.sourceTargets.length > 0
+        ? watch.sourceTargets
+            .filter((target) => target.enabled && target.tier === 1)
+            .map(targetKey)
+        : [...plannedByKey.values()]
+            .filter((target) => target.tier === 1)
+            .map((target) => target.key),
+    );
+    const coverageDegraded = [...activeTierOneKeys].some(
+      (key) => (targetHealth[key]?.consecutiveHardFailures ?? 0) >= 3,
+    );
+    return { targetHealth, targetResults, coverageDegraded };
+  }
+
+  private watchInitializedAt(
+    watch: JobWatch,
+    sourceTargets: JobWatch["sourceTargets"],
+    result: WatchSourcesExecutionResult,
+    completedAt: Date,
+    requestedMode?: WatchInitializationMode,
+  ): Date | null | undefined {
+    if (sourceTargets.length > 0) {
+      const allEnabledTargetsInitialized = sourceTargets
+        .filter((target) => target.enabled)
+        .every((target) =>
+          target.initializedAt === undefined
+            ? Boolean(watch.initializedAt)
+            : Boolean(target.initializedAt),
+        );
+      return allEnabledTargetsInitialized
+        ? (watch.initializedAt ?? completedAt)
+        : watch.initializedAt;
+    }
+
+    const effectiveMode = this.initializationModeForTarget(
+      watch,
+      watch.initializedAt,
+      requestedMode,
+    );
+    return effectiveMode === "baseline" && result.status === "completed"
+      ? (watch.initializedAt ?? completedAt)
+      : watch.initializedAt;
+  }
+
+  private nextWatchRunAt(
+    watch: JobWatch,
+    sourceTargets: JobWatch["sourceTargets"],
+    completedAt: Date,
+  ): Date | null {
+    if (sourceTargets.length === 0) {
+      return new Date(completedAt.getTime() + watch.intervalMinutes * 60_000);
+    }
+    const enabledTargets = sourceTargets.filter((target) => target.enabled);
+    if (enabledTargets.length === 0) {
+      return new Date(completedAt.getTime() + watch.intervalMinutes * 60_000);
+    }
+    if (enabledTargets.some((target) => !target.nextRunAt)) return null;
+    return enabledTargets.reduce(
+      (earliest, target) =>
+        (target.nextRunAt as Date).getTime() < earliest.getTime()
+          ? (target.nextRunAt as Date)
+          : earliest,
+      enabledTargets[0].nextRunAt as Date,
+    );
   }
 
   private observeRun(
@@ -470,6 +757,62 @@ function stringOrNull(value: unknown): string | null {
   const text = typeof value === "string" ? value : String(value);
   const trimmed = text.trim();
   return trimmed || null;
+}
+
+function targetKey(target: { site: string; companySlug?: string }): string {
+  return target.companySlug
+    ? `${String(target.site)}:${target.companySlug}`
+    : String(target.site);
+}
+
+function storedLocations(job: JobPostDto): LocationDto[] {
+  const candidates =
+    Array.isArray(job.locations) && job.locations.length > 0
+      ? job.locations
+      : job.location
+        ? [job.location]
+        : [];
+  const locations: LocationDto[] = [];
+  const seen = new Set<string>();
+  for (const candidate of candidates as unknown[]) {
+    const location = storedLocation(candidate);
+    if (!location) continue;
+    const key = [location.city, location.state, location.country]
+      .map((part) =>
+        String(part ?? "")
+          .trim()
+          .toLowerCase(),
+      )
+      .join("\u001f");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    locations.push(location);
+  }
+  return locations;
+}
+
+function storedLocation(value: unknown): LocationDto | null {
+  if (typeof value === "string") {
+    const city = value.trim();
+    return city ? new LocationDto({ city }) : null;
+  }
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const city = stringOrNull(record.city);
+  const state = stringOrNull(record.state);
+  const country = stringOrNull(record.country);
+  if (!city && !state && !country) return null;
+  return new LocationDto({ city, state, country });
+}
+
+function locationText(value: unknown): string {
+  if (typeof value === "string") return value.trim();
+  if (!value || typeof value !== "object") return "";
+  const record = value as Record<string, unknown>;
+  return [record.city, record.state, record.country]
+    .map(stringOrNull)
+    .filter((part): part is string => Boolean(part))
+    .join(", ");
 }
 
 function safeError(error: unknown): string {

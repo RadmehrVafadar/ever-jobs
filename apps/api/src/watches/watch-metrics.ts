@@ -113,6 +113,19 @@ export async function collectWatchMetrics(
       publicationToNotification: publicationToNotification.length,
     },
     sourceSuccessRates: sourceSuccessRates(runData.items),
+    targetHealth: Object.fromEntries(
+      Object.entries(watch.targetHealth ?? {}).sort(([left], [right]) =>
+        left.localeCompare(right),
+      ),
+    ),
+    tier1CoverageDegraded: tier1CoverageDegraded(watch),
+    targetRunOutcomes: countBy(
+      runData.items.flatMap((run) => run.targetResults ?? []),
+      (result) => result.outcome,
+    ),
+    coverageDegradedRuns: runData.items.filter(
+      (run) => run.coverageDegraded === true,
+    ).length,
     jobsByCompany: countBy(jobs, (job) => job.company ?? "Unknown"),
     jobsBySource: countBy(jobs, (job) => job.source),
     jobsByLocation: countBy(jobs, (job) => job.location ?? "Unknown"),
@@ -129,6 +142,25 @@ export async function collectWatchMetrics(
     runStatuses: countBy(runData.items, (run) => run.status),
     recentRuns: runData.items.slice(0, 10),
   };
+}
+
+function tier1CoverageDegraded(watch: JobWatch): boolean {
+  const activeTierOneKeys = new Set(
+    watch.sourceTargets.length > 0
+      ? watch.sourceTargets
+          .filter((target) => target.enabled && target.tier === 1)
+          .map((target) =>
+            target.companySlug
+              ? `${String(target.site)}:${target.companySlug}`
+              : String(target.site),
+          )
+      : Object.values(watch.targetHealth ?? {})
+          .filter((health) => health.tier === 1)
+          .map((health) => health.targetKey),
+  );
+  return [...activeTierOneKeys].some(
+    (key) => (watch.targetHealth?.[key]?.consecutiveHardFailures ?? 0) >= 3,
+  );
 }
 
 async function collectPages<T>(

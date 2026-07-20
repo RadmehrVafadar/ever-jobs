@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing";
-import { JobPostDto, ScraperInputDto, Site } from "@ever-jobs/models";
+import { Country, JobPostDto, ScraperInputDto, Site } from "@ever-jobs/models";
 import { JobWatch } from "../interfaces/watch.types";
 import {
   JobsServiceWatchExecutor,
@@ -84,6 +84,148 @@ describe("WatchSourcePlanner", () => {
     ]);
   });
 
+  it("uses explicit plugin mode and carries effective target context", () => {
+    const watchInitializedAt = new Date("2026-07-14T11:00:00.000Z");
+    const plan = planner.plan(
+      createWatch({
+        initializedAt: watchInitializedAt,
+        searchTerms: ["legacy term"],
+        locations: ["legacy location"],
+        countryCodes: ["CA"],
+        sourceTargets: [
+          {
+            site: Site.GOOGLE_CAREERS,
+            tier: 1,
+            intervalMinutes: 3,
+            companyName: "Google",
+            enabled: true,
+            searchScope: {
+              countryCodes: ["CA"],
+              locations: ["Canada", "Waterloo, Ontario"],
+              searchTerms: ["software intern"],
+              maxRequestsPerRun: 2,
+            },
+          },
+        ],
+      }),
+      {
+        force: true,
+        rotationSeed: 0,
+        sourceMetadata: [
+          {
+            site: Site.GOOGLE_CAREERS,
+            category: "company",
+            watchMode: "query",
+          },
+        ],
+      },
+    );
+
+    expect(plan.targets[0]).toEqual(
+      expect.objectContaining({
+        key: Site.GOOGLE_CAREERS,
+        companyName: "Google",
+        intervalMinutes: 3,
+        mode: "query",
+        initializedAt: watchInitializedAt,
+        searchScope: {
+          countryCodes: ["CA"],
+          locations: ["Canada", "Waterloo, Ontario"],
+          searchTerms: ["software intern"],
+          maxRequestsPerRun: 2,
+        },
+      }),
+    );
+    expect(plan.requests).toEqual([
+      expect.objectContaining({
+        searchTerm: "software intern",
+        location: "Canada",
+        countryCodes: ["CA"],
+        matrixIndex: 0,
+      }),
+      expect.objectContaining({
+        searchTerm: "software intern",
+        location: "Waterloo, Ontario",
+        countryCodes: ["CA"],
+        matrixIndex: 1,
+      }),
+    ]);
+  });
+
+  it("builds the complete unique term by location matrix", () => {
+    const plan = planner.plan(
+      createWatch({
+        sourceTargets: [
+          {
+            site: Site.GOOGLE,
+            tier: 2,
+            intervalMinutes: 15,
+            enabled: true,
+            searchScope: {
+              countryCodes: ["CA", "US"],
+              locations: ["Canada", "United States", "Canada"],
+              searchTerms: ["software intern", "ml intern", "software intern"],
+              maxRequestsPerRun: 10,
+            },
+          },
+        ],
+      }),
+      { force: true, rotationSeed: 0 },
+    );
+
+    expect(
+      plan.requests.map(({ searchTerm, location }) => [searchTerm, location]),
+    ).toEqual([
+      ["software intern", "Canada"],
+      ["software intern", "United States"],
+      ["ml intern", "Canada"],
+      ["ml intern", "United States"],
+    ]);
+    expect(plan.requests.map((request) => request.matrixIndex)).toEqual([
+      0, 1, 2, 3,
+    ]);
+    expect(
+      plan.requests.every(
+        (request) => request.countryCodes.join(",") === "CA,US",
+      ),
+    ).toBe(true);
+  });
+
+  it("rotates a bounded matrix deterministically until every query is covered", () => {
+    const watch = createWatch({
+      sourceTargets: [
+        {
+          site: Site.GOOGLE,
+          tier: 2,
+          intervalMinutes: 15,
+          enabled: true,
+          searchScope: {
+            countryCodes: ["CA", "US"],
+            locations: ["Canada", "United States", "Toronto, Ontario"],
+            searchTerms: ["software intern", "ml intern"],
+            maxRequestsPerRun: 2,
+          },
+        },
+      ],
+    });
+    const plans = [0, 1, 2].map((rotationSeed) =>
+      planner.plan(watch, { force: true, rotationSeed }),
+    );
+    const repeated = planner.plan(watch, { force: true, rotationSeed: 1 });
+
+    expect(plans.every((plan) => plan.requests.length === 2)).toBe(true);
+    expect(repeated.requests.map((request) => request.id)).toEqual(
+      plans[1].requests.map((request) => request.id),
+    );
+    expect(
+      new Set(
+        plans.flatMap((plan) =>
+          plan.requests.map((request) => request.matrixIndex),
+        ),
+      ).size,
+    ).toBe(6);
+  });
+
   it("fetches each direct or ATS board once instead of once per search term", () => {
     const terms = Array.from(
       { length: 16 },
@@ -123,7 +265,7 @@ describe("WatchSourcePlanner", () => {
     const plan = planner.plan(
       createWatch({
         sources: [
-          "source-company-shopify",
+          "source-company-not-real",
           "source-ats-greenhouse",
           "source-ats-lever",
         ],
@@ -292,6 +434,153 @@ describe("JobsServiceWatchExecutor", () => {
     expect(maximumActive).toBe(1);
     expect(result.status).toBe("completed");
     expect(result.jobs).toHaveLength(4);
+    expect(result.jobs[0]).toEqual(
+      expect.objectContaining({
+        job: expect.any(JobPostDto),
+        target: expect.objectContaining({ key: Site.GOOGLE, tier: 2 }),
+        requestId: expect.stringContaining(`${Site.GOOGLE}:matrix-`),
+        location: "Toronto",
+        countryCodes: ["CA"],
+        matrixIndex: expect.any(Number),
+      }),
+    );
+  });
+
+  it("forwards scoped locations and effective countries and attributes each job", async () => {
+    const capturedInputs: ScraperInputDto[] = [];
+    const service: WatchJobsService = {
+      listRegisteredSources: () => [Site.GOOGLE],
+      listSourceMetadata: () => [
+        {
+          site: Site.GOOGLE,
+          category: "job-board",
+          watchMode: "query",
+        },
+      ],
+      searchJobs: async (input) => {
+        capturedInputs.push(input);
+        return [
+          new JobPostDto({
+            id: `job-${capturedInputs.length}`,
+            site: Site.GOOGLE,
+            title: "Software Intern",
+            jobUrl: "https://example.com/job",
+          }),
+        ];
+      },
+    };
+    const executor = new JobsServiceWatchExecutor(
+      service,
+      new WatchSourcePlanner(),
+      { maxConcurrency: 2, maxConcurrencyPerSource: 1, maxJitterMs: 0 },
+    );
+
+    const result = await executor.execute({
+      watch: createWatch({
+        sourceTargets: [
+          {
+            site: Site.GOOGLE,
+            tier: 2,
+            intervalMinutes: 15,
+            companyName: "Aggregator",
+            enabled: true,
+            searchScope: {
+              countryCodes: ["CA", "US"],
+              locations: ["Canada", "Seattle, Washington"],
+              searchTerms: ["software intern"],
+              maxRequestsPerRun: 2,
+            },
+          },
+        ],
+      }),
+      force: true,
+    });
+
+    expect(capturedInputs.map((input) => input.location)).toEqual([
+      "Canada",
+      "Seattle, Washington",
+    ]);
+    expect(capturedInputs.map((input) => input.country)).toEqual([
+      Country.CANADA,
+      Country.USA,
+    ]);
+    expect(result.jobs).toHaveLength(2);
+    expect(result.jobs.map((resultJob) => resultJob.location)).toEqual([
+      "Canada",
+      "Seattle, Washington",
+    ]);
+    expect(
+      result.jobs.every(
+        (resultJob) =>
+          resultJob.target.companyName === "Aggregator" &&
+          resultJob.countryCodes.join(",") === "CA,US",
+      ),
+    ).toBe(true);
+    expect(result.requestResults[1]).toEqual(
+      expect.objectContaining({
+        source: Site.GOOGLE,
+        location: "Seattle, Washington",
+        countryCodes: ["CA", "US"],
+        matrixIndex: 1,
+        target: expect.objectContaining({ key: Site.GOOGLE, tier: 2 }),
+        status: "succeeded",
+      }),
+    );
+  });
+
+  it("applies the branded company name carried by a generic ATS target", async () => {
+    const service: WatchJobsService = {
+      listRegisteredSources: () => [Site.ASHBY],
+      listSourceMetadata: () => [
+        {
+          site: Site.ASHBY,
+          category: "ats",
+          isAts: true,
+          watchMode: "board",
+        },
+      ],
+      searchJobs: async (input) => {
+        expect(input.companySlug).toBe("wealthsimple");
+        return [
+          new JobPostDto({
+            id: "ashby-1",
+            site: Site.ASHBY,
+            title: "Software Engineering Intern",
+            companyName: "wealthsimple",
+            jobUrl: "https://jobs.ashbyhq.com/wealthsimple/1",
+          }),
+        ];
+      },
+    };
+    const executor = new JobsServiceWatchExecutor(
+      service,
+      new WatchSourcePlanner(),
+      { maxJitterMs: 0 },
+    );
+
+    const result = await executor.execute({
+      watch: createWatch({
+        sourceTargets: [
+          {
+            site: Site.ASHBY,
+            tier: 1,
+            intervalMinutes: 3,
+            companySlug: "wealthsimple",
+            companyName: "Wealthsimple",
+            enabled: true,
+            searchScope: {
+              countryCodes: ["CA"],
+              locations: ["Canada"],
+            },
+          },
+        ],
+      }),
+      force: true,
+    });
+
+    expect(result.jobs).toHaveLength(1);
+    expect(result.jobs[0].job.companyName).toBe("Wealthsimple");
+    expect(result.jobs[0].target.key).toBe("ashby:wealthsimple");
   });
 
   it("reports hard timeouts without blocking the whole source batch", async () => {
