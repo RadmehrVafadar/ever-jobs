@@ -1,4 +1,4 @@
-# Ever Jobs
+# rad.r
 
 > A modular, extensible NestJS monorepo for aggregating job postings from multiple job boards.
 
@@ -9,7 +9,7 @@
 
 ## ⭐️ Overview
 
-**Ever® Jobs™** searches job postings from **160+ sources** concurrently and returns aggregated, normalized results through a single REST API, **GraphQL API**, **CLI**, or **MCP server** for AI assistants. Sources span search-based job boards, ATS (Applicant Tracking System) boards, and company-specific career APIs. Each source is an independent, reusable NestJS package — making it easy to add new sources, consume individual packages in other projects, or deploy the full API.
+**rad.r™** searches job postings from **160+ sources** concurrently and returns aggregated, normalized results through a single REST API, **GraphQL API**, **CLI**, or **MCP server** for AI assistants. Sources span search-based job boards, ATS (Applicant Tracking System) boards, and company-specific career APIs. Each source is an independent, reusable NestJS package — making it easy to add new sources, consume individual packages in other projects, or deploy the full API.
 
 ### Search-Based Job Boards (107)
 
