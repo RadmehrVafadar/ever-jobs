@@ -224,3 +224,20 @@
   - **Files:** watcher README, Spec 6000 mirror, docs index/log/questions, focused tests/build/diff
   - **Acceptance:** deployment/baseline behavior is documented; focused suites and TypeScript checks pass; remaining external/pre-existing blockers are recorded.
   - **Estimate:** 0.5 day
+
+## Phase 10 — Google Careers duplicate-delivery correction
+
+- [x] T38 — Amend the canonical identity contract before code
+  - **Files:** Spec 6000 `spec.md`, `plan.md`, and `tasks.md`
+  - **Acceptance:** stable Google result identity, variable Apply parameters, distinct requisitions, tests, and targeted-baseline rollout are explicit.
+  - **Estimate:** 0.25 day
+
+- [x] T39 — Implement and test stable Google canonical identity
+  - **Files:** `job-fingerprint.service.ts`, watcher fingerprint/execution tests
+  - **Acceptance:** one Google posting survives changing query/location parameters as one observation/match/delivery while separate posting IDs remain distinct.
+  - **Estimate:** 0.5 day
+
+- [x] T40 — Document, validate, and prepare safe rollout
+  - **Files:** watcher README, Spec 6000 mirror, docs index/log, focused/full watcher validation
+  - **Acceptance:** the production watch remains paused until the fixed Google target is baselined; validation evidence and exact deployment commands are recorded.
+  - **Estimate:** 0.5 day

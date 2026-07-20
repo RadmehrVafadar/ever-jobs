@@ -195,6 +195,13 @@ jobs can still be standard or digest matches but cannot be urgent or display as
 `100/100` under the default thresholds. Direct/ATS observations and LinkedIn
 observations for Tier 1 companies keep normal scoring.
 
+Google Careers uses the stable official results URL (including Google's numeric
+posting ID) for canonical job and notification identity. Its Apply URL is kept
+for the notification button but is not identity-bearing because Google decorates
+it with the rotating search term, location, locale, and page. After deploying a
+canonical-identity change, pause the watch and baseline `google_careers` before
+resuming so the corrected identity cannot generate a migration-time alert.
+
 Toronto, the GTA, and Waterloo add preference points only. Vancouver, Calgary,
 Montréal, Ottawa, remote Canada, and every other confidently Canadian location
 remain eligible in Tier 1. `Remote US` is Tier 2/3 only; `North America` and

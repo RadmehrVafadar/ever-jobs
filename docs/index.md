@@ -1774,7 +1774,7 @@
 - [Watcher Spec-Kit specification](../.specify/specs/016-realtime-job-watcher/spec.md) — production contracts, data model, scheduler, notification, source-readiness, API/CLI, tests, and limitations
 - [Watcher implementation plan](../.specify/specs/016-realtime-job-watcher/plan.md) — architecture, phases, migration, rollout, risks, rollback, and validation
 - [Watcher task ledger](../.specify/specs/016-realtime-job-watcher/tasks.md) — completed implementation work and remaining local credentialed smoke test
-- [Prestige internship coverage expansion](specs/6000-prestige-internship-coverage-expansion.md) — six-target enabled inventory, Summer 2027/PhD eligibility policy, Tier-1-aware LinkedIn priority cap, Canada/US geography, rolling canonical episodes, target health, and the remaining changed-target baseline gate
+- [Prestige internship coverage expansion](specs/6000-prestige-internship-coverage-expansion.md) — six-target enabled inventory, Summer 2027/PhD eligibility policy, Tier-1-aware LinkedIn priority cap, stable Google Careers result-URL identity, Canada/US geography, rolling canonical episodes, target health, and targeted baseline gates
 - [Expansion Spec-Kit contracts](../.specify/specs/6000-prestige-internship-coverage-expansion/spec.md) — authoritative source, query, eligibility, identity, health, migration, and acceptance requirements
 - [Expansion implementation plan](../.specify/specs/6000-prestige-internship-coverage-expansion/plan.md) and [task ledger](../.specify/specs/6000-prestige-internship-coverage-expansion/tasks.md)
 

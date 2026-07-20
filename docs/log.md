@@ -5,6 +5,31 @@
 
 ---
 
+## 2026-07-20 — Spec 6000 — Google Careers duplicate-delivery correction
+
+**Production evidence:** The rotating Google Careers query matrix returned the
+same BS and MS posting IDs through different terms and locations. Although the
+source IDs and result URLs were stable, Google decorated each Apply URL with
+request-specific `q`, `location`, locale, targeting, and pagination parameters.
+Those parameters created distinct canonical episodes and 49 successful Discord
+deliveries instead of one delivery per requisition.
+
+**Correction:** Google Careers canonical identity now uses the official stable
+result URL containing Google's numeric posting ID. The full Apply URL is retained
+for user navigation but no longer affects job, episode, or delivery identity.
+Distinct Google posting IDs remain distinct. Regression coverage runs the same
+posting through two matrix-specific Apply URLs and asserts one observation, one
+match, and one delivery.
+
+**Rollout:** Keep the production watch paused during deployment, rebuild the
+watcher and CLI without stale cache, baseline only `google_careers`, inspect the
+no-notification result, and resume. Historical duplicate records remain intact as
+an audit trail. Validation passed the focused fingerprint/execution suites (27
+tests), all 10 watcher suites (126 tests), watcher TypeScript compilation,
+affected TypeScript formatting, and diff hygiene.
+
+---
+
 ## 2026-07-20 — Spec 6000 — Summer 2027 filtering refinement
 
 **Specification:** Amended the existing prestige-internship contract, plan, task

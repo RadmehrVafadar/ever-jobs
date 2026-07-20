@@ -150,6 +150,14 @@ Non-Tier-1 LinkedIn totals are capped at `urgentScore - 1`; they remain eligible
 for standard/digest delivery. Tier 1 LinkedIn employers and non-LinkedIn source
 observations retain the normal additive total.
 
+Google Careers notification identity is anchored to the stable official result
+URL containing Google's numeric posting ID. The Apply URL remains available to
+the operator but does not participate in identity because its search term,
+location, locale, targeting, and pagination parameters change across matrix
+requests. Reobserving one posting through different queries therefore updates
+one source observation and one match rather than sending another notification;
+distinct Google requisition IDs such as BS and MS roles remain separate.
+
 Geography is a hard eligibility decision. Location preference is a separate
 ranking component. Unknown geography is visible and suppressed rather than
 discarded or treated as successful eligibility.
@@ -223,6 +231,11 @@ For an existing v2 watch receiving the 2026-07-20 refinement, preset preview/app
 marks the changed query scopes as material. Baseline every enabled target key
 reported by the apply result before resuming, preventing the narrowed search
 matrix from surfacing historical postings.
+
+After deploying the Google canonical-identity correction, keep the watch paused,
+rebuild the watcher, initialize only `google_careers`, inspect the no-notification
+baseline, then resume. Historical duplicate rows and delivery records remain as
+an audit trail and do not need destructive cleanup.
 
 Six deterministic source suites passed with 59 tests. Disabled live evidence
 returned two Canadian Google Careers roles, a marker-validated valid empty

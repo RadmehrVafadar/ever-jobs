@@ -214,6 +214,8 @@ behavior; every unlisted Spec 016 contract remains authoritative.
 | FR-53 | For a result produced by the LinkedIn target, Tier 1 company membership derives from configured `sourceTargets` having `tier === 1` and a `companyName`; it does not derive from the flat prestige ranking list. Company comparison is case/punctuation-insensitive and permits a configured brand at the beginning of a legal/source company name. | must |
 | FR-54 | A LinkedIn result outside that Tier 1 company set retains its calculated breakdown but its total is capped at `urgentScore - 1` (never below zero). It may remain a standard or digest match but cannot be urgent or display as `100/100` under the default thresholds. | must |
 | FR-55 | Direct/ATS observations and LinkedIn observations for Tier 1 companies retain normal scoring. Existing observation, canonical episode, suppression, and idempotency contracts remain unchanged. | must |
+| FR-56 | Google Careers canonical job and episode identity uses the stable official results URL containing Google's numeric posting ID, not the application URL whose `q`, `location`, pagination, locale, and targeting parameters vary by search-matrix request. The complete application URL remains available for the operator's Apply action. | must |
+| FR-57 | Repeated Google Careers observations with the same stable posting ID and result URL produce one stored source observation, one canonical match episode, and at most one delivery per destination, even when their application-query parameters differ. Distinct Google posting IDs such as BS and MS requisitions remain distinct. | must |
 
 ## 6. Core contracts
 
@@ -424,6 +426,10 @@ returned zero. Error messages are sanitized and never include secrets/cookies.
 - Cover non-Tier-1 LinkedIn score capping below the configured urgent threshold,
   Tier 1 LinkedIn company exemption, direct-source exemption, and explanation
   text without changing score components.
+- Cover Google Careers observations whose stable posting ID/result URL match but
+  whose application `q` and `location` parameters differ; assert stable source
+  fingerprint, canonical episode, persisted match, and delivery identity while
+  retaining distinct identities for distinct Google posting IDs.
 - Cover Tier 1 Canadian acceptance/US rejection, Tier 2/3 CA/US acceptance,
   regional-remote rules, unknown suppression, and preference-only location score.
 - Cover canonical identity with employer URL, publication-date fallback,

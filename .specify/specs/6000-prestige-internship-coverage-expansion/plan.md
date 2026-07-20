@@ -146,6 +146,16 @@ work; Google Jobs and legacy-source live failures remain safely target-disabled.
   preset/example parity and TypeScript compilation pass; the changed LinkedIn
   target is baselined after deployment before the watch resumes.
 
+### Phase 10 — Google Careers duplicate-delivery correction
+
+- Goal: prevent the rotating Google term/location matrix from creating a new
+  notification identity when only query-specific application URL parameters vary.
+- Deliverables: Google-specific stable canonical URL selection, unit and execution
+  regression coverage, operator documentation, and a targeted-baseline rollout.
+- Exit criteria: identical Google posting IDs/result URLs with different Apply URL
+  search parameters persist and deliver once; distinct requisition IDs remain
+  separate; watcher tests and TypeScript compilation pass.
+
 ## 3. Packages and files touched
 
 | Area | Change |

@@ -329,6 +329,73 @@ describe("WatchExecutionService durable pipeline", () => {
     expect(provider.send).toHaveBeenCalledTimes(1);
   });
 
+  it("sends one Google Careers notification across matrix-specific Apply URLs", async () => {
+    let now = new Date("2026-07-20T16:00:00.000Z");
+    const initializedAt = new Date("2026-07-20T15:00:00.000Z");
+    const first = internship(
+      "google-careers-76982475250639558",
+      "First matrix observation",
+    );
+    first.jobUrl =
+      "https://www.google.com/about/careers/applications/jobs/results/76982475250639558-software-developer-intern-bs-summer-2027";
+    first.applyUrl =
+      "https://www.google.com/about/careers/applications/jobs/results/apply?jobId=stable&q=AI+engineer+intern&location=Greater+Toronto+Area&page=1";
+    const second = new JobPostDto({
+      ...first,
+      description:
+        "Second matrix observation. Internship building Python distributed systems on Google Cloud with Docker and Kubernetes.",
+      applyUrl:
+        "https://www.google.com/about/careers/applications/jobs/results/apply?jobId=stable&q=devops+engineer+intern&location=Waterloo%2C+Ontario&page=2",
+    });
+    const repository = new InMemoryWatchRepository();
+    const watch = await repository.createWatch(
+      pipelineWatch({
+        initializedAt,
+        sourceTargets: [sourceTarget(Site.GOOGLE_CAREERS, 1, initializedAt)],
+        notificationChannels: [{ type: "discord", destinationRef: "default" }],
+      }),
+    );
+    let current = first;
+    const provider = successfulProvider();
+    const execution = executionService(
+      repository,
+      fakeExecutor(() => sourceResult([current])),
+      provider,
+      () => now,
+      "google-matrix-worker",
+    );
+
+    const firstRun = await execution.runWatch(watch.id);
+    current = second;
+    now = new Date("2026-07-20T16:03:00.000Z");
+    const secondRun = await execution.runWatch(watch.id);
+
+    expect(firstRun).toEqual(
+      expect.objectContaining({
+        newJobsDetected: 1,
+        matchesCreated: 1,
+        notificationsSent: 1,
+      }),
+    );
+    expect(secondRun).toEqual(
+      expect.objectContaining({
+        newJobsDetected: 0,
+        matchesCreated: 0,
+        notificationsSent: 0,
+      }),
+    );
+    await expect(repository.listObservedJobs({})).resolves.toMatchObject({
+      total: 1,
+    });
+    await expect(
+      repository.listMatches({ watchId: watch.id }),
+    ).resolves.toMatchObject({ total: 1 });
+    await expect(
+      repository.listNotifications({ watchId: watch.id }),
+    ).resolves.toMatchObject({ total: 1 });
+    expect(provider.send).toHaveBeenCalledTimes(1);
+  });
+
   it("notifies when a richer direct observation makes a suppressed canonical episode eligible", async () => {
     let now = new Date("2026-07-14T12:00:00.000Z");
     const initializedAt = new Date("2026-07-14T11:00:00.000Z");
