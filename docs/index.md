@@ -65,6 +65,7 @@
 | File                                                                | Purpose                                                                                                                                                                     |
 | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [Local watcher operations](runbooks/watcher-local.md)               | PostgreSQL setup, host/Compose migration and safe seeding, paused-watch targeted baselines/two observation cycles, source evidence, Discord test, metrics, and troubleshooting. |
+| [Mac Mini production cheat sheet](runbooks/mac-mini-production-cheat-sheet.md) | Copy-ready production update, forced Nx rebuild, preset rollout, health, logs, LaunchAgent, database, backup, and recovery commands. |
 | [Google Cloud watcher deployment](runbooks/watcher-google-cloud.md) | Private always-on Cloud Run service, Cloud SQL, Secret Manager, explicit migration/seed, source readiness, release workflow, monitoring, cost, and worker-pool constraints. |
 
 ## 7. Specs (`.specify/specs/`)

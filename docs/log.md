@@ -3,6 +3,15 @@
 > Append-only log of every doc/spec edit. **Newest entry at the top.** This is a
 > human-readable audit trail; for source-code history, see `git log`.
 
+## 2026-07-20 — Mac Mini production cheat sheet refresh
+
+Added a consolidated, copy-ready Mac Mini runbook for compiled-CLI operations,
+safe Git deployment, `nx reset` plus cache-bypassed watcher/CLI builds, preset
+preview/apply/baseline workflow, current reduced cadence, health interpretation,
+LinkedIn partial handling, logs, LaunchAgent recovery, PostgreSQL, and backups.
+The runbook explicitly distinguishes scheduler polling from source cadence and an
+idle `activeWatchIds` list from a stopped service.
+
 ## 2026-07-20 — Spec 6000 — Reduced production polling cadence
 
 Google Careers now processes one rotating matrix request every 10 minutes.
