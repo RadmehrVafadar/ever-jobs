@@ -2,7 +2,7 @@
   "name": "@ever-jobs/root",
   "version": "0.1.0",
   "private": true,
-  "description": "Ever Jobs — NestJS monorepo for multi-source job scraping",
+  "description": "rad.ar — NestJS monorepo for multi-source job scraping",
   "license": "MIT",
   "workspaces": [
     "apps/*",

@@ -27,6 +27,11 @@
     "vercel",
     "meta",
     "wellfound",
+    "uber",
+    "notion",
+    "ramp",
+    "netflix",
+    "ibm",
     "canadajobbank",
     "google",
     "linkedin"
@@ -48,6 +53,11 @@
     "vercel": 1,
     "meta": 1,
     "wellfound": 1,
+    "uber": 1,
+    "notion": 1,
+    "ramp": 1,
+    "netflix": 1,
+    "ibm": 1,
     "canadajobbank": 2,
     "google": 2,
     "linkedin": 3
@@ -387,6 +397,106 @@
       "companyName": "Wellfound",
       "tier": 1,
       "intervalMinutes": 30,
+      "enabled": true,
+      "searchScope": {
+        "countryCodes": ["CA"],
+        "locations": [
+          "Canada",
+          "Toronto, Ontario",
+          "Greater Toronto Area",
+          "Waterloo, Ontario"
+        ]
+      },
+      "initializedAt": null,
+      "lastRunAt": null,
+      "nextRunAt": null
+    },
+    {
+      "site": "uber",
+      "companyName": "Uber",
+      "tier": 1,
+      "intervalMinutes": 10,
+      "resultsWanted": 500,
+      "enabled": true,
+      "searchScope": {
+        "countryCodes": ["CA"],
+        "locations": [
+          "Canada",
+          "Toronto, Ontario",
+          "Greater Toronto Area",
+          "Waterloo, Ontario"
+        ]
+      },
+      "initializedAt": null,
+      "lastRunAt": null,
+      "nextRunAt": null
+    },
+    {
+      "site": "notion",
+      "companyName": "Notion",
+      "tier": 1,
+      "intervalMinutes": 10,
+      "resultsWanted": 500,
+      "enabled": true,
+      "searchScope": {
+        "countryCodes": ["CA"],
+        "locations": [
+          "Canada",
+          "Toronto, Ontario",
+          "Greater Toronto Area",
+          "Waterloo, Ontario"
+        ]
+      },
+      "initializedAt": null,
+      "lastRunAt": null,
+      "nextRunAt": null
+    },
+    {
+      "site": "ramp",
+      "companyName": "Ramp",
+      "tier": 1,
+      "intervalMinutes": 10,
+      "resultsWanted": 500,
+      "enabled": true,
+      "searchScope": {
+        "countryCodes": ["CA"],
+        "locations": [
+          "Canada",
+          "Toronto, Ontario",
+          "Greater Toronto Area",
+          "Waterloo, Ontario"
+        ]
+      },
+      "initializedAt": null,
+      "lastRunAt": null,
+      "nextRunAt": null
+    },
+    {
+      "site": "netflix",
+      "companyName": "Netflix",
+      "tier": 1,
+      "intervalMinutes": 10,
+      "resultsWanted": 500,
+      "enabled": true,
+      "searchScope": {
+        "countryCodes": ["CA"],
+        "locations": [
+          "Canada",
+          "Toronto, Ontario",
+          "Greater Toronto Area",
+          "Waterloo, Ontario"
+        ]
+      },
+      "initializedAt": null,
+      "lastRunAt": null,
+      "nextRunAt": null
+    },
+    {
+      "site": "ibm",
+      "companyName": "IBM",
+      "tier": 1,
+      "intervalMinutes": 10,
+      "resultsWanted": 500,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],

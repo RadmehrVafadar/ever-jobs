@@ -32,6 +32,7 @@ const COMPANY_NAME = 'Notion';
   site: Site.NOTION,
   name: COMPANY_NAME,
   category: 'company',
+  watchMode: 'board',
 })
 @Injectable()
 export class NotionService implements IScraper {
@@ -42,12 +43,19 @@ export class NotionService implements IScraper {
   ) {}
 
   async scrape(input: ScraperInputDto): Promise<JobResponseDto> {
-    const ashby = this.registry?.getScraper(Site.ASHBY);
+    if (!this.registry) {
+      const message =
+        'Notion source requires PluginRegistry injection to resolve Ashby';
+      this.logger.error(message);
+      throw new Error(message);
+    }
+
+    const ashby = this.registry.getScraper(Site.ASHBY);
     if (!ashby) {
-      this.logger.error(
-        'Ashby source plugin is not registered; cannot scrape Notion',
-      );
-      return new JobResponseDto([]);
+      const message =
+        'Notion source requires the Ashby source plugin to be registered';
+      this.logger.error(message);
+      throw new Error(message);
     }
 
     this.logger.log(
@@ -62,9 +70,11 @@ export class NotionService implements IScraper {
     for (const job of result.jobs) {
       job.site = Site.NOTION;
       job.companyName = COMPANY_NAME;
-      if (job.id) {
-        job.id = job.id.replace(/^ashby-/, 'notion-');
+      const delegatedId = job.id?.trim();
+      if (!delegatedId) {
+        throw new Error('Notion received an Ashby job without a stable ID');
       }
+      job.id = `notion-${delegatedId.replace(/^(?:ashby|notion)-/, '')}`;
     }
 
     this.logger.log(`Notion: scraped ${result.jobs.length} jobs`);

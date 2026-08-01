@@ -1,8 +1,8 @@
-# Ever Jobs CLI
+# rad.ar CLI
 
 Command-line interface for searching and comparing job postings from 65+ job boards.
 
-Built with [nest-commander](https://docs.nestjs.com/recipes/nest-commander) on the Ever Jobs scraping engine.
+Built with [nest-commander](https://docs.nestjs.com/recipes/nest-commander) on the rad.ar scraping engine.
 
 ## Installation
 
@@ -177,7 +177,7 @@ Core actions are:
 | `initialize <watch-id>` | Run a no-notification baseline for all enabled targets |
 | `initialize <watch-id> --target <key>` | Baseline only selected target keys; repeat `--target` as needed |
 | `pause <watch-id>`, `resume <watch-id>` | Control future scheduling |
-| `runs`, `matches`, `metrics`, `observed-jobs`, `deliveries` | Read durable history and operational state |
+| `runs`, `matches`, `metrics`, `coverage`, `observed-jobs`, `deliveries` | Read durable history and operational state |
 | `match-status <match-id> <status>` | Update application workflow status |
 | `notifications-test <watch-id>` | Test Discord configuration without creating a fake match |
 
@@ -191,12 +191,11 @@ so it is a valid targeted-baseline key but cannot poll or notify while paused.
 
 ```bash
 npm run cli -- watch initialize <watch-id> \
-  --target google_careers \
-  --target shopify \
-  --target ashby:wealthsimple \
-  --target ashby:plaid \
-  --target canadajobbank \
-  --target linkedin \
+  --target uber \
+  --target notion \
+  --target ramp \
+  --target netflix \
+  --target ibm \
   --json
 ```
 
@@ -204,6 +203,23 @@ npm run cli -- watch initialize <watch-id> \
 disabled, or duplicate keys produce a non-zero validated error. A target receives
 its baseline timestamp only after its own successful baseline; a failed sibling
 does not erase successful target state.
+
+#### Inspect company coverage
+
+```bash
+npm run cli -- watch coverage --id <watch-id>
+npm run cli -- watch coverage --id <watch-id> --json
+```
+
+The report contains summary counts for configured, active, disabled, uncovered,
+initialized, and degraded companies, plus one row per configured company. Rows
+include matching target keys, initialization state, last attempt/success/
+non-empty timestamps, consecutive hard failures, and degradation state.
+
+Coverage is a normalized exact company-name match against
+`sourceTargets[].companyName`. Generic discovery boards do not count. The
+revision 3 prestige preset therefore reports 21 first-class covered companies
+and leaves RBC, TD, Scotiabank, BMO, and CIBC visibly uncovered.
 
 #### Apply the Prestige Internships v2 preset
 
@@ -225,7 +241,10 @@ npm run cli -- watch preset apply prestige-internships-v2 \
 ```
 
 Mutation rejects an enabled watch. It preserves notification destinations,
-thresholds, history, and unrelated operator edits. Baseline only target keys
+thresholds, history, and unrelated operator edits. Target `resultsWanted` is
+material configuration: it accepts integers from 1 through 1000, persists in
+the existing target JSON, and defaults to existing executor behavior when
+omitted. Baseline only target keys
 reported as added or materially changed, inspect their locations/application
 URLs and health, then repeat targeted initialization for two additional
 no-notification observation cycles before resume.
@@ -234,12 +253,15 @@ The preset defaults to Canada-only Tier 1 and Canada/US Tier 2/3. Its 19 search
 terms form 76-entry Canadian matrices for Google Careers and Canada Job Bank and
 95-entry Canada/US matrices for Google Jobs and LinkedIn. Per-run request budgets
 are 1, 12, 12, and 8 respectively; LinkedIn uses a newest-first 72-hour recent
-window. The target-enabled set inside the globally disabled/uninitialized watch
-is `google_careers`, `shopify`, `ashby:wealthsimple`, `ashby:plaid`, all 13
-legacy direct-company targets, `canadajobbank`, and `linkedin`. Only Google Jobs
-remains target-disabled. Six deterministic source suites (59 tests) and
-the recorded disabled smokes support these states; target baselines and both
-observation cycles still gate resume and notifications.
+window. Revision 3 adds enabled 10-minute, Canada-scoped `uber`, `notion`,
+`ramp`, `netflix`, and `ibm` board targets, each with `resultsWanted: 500`. The
+target-enabled set inside the globally disabled/uninitialized watch also
+includes `google_careers`, `shopify`, `ashby:wealthsimple`, `ashby:plaid`, all
+13 legacy direct-company targets, `canadajobbank`, and `linkedin`; only Google
+Jobs remains target-disabled. When upgrading revision 2, preview/apply should
+identify only the five new targets as requiring baseline. Disabled live smokes,
+targeted baselines, and both observation cycles still gate resume and
+notifications.
 
 ---
 

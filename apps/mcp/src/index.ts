@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Ever Jobs MCP Server
+ * rad.ar MCP Server
  *
  * Model Context Protocol server that allows AI assistants (ChatGPT, Claude,
- * Copilot, etc.) to search for jobs across 166+ sources via the Ever Jobs API.
+ * Copilot, etc.) to search for jobs across registered sources via the rad.ar API.
  *
  * Transport: stdio (standard input/output)
  * Protocol: MCP v1.0
@@ -107,7 +107,7 @@ function createServer(): Server {
             },
             job_id: {
               type: 'string',
-              description: 'The Ever Jobs internal job ID (returned from search_jobs)',
+              description: 'The rad.ar internal job ID (returned from search_jobs)',
             },
           },
           required: [],
@@ -325,7 +325,7 @@ function createServer(): Server {
   return server;
 }
 
-const SEARCH_GUIDE = `# Ever Jobs Search Guide
+const SEARCH_GUIDE = `# rad.ar Search Guide
 
 ## Basic Search
 Use the search_jobs tool with a query:
@@ -422,7 +422,7 @@ async function startHttp(): Promise<void> {
 
   const port = Number(process.env.PORT ?? 3002);
   app.listen(port, () => {
-    console.error(`Ever Jobs MCP Server v${SERVER_VERSION} started (HTTP/streamable mode) on :${port}`);
+    console.error(`rad.ar MCP Server v${SERVER_VERSION} started (HTTP/streamable mode) on :${port}`);
   });
 }
 
@@ -434,7 +434,7 @@ async function main(): Promise<void> {
   const server = createServer();
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error(`Ever Jobs MCP Server v${SERVER_VERSION} started (stdio mode)`);
+  console.error(`rad.ar MCP Server v${SERVER_VERSION} started (stdio mode)`);
 }
 
 main().catch((err) => {

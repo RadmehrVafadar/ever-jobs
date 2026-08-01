@@ -4,6 +4,9 @@ import { BadRequestException, ConflictException } from "@nestjs/common";
 import { Site } from "@ever-jobs/models";
 import { InMemoryWatchRepository } from "../persistence/in-memory-watch.repository";
 import {
+  assertPrestigeCompanyCoverage,
+  PRESTIGE_COMPANIES,
+  PRESTIGE_DEFERRED_COMPANIES,
   prestigeInternshipsV2Watch,
   PRESTIGE_INTERNSHIPS_V2_ID,
   PRESTIGE_INTERNSHIPS_V2_NAME,
@@ -54,6 +57,11 @@ describe("prestige-internships-v2 preset", () => {
       "vercel",
       "meta",
       "wellfound",
+      "uber",
+      "notion",
+      "ramp",
+      "netflix",
+      "ibm",
       "canadajobbank",
       "linkedin",
     ]);
@@ -99,7 +107,68 @@ describe("prestige-internships-v2 preset", () => {
     expect(byKey.get("wellfound")).toEqual(
       expect.objectContaining({ enabled: true, intervalMinutes: 30 }),
     );
+    for (const key of ["uber", "notion", "ramp", "netflix", "ibm"]) {
+      expect(byKey.get(key)).toEqual(
+        expect.objectContaining({
+          enabled: true,
+          tier: 1,
+          intervalMinutes: 10,
+          resultsWanted: 500,
+          initializedAt: null,
+          searchScope: expect.objectContaining({ countryCodes: ["CA"] }),
+        }),
+      );
+    }
     expect(byKey.get("google")?.enabled).toBe(false);
+
+    const activePrestige = new Set(
+      targets
+        .filter((target) => target.enabled && target.companyName)
+        .map((target) => target.companyName),
+    );
+    expect(
+      PRESTIGE_COMPANIES.filter((company) => activePrestige.has(company)),
+    ).toHaveLength(21);
+    expect(PRESTIGE_DEFERRED_COMPANIES).toEqual([
+      "RBC",
+      "TD",
+      "Scotiabank",
+      "BMO",
+      "CIBC",
+    ]);
+  });
+
+  it("rejects a prestige inventory entry with neither target nor deferral", () => {
+    const targets = prestigeInternshipsV2Watch().sourceTargets ?? [];
+    const withoutUber = targets.filter(
+      (target) => target.companyName !== "Uber",
+    );
+    expect(() =>
+      assertPrestigeCompanyCoverage(withoutUber),
+    ).toThrow(/Uber/);
+    expect(() =>
+      assertPrestigeCompanyCoverage([
+        ...withoutUber,
+        {
+          site: Site.LINKEDIN,
+          companyName: "Uber",
+          tier: 3,
+          intervalMinutes: 60,
+          enabled: true,
+        },
+      ]),
+    ).toThrow(/Uber/);
+  });
+
+  it("uses the same normalized exact-name semantics as coverage reports", () => {
+    const targets = (prestigeInternshipsV2Watch().sourceTargets ?? []).map(
+      (target) =>
+        target.companyName === "Google"
+          ? { ...target, companyName: "Google, Inc." }
+          : target,
+    );
+
+    expect(() => assertPrestigeCompanyCoverage(targets)).not.toThrow();
   });
 
   it("keeps the Canada/USA JSON example aligned with the factory", () => {
@@ -139,6 +208,72 @@ describe("WatchPresetService", () => {
       service.apply(PRESTIGE_INTERNSHIPS_V2_ID, watch.id, { apply: true }),
     ).rejects.toBeInstanceOf(ConflictException);
     expect(update).not.toHaveBeenCalled();
+  });
+
+  it("adds exactly the five phase 13 targets and requires their initialization", async () => {
+    const repository = new InMemoryWatchRepository();
+    const baselineAt = new Date("2026-07-21T12:00:00.000Z");
+    const phase13Keys = ["uber", "notion", "ramp", "netflix", "ibm"];
+    const currentTargets = (prestigeInternshipsV2Watch().sourceTargets ?? [])
+      .filter((target) => !phase13Keys.includes(watchSourceTargetKey(target)))
+      .map((target) => ({
+        ...target,
+        initializedAt: target.enabled ? baselineAt : target.initializedAt,
+      }));
+    const watch = await repository.createWatch({
+      ...prestigeInternshipsV2Watch(),
+      initializedAt: baselineAt,
+      sourceTargets: currentTargets,
+      sources: currentTargets.map((target) => target.site),
+      sourceTiers: Object.fromEntries(
+        currentTargets.map((target) => [String(target.site), target.tier]),
+      ),
+    });
+    const service = new WatchPresetService(repository);
+
+    const result = await service.apply(PRESTIGE_INTERNSHIPS_V2_ID, watch.id, {
+      apply: true,
+    });
+
+    expect(result.preset.version).toBe(3);
+    expect(result.targets.added).toEqual(phase13Keys);
+    expect(result.targets.materiallyChanged).toEqual([]);
+    expect(result.targetKeysRequiringInitialization).toEqual(phase13Keys);
+  });
+
+  it("treats a resultsWanted change as material target configuration", async () => {
+    const repository = new InMemoryWatchRepository();
+    const baselineAt = new Date("2026-07-21T12:00:00.000Z");
+    const currentTargets = (prestigeInternshipsV2Watch().sourceTargets ?? []).map(
+      (target) => ({
+        ...target,
+        ...(watchSourceTargetKey(target) === "uber"
+          ? { resultsWanted: 100 }
+          : {}),
+        initializedAt: target.enabled ? baselineAt : target.initializedAt,
+      }),
+    );
+    const watch = await repository.createWatch({
+      ...prestigeInternshipsV2Watch(),
+      initializedAt: baselineAt,
+      sourceTargets: currentTargets,
+    });
+
+    const result = await new WatchPresetService(repository).apply(
+      PRESTIGE_INTERNSHIPS_V2_ID,
+      watch.id,
+      { apply: true },
+    );
+
+    expect(result.targets.materiallyChanged).toEqual(["uber"]);
+    expect(result.targetKeysRequiringInitialization).toEqual(["uber"]);
+    expect(
+      result.watch?.sourceTargets.find(
+        (target) => watchSourceTargetKey(target) === "uber",
+      ),
+    ).toEqual(
+      expect.objectContaining({ resultsWanted: 500, initializedAt: null }),
+    );
   });
 
   it("preserves operator state and resets only added/materially changed targets", async () => {

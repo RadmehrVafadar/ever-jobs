@@ -9,7 +9,7 @@ location request matrix.
 
 The service sends ordinary HTML requests to `https://www.google.com/search`
 with `ibp=htl;jobs`, an English locale, a country hint, and a bounded page
-offset. All HTTP I/O uses the shared Ever Jobs client.
+offset. All HTTP I/O uses the shared rad.ar client.
 
 Relevant `ScraperInputDto` fields are:
 

@@ -29,6 +29,8 @@ export interface WatchSourceTarget {
   site: Site | string;
   tier: 1 | 2 | 3;
   intervalMinutes: number;
+  /** Per-run normalized result ceiling forwarded to the source scraper. */
+  resultsWanted?: number;
   companySlug?: string;
   companyName?: string;
   searchScope?: WatchSearchScope;

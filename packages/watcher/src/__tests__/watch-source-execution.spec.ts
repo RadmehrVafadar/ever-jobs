@@ -97,6 +97,7 @@ describe("WatchSourcePlanner", () => {
             site: Site.GOOGLE_CAREERS,
             tier: 1,
             intervalMinutes: 3,
+            resultsWanted: 500,
             companyName: "Google",
             enabled: true,
             searchScope: {
@@ -126,6 +127,7 @@ describe("WatchSourcePlanner", () => {
         key: Site.GOOGLE_CAREERS,
         companyName: "Google",
         intervalMinutes: 3,
+        resultsWanted: 500,
         mode: "query",
         initializedAt: watchInitializedAt,
         searchScope: {
@@ -261,6 +263,39 @@ describe("WatchSourcePlanner", () => {
     expect(queryRequests).toHaveLength(4);
   });
 
+  it.each([Site.NOTION, Site.RAMP])(
+    "classifies %s as a single board request with or without runtime metadata",
+    (site) => {
+      const watch = createWatch({
+        searchTerms: ["software intern", "backend intern"],
+        locations: ["Canada", "Toronto, Ontario"],
+        sourceTargets: [
+          {
+            site,
+            companyName: site === Site.NOTION ? "Notion" : "Ramp",
+            tier: 1,
+            intervalMinutes: 10,
+            enabled: true,
+          },
+        ],
+      });
+
+      const compatibilityPlan = planner.plan(watch, { force: true });
+      const metadataPlan = planner.plan(watch, {
+        force: true,
+        sourceMetadata: [{ site, category: "company", watchMode: "board" }],
+      });
+
+      for (const plan of [compatibilityPlan, metadataPlan]) {
+        expect(plan.targets).toHaveLength(1);
+        expect(plan.targets[0].mode).toBe("board");
+        expect(plan.requests).toHaveLength(1);
+        expect(plan.requests[0].searchTerm).toBeUndefined();
+        expect(plan.requests[0].location).toBeUndefined();
+      }
+    },
+  );
+
   it("rejects unknown sources and ambiguous ATS slugs without fanning them out", () => {
     const plan = planner.plan(
       createWatch({
@@ -309,7 +344,7 @@ describe("JobsServiceWatchExecutor", () => {
     await module.close();
   });
 
-  it("bounds concurrency and preserves jobs when one detailed source fails", async () => {
+  it("keeps healthy jobs and reports a partial run when the new Uber source fails", async () => {
     let active = 0;
     let maximumActive = 0;
     const capturedInputs: ScraperInputDto[] = [];
@@ -317,7 +352,7 @@ describe("JobsServiceWatchExecutor", () => {
       listRegisteredSources: () => [
         Site.GOOGLE_CAREERS,
         Site.AMAZON,
-        Site.META,
+        Site.UBER,
       ],
       searchJobs: async () => [],
       searchJobsDetailed: async (
@@ -329,7 +364,7 @@ describe("JobsServiceWatchExecutor", () => {
         await delay(10);
         active -= 1;
         const site = input.siteType?.[0] as Site;
-        if (site === Site.META) {
+        if (site === Site.UBER) {
           return {
             jobs: [],
             sourcesRequested: [site],
@@ -362,7 +397,7 @@ describe("JobsServiceWatchExecutor", () => {
         sourceTargets: [
           sourceTarget(Site.GOOGLE_CAREERS, 1),
           sourceTarget(Site.AMAZON, 1),
-          sourceTarget(Site.META, 1),
+          sourceTarget(Site.UBER, 1),
         ],
       }),
       force: true,
@@ -381,12 +416,49 @@ describe("JobsServiceWatchExecutor", () => {
     expect(result.sourcesSucceeded).toEqual(
       expect.arrayContaining([Site.GOOGLE_CAREERS, Site.AMAZON]),
     );
-    expect(result.sourcesFailed).toEqual([Site.META]);
+    expect(result.sourcesFailed).toEqual([Site.UBER]);
     expect(result.failures[0]).toMatchObject({
-      source: Site.META,
+      source: Site.UBER,
       category: "source",
       retryable: true,
     });
+  });
+
+  it("forwards a per-target resultsWanted ceiling to the scraper input", async () => {
+    const capturedInputs: ScraperInputDto[] = [];
+    const executor = new JobsServiceWatchExecutor(
+      {
+        listRegisteredSources: () => [Site.UBER],
+        listSourceMetadata: () => [
+          { site: Site.UBER, category: "company", watchMode: "board" },
+        ],
+        searchJobs: async (input) => {
+          capturedInputs.push(input);
+          return [];
+        },
+      },
+      new WatchSourcePlanner(),
+      { maxJitterMs: 0, resultsWanted: 100 },
+    );
+
+    await executor.execute({
+      watch: createWatch({
+        sourceTargets: [
+          {
+            site: Site.UBER,
+            tier: 1,
+            intervalMinutes: 10,
+            resultsWanted: 500,
+            companyName: "Uber",
+            enabled: true,
+          },
+        ],
+      }),
+      force: true,
+    });
+
+    expect(capturedInputs).toHaveLength(1);
+    expect(capturedInputs[0].resultsWanted).toBe(500);
   });
 
   it("serializes multiple query requests to the same source", async () => {

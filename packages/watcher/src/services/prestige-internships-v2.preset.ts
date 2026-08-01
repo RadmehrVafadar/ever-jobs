@@ -1,4 +1,5 @@
 import { Site } from "@ever-jobs/models";
+import { normalizeCompany } from "@ever-jobs/common";
 import {
   JobWatch,
   WatchSearchScope,
@@ -6,7 +7,7 @@ import {
 } from "../interfaces/watch.types";
 
 export const PRESTIGE_INTERNSHIPS_V2_ID = "prestige-internships-v2";
-export const PRESTIGE_INTERNSHIPS_V2_VERSION = 2;
+export const PRESTIGE_INTERNSHIPS_V2_VERSION = 3;
 export const PRESTIGE_INTERNSHIPS_V2_NAME =
   "Prestige Software Internships — Canada and USA";
 
@@ -52,7 +53,7 @@ export const PRESTIGE_TIER_2_3_LOCATIONS = [
   "United States",
 ] as const;
 
-const PRESTIGE_COMPANIES = [
+export const PRESTIGE_COMPANIES = [
   "Google",
   "Amazon",
   "Meta",
@@ -74,6 +75,14 @@ const PRESTIGE_COMPANIES = [
   "Vercel",
   "Netflix",
   "IBM",
+  "RBC",
+  "TD",
+  "Scotiabank",
+  "BMO",
+  "CIBC",
+] as const;
+
+export const PRESTIGE_DEFERRED_COMPANIES = [
   "RBC",
   "TD",
   "Scotiabank",
@@ -164,6 +173,23 @@ const LEGACY_DIRECT_TARGETS: ReadonlyArray<{
   { site: Site.WELLFOUND, companyName: "Wellfound" },
 ];
 
+const PHASE_13_DIRECT_TARGETS: ReadonlyArray<{
+  site: Site;
+  companyName: string;
+}> = [
+  { site: Site.UBER, companyName: "Uber" },
+  { site: Site.NOTION, companyName: "Notion" },
+  { site: Site.RAMP, companyName: "Ramp" },
+  { site: Site.NETFLIX, companyName: "Netflix" },
+  { site: Site.IBM, companyName: "IBM" },
+];
+
+const GENERIC_DISCOVERY_SITES = new Set<Site>([
+  Site.CANADAJOBBANK,
+  Site.GOOGLE,
+  Site.LINKEDIN,
+]);
+
 function scope(
   countryCodes: readonly string[],
   locations: readonly string[],
@@ -250,6 +276,17 @@ function sourceTargets(): WatchSourceTarget[] {
         searchScope: canadaBoardScope(),
       }),
     ),
+    ...PHASE_13_DIRECT_TARGETS.map(({ site, companyName }) =>
+      target({
+        site,
+        companyName,
+        tier: 1,
+        intervalMinutes: 10,
+        resultsWanted: 500,
+        enabled: true,
+        searchScope: canadaBoardScope(),
+      }),
+    ),
     target({
       site: Site.CANADAJOBBANK,
       companyName: "Canada Job Bank",
@@ -289,6 +326,7 @@ function sourceTargets(): WatchSourceTarget[] {
 
 export function prestigeInternshipsV2Watch(): Partial<JobWatch> {
   const targets = sourceTargets();
+  assertPrestigeCompanyCoverage(targets);
   const sources = [...new Set(targets.map(({ site }) => String(site)))];
   return {
     name: PRESTIGE_INTERNSHIPS_V2_NAME,
@@ -319,6 +357,37 @@ export function prestigeInternshipsV2Watch(): Partial<JobWatch> {
     initializationMode: "baseline",
     recentWindowMinutes: 180,
   };
+}
+
+/**
+ * Prevents a ranking-only company from silently appearing covered. Every
+ * prestige name must have a branded target or an explicit deferred entry.
+ */
+export function assertPrestigeCompanyCoverage(
+  targets: readonly WatchSourceTarget[],
+): void {
+  const covered = new Set(
+    targets
+      .filter(
+        (candidate) =>
+          !GENERIC_DISCOVERY_SITES.has(candidate.site as Site),
+      )
+      .map((candidate) => candidate.companyName?.trim())
+      .filter((name): name is string => Boolean(name))
+      .map(normalizeCompany),
+  );
+  const deferred = new Set(
+    PRESTIGE_DEFERRED_COMPANIES.map(normalizeCompany),
+  );
+  const unclassified = PRESTIGE_COMPANIES.filter((company) => {
+    const key = normalizeCompany(company);
+    return !covered.has(key) && !deferred.has(key);
+  });
+  if (unclassified.length > 0) {
+    throw new Error(
+      `Prestige companies require a branded target or explicit deferral: ${unclassified.join(", ")}`,
+    );
+  }
 }
 
 export const PRESTIGE_INTERNSHIPS_V2_PRESET: WatchPresetDefinition =

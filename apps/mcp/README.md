@@ -1,4 +1,4 @@
-# Ever Jobs MCP Server
+# rad.ar MCP Server
 
 A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that lets AI assistants like **ChatGPT**, **Claude**, **GitHub Copilot**, and others search for jobs across **65+ sources** — including LinkedIn, Indeed, Glassdoor, company career pages, and ATS platforms.
 
@@ -7,7 +7,7 @@ A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that l
 ### Install & Run
 
 ```bash
-# From the ever-jobs monorepo root
+# From the rad.ar monorepo root
 cd apps/mcp
 npm install
 npm run build
@@ -23,7 +23,7 @@ Add to your Claude Desktop config (`~/.claude/claude_desktop_config.json`):
   "mcpServers": {
     "ever-jobs": {
       "command": "node",
-      "args": ["<path-to>/ever-jobs/apps/mcp/dist/index.js"],
+      "args": ["<path-to>/rad.ar/apps/mcp/dist/index.js"],
       "env": {
         "EVER_JOBS_API_URL": "http://localhost:3001"
       }
@@ -58,7 +58,7 @@ Get detailed information about a specific job posting.
 | Parameter | Type   | Required | Description                 |
 | --------- | ------ | -------- | --------------------------- |
 | `job_url` | string | ❌       | Full URL of the job posting |
-| `job_id`  | string | ❌       | Ever Jobs internal job ID   |
+| `job_id`  | string | ❌       | rad.ar internal job ID      |
 
 ### `list_sources`
 
@@ -105,7 +105,7 @@ _No parameters required._
 
 | Variable            | Default                 | Description            |
 | ------------------- | ----------------------- | ---------------------- |
-| `EVER_JOBS_API_URL` | `http://localhost:3001` | Ever Jobs API endpoint |
+| `EVER_JOBS_API_URL` | `http://localhost:3001` | rad.ar API endpoint |
 
 ## Source Coverage
 

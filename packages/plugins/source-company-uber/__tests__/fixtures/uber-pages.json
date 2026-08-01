@@ -1,0 +1,59 @@
+{
+  "pages": [
+    {
+      "data": {
+        "totalResults": 4,
+        "results": [
+          {
+            "id": 101,
+            "title": "Software Engineering Intern",
+            "absolute_url": "https://www.uber.com/global/en/careers/list/101/",
+            "apply_url": "https://www.uber.com/global/en/careers/list/101/apply/",
+            "description": "<p>Build reliable mobility software.</p>",
+            "locations": [
+              { "city": "Toronto", "region": "Ontario", "country": "Canada" },
+              "Remote - Canada"
+            ],
+            "department": "Engineering",
+            "team": "Developer Platform",
+            "time_type": "Intern",
+            "creation_date": "2026-07-01"
+          },
+          {
+            "id": 102,
+            "title": "Machine Learning Co-op",
+            "absolute_url": "https://www.uber.com/global/en/careers/list/102/",
+            "city": "Vancouver",
+            "region": "British Columbia",
+            "country": "Canada",
+            "employment_type": "Co-op",
+            "posted_date": "2026-07-02"
+          }
+        ]
+      }
+    },
+    {
+      "data": {
+        "totalResults": 4,
+        "results": [
+          {
+            "id": 103,
+            "title": "Data Engineering Intern",
+            "absolute_url": "https://www.uber.com/global/en/careers/list/103/",
+            "location": "Montreal, Quebec, Canada",
+            "job_type": "Internship",
+            "created_at": "2026-07-03"
+          },
+          {
+            "id": 104,
+            "title": "Security Engineering Intern",
+            "absolute_url": "https://www.uber.com/global/en/careers/list/104/",
+            "location": "Ottawa, Ontario, Canada",
+            "job_type": "Internship",
+            "created_at": "2026-07-04"
+          }
+        ]
+      }
+    }
+  ]
+}

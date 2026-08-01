@@ -10,7 +10,7 @@ alerts.
 The source never logs in, stores or reuses personal cookies, attaches an
 authenticated browser session, solves CAPTCHAs, or bypasses a challenge/access
 control. Search uses the public guest listing endpoint and public job detail
-pages through the shared Ever Jobs HTTP client. A challenge/auth wall is a hard
+pages through the shared rad.ar HTTP client. A challenge/auth wall is a hard
 failure.
 
 ## Inputs and request bounds

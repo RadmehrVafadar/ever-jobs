@@ -62,9 +62,11 @@ describe("DiscordNotificationProvider", () => {
     });
 
     const payload = JSON.parse(String(requestInit?.body));
+    expect(payload.username).toBe("rad.ar");
     expect(payload.allowed_mentions).toEqual({ parse: [] });
     expect(payload.content).toContain("URGENT INTERNSHIP");
     expect(payload.embeds).toHaveLength(1);
+    expect(payload.embeds[0].footer).toEqual({ text: "rad.ar watcher" });
     expect(payload.embeds[0].title).toContain("@\u200beveryone");
     expect(payload.embeds[0].title).toContain("\\*Acme\\*");
     expect(payload.embeds[0].fields).toEqual(

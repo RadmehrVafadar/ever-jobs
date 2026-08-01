@@ -32,6 +32,7 @@ export const watchSourceTargetSchema = z.object({
     .int()
     .min(1)
     .max(24 * 60),
+  resultsWanted: z.number().int().min(1).max(1_000).optional(),
   companySlug: z.string().trim().min(1).max(200).optional(),
   companyName: z.string().trim().min(1).max(200).optional(),
   searchScope: watchSearchScopeSchema.optional(),

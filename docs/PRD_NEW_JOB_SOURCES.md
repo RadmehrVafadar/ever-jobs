@@ -268,13 +268,13 @@ API Request
 
 ### Overview
 
-The MCP (Model Context Protocol) server (`apps/mcp/`) enables AI assistants to search for jobs via Ever Jobs. Users of ChatGPT, Claude Desktop, GitHub Copilot, and other MCP-compatible tools can connect to the Ever Jobs API through their AI assistant.
+The MCP (Model Context Protocol) server (`apps/mcp/`) enables AI assistants to search for jobs via rad.ar. Users of ChatGPT, Claude Desktop, GitHub Copilot, and other MCP-compatible tools can connect to the rad.ar API through their AI assistant.
 
 ### Architecture
 
 ```
 ┌─────────────┐     stdio      ┌──────────────┐     HTTP      ┌──────────────┐
-│ AI Assistant │ ◄────────────► │ MCP Server   │ ◄───────────► │ Ever Jobs    │
+│ AI Assistant │ ◄────────────► │ MCP Server   │ ◄───────────► │ rad.ar       │
 │ (Claude,     │                │ (apps/mcp)   │               │ API (:3001)  │
 │  ChatGPT)    │                └──────────────┘               └──────────────┘
 └─────────────┘
@@ -299,4 +299,4 @@ The MCP (Model Context Protocol) server (`apps/mcp/`) enables AI assistants to s
 
 | Variable            | Default                 | Description            |
 | ------------------- | ----------------------- | ---------------------- |
-| `EVER_JOBS_API_URL` | `http://localhost:3001` | Ever Jobs API endpoint |
+| `EVER_JOBS_API_URL` | `http://localhost:3001` | rad.ar API endpoint |

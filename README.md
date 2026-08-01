@@ -1,4 +1,4 @@
-# Ever Jobs
+# rad.ar
 
 > A plugin-driven TypeScript platform for searching, normalizing, analyzing, and monitoring jobs
 > across job boards, applicant-tracking systems, and company career sites.
@@ -7,7 +7,7 @@
 [![NestJS](https://img.shields.io/badge/NestJS-11-E0234E.svg)](https://nestjs.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-Ever Jobs is a NestJS/Nx monorepo with a runtime plugin registry and a catalog of more than
+rad.ar is a NestJS/Nx monorepo with a runtime plugin registry and a catalog of more than
 1,800 source packages. It exposes the same normalized job model through REST, GraphQL, a
 command-line client, and an MCP server. A separate PostgreSQL-backed watcher can continuously
 evaluate selected sources, retain observations, score matches, deduplicate equivalent postings,
@@ -16,13 +16,16 @@ and deliver notifications.
 The registry determines the source count and availability at application startup. A source being
 present in the catalog does not by itself mean it is enabled for unattended monitoring.
 
+The `@ever-jobs/*` npm scope, `EVER_JOBS_*` environment variables, `ever_jobs_*`
+metrics, and existing CLI/MCP identifiers are retained for backward compatibility.
+
 ## Applications
 
 | Application | Purpose | Default interface |
 | --- | --- | --- |
 | [`apps/api`](apps/api) | Concurrent job search, analysis, source health, watch management, and metrics | REST on `http://localhost:3001`, GraphQL at `/graphql` |
 | [`apps/cli`](apps/cli) | Search, compare, and administer persistent watches from a terminal or JSON stdin | `npm run cli -- <command>` |
-| [`apps/mcp`](apps/mcp) | Makes Ever Jobs search tools available to MCP-compatible AI clients | stdio, backed by the API |
+| [`apps/mcp`](apps/mcp) | Makes rad.ar search tools available to MCP-compatible AI clients | stdio, backed by the API |
 | [`apps/watcher`](apps/watcher) | Schedules persistent watches and exposes worker health and Prometheus metrics | health/metrics on `http://localhost:3002` |
 
 The API publishes an interactive Scalar reference at
@@ -47,7 +50,7 @@ The API publishes an interactive Scalar reference at
 
 ## Architecture
 
-Ever Jobs keeps orchestration separate from source and feature implementations:
+rad.ar keeps orchestration separate from source and feature implementations:
 
 | Package area | Responsibility |
 | --- | --- |
@@ -218,16 +221,16 @@ the Spec Kit artifacts under [`.specify/specs`](.specify/specs).
 
 Source availability and legal terms vary. Some adapters rely on public or unofficial interfaces
 that can change or reject automated traffic. Confirm that your use complies with applicable laws,
-site terms, robots policies, rate limits, and data-retention requirements. Ever Jobs provides no
+site terms, robots policies, rate limits, and data-retention requirements. rad.ar provides no
 guarantee that a posting is current, legitimate, or complete.
 
 ## Credits
 
-Ever Jobs is a TypeScript/NestJS re-architecture influenced by
+rad.ar is a TypeScript/NestJS re-architecture influenced by
 [JobSpy](https://github.com/speedyapply/JobSpy),
 [JobSpy API](https://github.com/rainmanjam/jobspy-api), and
 [ats-scrapers](https://github.com/speedyapply/ats-scrapers).
 
 ## License
 
-Ever Jobs is available under the [MIT License](LICENSE).
+rad.ar is available under the [MIT License](LICENSE).

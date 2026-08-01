@@ -9,7 +9,7 @@ async function bootstrap() {
   const port = positivePort(process.env.WATCHER_HEALTH_PORT, 3002);
   await app.listen(port, "0.0.0.0");
   Logger.log(
-    `Ever Jobs watcher started; health endpoint listening on ${port}`,
+    `rad.ar watcher started; health endpoint listening on ${port}`,
     "Watcher",
   );
 }

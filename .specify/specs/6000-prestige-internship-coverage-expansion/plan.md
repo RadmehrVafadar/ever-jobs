@@ -260,3 +260,27 @@ the latest stable version and record the change in `docs/log.md`.
   implementation is added to `docs/questions.md`; the safe default is disabled.
 - Summer strictness, PhD description context, and LinkedIn Tier 1 score treatment
   are recorded as Q-076 through Q-078 with the documented defaults proceeding.
+
+## 9. Phase 13 implementation plan — prestige-company coverage
+
+1. Add `resultsWanted` to the watch target contract, Zod/API validation,
+   target JSON serialization, preset material diff, and executor forwarding;
+   preserve the existing default when omitted.
+2. Harden Uber, Notion, Ramp, Netflix, and IBM behind the shared HTTP client.
+   Require explicit board metadata, bounded complete pagination, stable source
+   identity and locations, and rejecting failure semantics. Notion and Ramp
+   continue resolving Ashby through `PluginRegistry` rather than importing it.
+3. Add the five enabled Tier 1 Canada targets with a 10-minute cadence and
+   500-result ceiling, bump preset revision to 3, mirror the JSON example, and
+   enforce the 21-covered/five-deferred inventory partition.
+4. Add a reusable coverage projection, REST and CLI views, coverage gauges, and
+   registry-derived total-source metric. Keep generic discovery sources out of
+   the company-coverage calculation.
+5. Run fixture-only source suites, watcher/API/CLI tests and TypeScript builds;
+   update the mirror, operator docs, manifest, index, and log. Keep live smokes,
+   targeted baseline, and two silent observation cycles as operator gates.
+
+Risks are controlled by the paused preset, per-target baselines, bounded result
+ceilings, circuit-breaker isolation, and the rule that malformed or blocked
+responses can never masquerade as valid empty boards. No database migration is
+needed because target configuration is already persisted as JSON.

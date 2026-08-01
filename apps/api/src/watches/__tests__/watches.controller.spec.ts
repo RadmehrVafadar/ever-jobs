@@ -16,6 +16,7 @@ import {
 describe("watcher management controllers", () => {
   let repository: jest.Mocked<WatchRepository>;
   let execution: { runWatch: jest.Mock };
+  let companyCoverage: { build: jest.Mock };
   let controller: WatchesController;
 
   beforeEach(() => {
@@ -36,10 +37,12 @@ describe("watcher management controllers", () => {
       getNotification: jest.fn(),
     } as unknown as jest.Mocked<WatchRepository>;
     execution = { runWatch: jest.fn() };
+    companyCoverage = { build: jest.fn() };
     controller = new WatchesController(
       repository,
       execution as never,
       new WatchValidationService(),
+      companyCoverage as never,
     );
   });
 
@@ -161,6 +164,48 @@ describe("watcher management controllers", () => {
     );
   });
 
+  it("returns the reusable company coverage report for an existing watch", async () => {
+    const watch = watchFixture({ companies: ["Acme"] });
+    const report = {
+      watchId: watch.id,
+      summary: {
+        configured: 1,
+        active: 0,
+        disabled: 0,
+        uncovered: 1,
+        initialized: 0,
+        degraded: 0,
+      },
+      companies: [
+        {
+          company: "Acme",
+          status: "uncovered",
+          targetKeys: [],
+          initialized: false,
+          lastAttemptAt: null,
+          lastSuccessAt: null,
+          lastNonEmptyAt: null,
+          consecutiveHardFailures: 0,
+          degraded: false,
+        },
+      ],
+    };
+    repository.getWatch.mockResolvedValue(watch);
+    companyCoverage.build.mockReturnValue(report);
+
+    await expect(controller.coverage(watch.id)).resolves.toBe(report);
+    expect(companyCoverage.build).toHaveBeenCalledWith(watch);
+  });
+
+  it("returns 404 coverage behavior without invoking the projection", async () => {
+    repository.getWatch.mockResolvedValue(null);
+
+    await expect(controller.coverage("missing")).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(companyCoverage.build).not.toHaveBeenCalled();
+  });
+
   it("updates match workflow status only when it belongs to the watch", async () => {
     const watch = watchFixture();
     const match = {
@@ -215,7 +260,11 @@ describe("watcher management controllers", () => {
     expect(discord.send).toHaveBeenCalledWith(
       expect.objectContaining({
         watch,
-        job: expect.objectContaining({ title: "Discord notification test" }),
+        job: expect.objectContaining({
+          company: "rad.ar",
+          normalizedCompany: "rad ar",
+          title: "Discord notification test",
+        }),
       }),
       { type: "discord", destinationRef: "default" },
     );

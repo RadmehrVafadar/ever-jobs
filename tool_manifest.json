@@ -1,12 +1,12 @@
 {
   "schema_version": "1.1.0",
   "name": "ever-jobs",
-  "display_name": "Ever Jobs",
+  "display_name": "rad.ar",
   "description": "Multi-source job search and persistent watcher. Searches job boards, ATS platforms, and company career pages concurrently, returns normalized multi-location job postings, and can monitor target-scoped internship coverage through REST API and CLI.",
   "version": "0.1.0",
   "author": "Ever Co",
   "license": "MIT",
-  "repository": "https://github.com/ever-jobs/ever-jobs",
+  "repository": "https://github.com/RadmehrVafadar/rad.ar",
 
   "capabilities": {
     "job_search": {
@@ -15,7 +15,7 @@
         "job_boards": ["linkedin", "indeed", "glassdoor", "zip_recruiter", "google", "bayt", "naukri", "bdjobs", "internshala", "exa", "upwork", "dice", "simplyhired", "wellfound", "stepstone", "monster", "careerbuilder", "builtin", "snagajob", "dribbble", "solidjobs"],
         "remote_boards": ["remoteok", "remotive", "weworkremotely", "jobicy", "himalayas", "arbeitnow"],
         "ats_platforms": ["greenhouse", "lever", "ashby", "workable", "smartrecruiters", "jobvite", "workday", "successfactors", "taleo", "icims", "adp", "ukg", "rippling", "recruitee", "teamtailor", "bamboohr", "personio", "jazzhr"],
-        "company_pages": ["amazon", "apple", "microsoft", "nvidia", "tiktok", "uber", "cursor", "google_careers", "shopify", "meta", "netflix", "stripe", "openai"],
+        "company_pages": ["amazon", "apple", "microsoft", "nvidia", "tiktok", "uber", "cursor", "google_careers", "shopify", "meta", "netflix", "stripe", "openai", "notion", "ramp", "ibm"],
         "aggregators": ["usajobs", "adzuna", "reed", "jooble", "careerjet"]
       },
       "output_formats": ["json", "csv", "table", "summary"],
@@ -39,6 +39,7 @@
     "watch_management": {
       "description": "Persist, baseline, schedule, inspect, and safely update target-aware job watches",
       "preset": "prestige-internships-v2",
+      "preset_revision": 3,
       "preset_apply": {
         "dry_run_command": "npm run cli -- watch preset apply prestige-internships-v2 --watch <watch-id>",
         "apply_command": "npm run cli -- watch preset apply prestige-internships-v2 --watch <watch-id> --apply",
@@ -50,6 +51,30 @@
         "target_option_repeatable": true,
         "omitted_targets_initialize_all": true
       },
+      "source_target_contract": {
+        "resultsWanted": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "optional": true,
+          "legacy_default_behavior": "When omitted, the watcher executor uses its configured default."
+        },
+        "persistence": "Stored in the existing sourceTargets JSON; no database migration is required.",
+        "material_diff_field": true
+      },
+      "company_coverage": {
+        "rest": "GET /api/watches/:id/coverage",
+        "cli": "npm run cli -- watch coverage --id <watch-id>",
+        "authentication": "Uses the existing watch-management API-key policy.",
+        "matching": "Normalized exact company name against sourceTargets[].companyName; generic discovery boards do not count.",
+        "statuses": ["active", "disabled", "uncovered"],
+        "summary_counts": ["configured", "active", "disabled", "uncovered", "initialized", "degraded"],
+        "prestige_inventory": {
+          "configured": 26,
+          "covered": 21,
+          "deferred_uncovered": ["RBC", "TD", "Scotiabank", "BMO", "CIBC"]
+        }
+      },
       "geography": {
         "tier_1": ["CA"],
         "tier_2": ["CA", "US"],
@@ -59,16 +84,18 @@
         "watch_enabled": false,
         "watch_initialized": false,
         "target_enabled_does_not_poll_or_notify_while_watch_disabled": true,
-        "enabled_target_keys": ["google_careers", "shopify", "ashby:wealthsimple", "ashby:plaid", "canadajobbank", "linkedin"],
-        "disabled_target_keys": ["amazon", "microsoft", "apple", "nvidia", "stripe", "openai", "datadog", "doordash", "coinbase", "figma", "vercel", "meta", "wellfound", "google"]
+        "enabled_target_keys": ["google_careers", "shopify", "ashby:wealthsimple", "ashby:plaid", "amazon", "microsoft", "apple", "nvidia", "stripe", "openai", "datadog", "doordash", "coinbase", "figma", "vercel", "meta", "wellfound", "uber", "notion", "ramp", "netflix", "ibm", "canadajobbank", "linkedin"],
+        "disabled_target_keys": ["google"],
+        "phase_13_target_keys": ["uber", "notion", "ramp", "netflix", "ibm"],
+        "phase_13_results_wanted": 500
       },
       "query_matrices": {
-        "google_careers": { "entries": 76, "max_requests_per_run": 12 },
+        "google_careers": { "entries": 76, "max_requests_per_run": 1 },
         "canadajobbank": { "entries": 76, "max_requests_per_run": 12 },
         "google": { "entries": 95, "max_requests_per_run": 12 },
         "linkedin": { "entries": 95, "max_requests_per_run": 8, "recent_window_hours": 72 }
       },
-      "activation_policy": "Keep the watch paused; targeted-baseline every target-enabled source and complete two additional no-notification observation cycles before resume",
+      "activation_policy": "Keep the watch paused; for the revision 3 upgrade, preview/apply the preset, disabled-live-smoke and baseline only uber, notion, ramp, netflix, and ibm, then complete two additional no-notification observation cycles before resume",
       "canonical_identity": {
         "delivery_key": ["watch", "canonical_episode", "channel", "destination"],
         "notification_type_in_key": false,
@@ -81,15 +108,21 @@
         "consecutive_hard_failures_reset_on": ["success", "empty", "partial"],
         "tier_1_degraded_at": 3
       },
+      "metrics": {
+        "company_coverage": "ever_jobs_watcher_company_coverage{watch_id,status}",
+        "company_coverage_status_labels": ["configured", "active", "disabled", "uncovered", "initialized", "degraded"],
+        "source_total": "ever_jobs_sources_total is initialized from the discovered plugin-registry count"
+      },
       "validation_evidence": {
-        "deterministic_suites": 6,
-        "deterministic_tests": 59,
+        "deterministic_suites_pre_phase_13": 6,
+        "deterministic_tests_pre_phase_13": 59,
         "google_careers": "Live pass: 2 Canadian roles",
         "shopify": "Live pass: marker-validated valid empty board",
         "wealthsimple": "Live pass: 37 roles with capped mapped sample",
         "linkedin": "Unauthenticated public listing/detail live pass",
-        "microsoft": "Live timeout; target disabled",
-        "google": "SOURCE_BLOCKED enable-JavaScript shell; target disabled"
+        "microsoft": "Live timeout; target remains operator-enabled inside the globally disabled watch",
+        "google": "SOURCE_BLOCKED enable-JavaScript shell; target disabled",
+        "phase_13_rollout_gate": "Fixture validation, operator-authorized disabled live smokes, targeted baselines, and two no-notification observation cycles for uber, notion, ramp, netflix, and ibm"
       },
       "linkedin_policy": "Unauthenticated public guest search only; newest-first 72-hour window; no login, personal cookies, CAPTCHA bypass, or personalized-alert parity claim"
     }
@@ -107,7 +140,9 @@
     },
     "watcher": {
       "initialize_endpoint": "POST /api/watches/:id/initialize",
-      "initialize_body": { "targetKeys": ["google_careers", "shopify", "ashby:wealthsimple", "ashby:plaid", "canadajobbank", "linkedin"] },
+      "initialize_body": { "targetKeys": ["uber", "notion", "ramp", "netflix", "ibm"] },
+      "coverage_endpoint": "GET /api/watches/:id/coverage",
+      "coverage_command": "npm run cli -- watch coverage --id <watch-id>",
       "health_endpoint": "GET /health",
       "metrics_endpoint": "GET /metrics"
     }

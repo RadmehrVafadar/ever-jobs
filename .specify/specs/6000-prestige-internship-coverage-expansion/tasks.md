@@ -267,3 +267,36 @@
   - **Acceptance:** Google Careers uses one request per 10-minute run; direct/ATS boards use 10 minutes; Wellfound and Tier 2 use 30; LinkedIn uses 60.
 - [~] T46 — Update operations documentation and validate
   - **Acceptance:** rollout/baseline effects are documented and focused validation passes.
+
+## Phase 13 — Complete prestige-company coverage (phase 1)
+
+- [x] T47 — Specify the company-coverage contract before code
+  - **Files:** Spec 6000 `spec.md`, `plan.md`, `tasks.md`, mirror, docs index/log
+  - **Acceptance:** the 21 active and five deferred companies, `resultsWanted`, source failure semantics, coverage report, metrics, non-goals, tests, and paused rollout are decision-complete.
+  - **Estimate:** 0.5 day
+
+- [x] T48 — Add the bounded per-target result contract
+  - **Files:** watcher target types, validation, persistence, preset diffing, executor, API DTOs, tests
+  - **Acceptance:** optional `resultsWanted` accepts integers 1..1000, round-trips through JSON, participates in material diffs, and reaches `ScraperInputDto` without changing legacy defaults.
+  - **Estimate:** 0.5 day
+
+- [x] T49 — Harden the five existing company sources
+  - **Files:** Uber, Notion, Ramp, Netflix, and IBM plugin packages and fixture suites
+  - **Acceptance:** all declare board mode; paginate/bound results; preserve identity, URLs, and locations; distinguish marker-validated empty boards from transport, blocked, malformed, and missing-delegate hard failures; CI performs no live I/O.
+  - **Estimate:** 2 days
+
+- [x] T50 — Wire and partition the prestige inventory
+  - **Files:** v2 preset, planner compatibility, preset tests, aligned JSON example
+  - **Acceptance:** Uber, Notion, Ramp, Netflix, and IBM are enabled Tier 1 Canada targets at 10 minutes with `resultsWanted: 500`; preset revision is 3; exactly 21 companies are covered and RBC/TD/Scotiabank/BMO/CIBC are explicitly deferred.
+  - **Estimate:** 0.5 day
+
+- [x] T51 — Expose company coverage and correct source metrics
+  - **Files:** watcher coverage projection, watches REST/CLI surfaces, watcher/API metrics, tests, tool manifest
+  - **Acceptance:** coverage reports active/disabled/uncovered plus initialization and health; Prometheus exposes per-watch status counts; `ever_jobs_sources_total` uses the discovered registry size instead of 160.
+  - **Estimate:** 1 day
+
+- [x] T52 — Validate and document the safe rollout
+  - **Files:** watcher/API/CLI/plugin tests and builds, watcher docs/runbooks, Spec 6000 mirror/index/log
+  - **Acceptance:** deterministic suites pass; the watch remains paused; only the five new targets require baseline; live smokes and two no-notification cycles remain explicit operator gates.
+  - **Estimate:** 0.5 day
+  - **Evidence:** 17 focused suites / 181 tests passed; watcher package and watcher/API/CLI app TypeScript checks passed; manifest parsing and `git diff --check` passed. Repository-wide docs lint still reports only the pre-existing duplicate 2026-07-20 log headings and missing metadata in Spec 5024. No production watch was mutated and the disabled live-smoke/baseline/observation gates remain operator actions.

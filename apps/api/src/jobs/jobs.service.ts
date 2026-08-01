@@ -51,6 +51,7 @@ export class JobsService implements OnModuleInit {
   ) {}
 
   onModuleInit() {
+    this.metrics.setTotalSources(this.registry.size);
     this.logger.log(
       `JobsService initialized with ${this.registry.size} source plugins`,
     );
@@ -319,6 +320,7 @@ export class JobsService implements OnModuleInit {
    */
   registerScraper(site: string, scraper: IScraper) {
     this.registry.registerExternal(site, scraper);
+    this.metrics.setTotalSources(this.registry.size);
   }
 
   /**

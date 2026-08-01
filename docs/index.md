@@ -1,4 +1,4 @@
-# Documentation Index — Ever Jobs
+# Documentation Index — rad.ar
 
 > Auto-maintained index of every document under `docs/` and `.specify/`.
 > Update this file whenever a doc is added, renamed, or removed.
@@ -12,7 +12,7 @@
 | [`/README.md`](../README.md)                   | Public-facing project overview.           |
 | [`/CHANGELOG.md`](../CHANGELOG.md)             | Release-level changelog (semver).         |
 | [`/CONTRIBUTING.md`](../CONTRIBUTING.md)       | Human contributor guide.                  |
-| [`/tool_manifest.json`](../tool_manifest.json) | Machine-readable API/source manifest.     |
+| [`/tool_manifest.json`](../tool_manifest.json) | Machine-readable API/source and watcher-coverage manifest. |
 
 ## 1. Operational Logs (this folder)
 
@@ -28,7 +28,7 @@
 | ---------------------------------------------------------- | ---------------------------------- |
 | [`ARCHITECTURE_OVERVIEW.md`](./ARCHITECTURE_OVERVIEW.md)   | High-level system architecture.    |
 | [`PLUGIN_ARCHITECTURE.md`](./PLUGIN_ARCHITECTURE.md)       | Plugin discovery & registry model. |
-| [`API_CHANGELOG.md`](./API_CHANGELOG.md)                   | API endpoint history.              |
+| [`API_CHANGELOG.md`](./API_CHANGELOG.md)                   | API endpoint and compatibility history. |
 | [`ATS_INTEGRATIONS.md`](./ATS_INTEGRATIONS.md)             | ATS plugin coverage.               |
 | [`COMPANY_SLUG_DIRECTORY.md`](./COMPANY_SLUG_DIRECTORY.md) | Slug catalogue for ATS.            |
 | [`GLOSSARY.md`](./GLOSSARY.md)                             | Domain terminology.                |
@@ -38,7 +38,7 @@
 | [`PERFORMANCE_TUNING.md`](./PERFORMANCE_TUNING.md)         | Performance knobs.                 |
 | [`DEPLOYMENT.md`](./DEPLOYMENT.md)                         | Docker / deployment.               |
 | [`UPGRADE_GUIDE.md`](./UPGRADE_GUIDE.md)                   | Version-to-version upgrade path.   |
-| [`CLI.md`](./CLI.md)                                       | CLI command reference.             |
+| [`CLI.md`](./CLI.md)                                       | CLI command and watcher-coverage reference. |
 
 ## 3. Roadmap & Product
 
@@ -64,7 +64,7 @@
 
 | File                                                                | Purpose                                                                                                                                                                     |
 | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Local watcher operations](runbooks/watcher-local.md)               | PostgreSQL setup, host/Compose migration and safe seeding, paused-watch targeted baselines/two observation cycles, source evidence, Discord test, metrics, and troubleshooting. |
+| [Local watcher operations](runbooks/watcher-local.md)               | PostgreSQL setup, revision 3 coverage inspection, paused-watch targeted baselines/two observation cycles, source evidence, Discord test, metrics, and troubleshooting. |
 | [Mac Mini production cheat sheet](runbooks/mac-mini-production-cheat-sheet.md) | Copy-ready production update, forced Nx rebuild, preset rollout, health, logs, LaunchAgent, database, backup, and recovery commands. |
 | [Google Cloud watcher deployment](runbooks/watcher-google-cloud.md) | Private always-on Cloud Run service, Cloud SQL, Secret Manager, explicit migration/seed, source readiness, release workflow, monitoring, cost, and worker-pool constraints. |
 
@@ -1759,7 +1759,8 @@
 | 5022 | [Shared JSON-LD Extraction](../.specify/specs/5022-jsonld-shared-extraction/spec.md) — [plan](../.specify/specs/5022-jsonld-shared-extraction/plan.md) — [tasks](../.specify/specs/5022-jsonld-shared-extraction/tasks.md)                                                                                                                                         | Implemented 2026-06-24. schema.org `JobPosting` JSON-LD parsing was duplicated/private (breezyhr), unused-but-available (paylocity), and missing as a generic source. Adds a pure shared helper `parseJobPostingLd(html)` in `@ever-jobs/common` (with `extractLdJsonBlocks` + `jobPostingLdToCompensation`) that finds every `application/ld+json` block, parses defensively, unwraps single/array/`@graph`/`ItemList` shapes and `@type` string-or-array, and normalises title/description/datePosted/validThrough/employmentType/hiringOrganization/url/applyUrl/remote/locations/baseSalary. Refactors breezyhr onto it (removes private `descriptionFromHtml`). Enriches the paylocity detail overlay JSON-LD-first for description with HTML fallback (Job Type still from HTML; board-page spine unchanged). Adds a generic `source-jsonld` aggregator-bucket plugin (`Site.JSONLD`, category `job-board`) that harvests a careers/job URL's `JobPosting` blocks — last-resort for sites without a recognised ATS — applying the ATS checklist (structured-first compensation, underscore/multi-value job-type mapping, location, remote, description formats, emails). Registered in all four places. 21 new unit tests; build + suites green.                                                                                                                                                                                                                                                                                                      |
 | 5023 | [`source-ats-workatastartup`](../.specify/specs/5023-source-ats-workatastartup/spec.md) — [plan](../.specify/specs/5023-source-ats-workatastartup/plan.md) — [tasks](../.specify/specs/5023-source-ats-workatastartup/tasks.md)                                                                                                                                    | Implemented 2026-06-24. New ATS plugin for YC Work at a Startup (WaaS), detected in fetch1 but previously unharvestable. WaaS is multi-tenant with two URL shapes for the same board: the canonical auth-gated `workatastartup.com/companies/{slug}` and the public YC mirror `ycombinator.com/companies/{slug}/jobs`. Harvests the YC mirror: the company jobs page embeds an Inertia.js `data-page` JSON blob (`props.company` + `props.jobPostings[]`) which is the list spine; each per-job detail page carries a schema.org `JobPosting` ld+json block parsed via the Spec 5022 `parseJobPostingLd` helper (detail overlay, bounded concurrency 5, `Promise.allSettled`, isolated failures). Applies the ATS checklist: structured-first ld+json baseSalary → min/max range with text `salaryRange` fallback via `resolveCompensation`; jobType from list `type` + ld `employmentType`; multi-location from ld `jobLocation` (semicolon-joined) with list `location` fallback; isRemote/workFromHomeType; datePosted; description HTML/markdown/plain; emails; `companyUrl`=canonical WaaS board, `jobUrl`=YC detail, `applyUrl`=WaaS/YC apply target. Driven by 5 real captured fixtures (diode list + 2 details, loombotic list + 1 detail); network smoke gated behind `RUN_NETWORK_E2E`. Registered in all four places. 12 unit tests green.                                                                                                                                                                                                       |
 | 5024 | [JobsService Registry Test Harness Fix](../.specify/specs/5024-jobs-service-registry-test-fix/spec.md) — [plan](../.specify/specs/5024-jobs-service-registry-test-fix/plan.md) — [tasks](../.specify/specs/5024-jobs-service-registry-test-fix/tasks.md)                                                                                                           | Implemented 2026-07-11. Updates the focused JobsService unit-test harness to mock the current PluginRegistry dependency instead of the removed scraperMap field, restoring coverage for routing, errors, result tagging, sorting, and salary post-processing.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| 6000 | [Prestige Internship Coverage Expansion](../.specify/specs/6000-prestige-internship-coverage-expansion/spec.md) — [plan](../.specify/specs/6000-prestige-internship-coverage-expansion/plan.md) — [tasks](../.specify/specs/6000-prestige-internship-coverage-expansion/tasks.md) | Integrated 2026-07-19; refined 2026-07-20 for Summer 2027-only eligibility, contextual PhD suppression, and Tier-1-aware LinkedIn priority capping. Operational changed-target baselines remain; Google Jobs is blocked/disabled. |
+| 6000 | [Prestige Internship Coverage Expansion](../.specify/specs/6000-prestige-internship-coverage-expansion/spec.md) — [plan](../.specify/specs/6000-prestige-internship-coverage-expansion/plan.md) — [tasks](../.specify/specs/6000-prestige-internship-coverage-expansion/tasks.md) | Integrated 2026-07-19; Phase 13 adds Uber, Notion, Ramp, Netflix, and IBM targets, explicit five-bank deferral, bounded target results, and company coverage reporting. Operational baselines remain; Google Jobs is blocked/disabled. |
+| 6001 | [rad.ar Product Branding](../.specify/specs/6001-rad-ar-branding/spec.md) — [plan](../.specify/specs/6001-rad-ar-branding/plan.md) — [tasks](../.specify/specs/6001-rad-ar-branding/tasks.md) — [mirror](specs/6001-rad-ar-branding.md) | Implemented 2026-08-01. Makes `rad.ar` the canonical display name while retaining compatibility-sensitive package, environment, metric, protocol, and deployment identifiers. |
 
 ## 8. Templates
 
@@ -1781,4 +1782,4 @@
 
 ---
 
-_Last revised: 2026-07-20 (Spec 6000 Summer 2027 filtering refinement)._
+_Last revised: 2026-08-01 (Spec 6001 rad.ar product branding)._

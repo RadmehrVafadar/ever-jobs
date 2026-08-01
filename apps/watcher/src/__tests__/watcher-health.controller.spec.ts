@@ -15,6 +15,7 @@ describe("WatcherHealthController", () => {
     } as unknown as WatchRepository;
     const watcherMetrics = {
       syncTargetHealth: jest.fn(),
+      syncCompanyCoverage: jest.fn(),
       render: jest.fn().mockResolvedValue("watcher_metric 2\n"),
     } as unknown as WatcherMetricsService;
     const applicationMetrics = {
@@ -30,6 +31,7 @@ describe("WatcherHealthController", () => {
       "application_metric 1\nwatcher_metric 2\n",
     );
     expect(watcherMetrics.syncTargetHealth).toHaveBeenCalledWith([]);
+    expect(watcherMetrics.syncCompanyCoverage).toHaveBeenCalledWith([]);
   });
 
   it("reports Tier 1 degradation without making process health unavailable", async () => {
@@ -39,9 +41,11 @@ describe("WatcherHealthController", () => {
         {
           id: "watch-1",
           name: "Prestige internships",
+          companies: ["Google"],
           sourceTargets: [
             {
               site: "google_careers",
+              companyName: "Google",
               tier: 1,
               intervalMinutes: 3,
               enabled: true,
@@ -64,6 +68,7 @@ describe("WatcherHealthController", () => {
     } as unknown as WatchRepository;
     const watcherMetrics = {
       syncTargetHealth: jest.fn(),
+      syncCompanyCoverage: jest.fn(),
       render: jest.fn(),
     } as unknown as WatcherMetricsService;
     const controller = makeController(repository, watcherMetrics, {
@@ -86,6 +91,16 @@ describe("WatcherHealthController", () => {
         }),
       }),
     );
+    expect(watcherMetrics.syncCompanyCoverage).toHaveBeenCalledWith([
+      {
+        watchId: "watch-1",
+        counts: expect.objectContaining({
+          configured: 1,
+          active: 1,
+          degraded: 1,
+        }),
+      },
+    ]);
   });
 });
 

@@ -461,7 +461,8 @@ export class JobsServiceWatchExecutor implements WatchSourceExecutor {
         watch.locations[0] ??
         "Canada",
       country: countryForRequest(request, watch),
-      resultsWanted: this.options.resultsWanted,
+      resultsWanted:
+        request.target.resultsWanted ?? this.options.resultsWanted,
       descriptionFormat: DescriptionFormat.MARKDOWN,
       requestTimeout: Math.max(1, Math.ceil(this.options.timeoutMs / 1_000)),
       maxConcurrentCompanies: 1,

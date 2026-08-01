@@ -1,8 +1,8 @@
 # Local Watcher Operations Runbook
 
-This runbook takes a clean Ever Jobs checkout to a continuously running local
+This runbook takes a clean rad.ar checkout to a continuously running local
 watcher for software internships and co-ops. It covers the dry-run-first v2
-preset, per-target baseline, 3/15/60 cadence, Canada/US geography, Discord,
+preset revision 3, per-target baseline, 10/30/60 cadence, Canada/US geography, Discord,
 Docker, target-health alerts, rollback, and failure recovery.
 
 The detailed component reference is in the
@@ -14,7 +14,7 @@ listed amendments.
 
 ## 1. Operating model
 
-The watcher is a long-running NestJS HTTP process with an in-process scheduler. PostgreSQL provides persistence, due-watch discovery, and distributed execution leases. The worker invokes the existing Ever Jobs source plugins; it does not call the Ever Jobs REST API to search.
+The watcher is a long-running NestJS HTTP process with an in-process scheduler. PostgreSQL provides persistence, due-watch discovery, and distributed execution leases. The worker invokes the existing rad.ar source plugins; it does not call the rad.ar REST API to search.
 
 There are three independently due source tiers:
 
@@ -39,16 +39,24 @@ registered is not an unattended-readiness claim.
 | Wealthsimple | 1 | `ashby:wealthsimple`, branded through the maintained Ashby plugin | **enabled target** inside the disabled preset watch; baseline before resume |
 | Plaid | 1 | `ashby:plaid` through the maintained Ashby plugin | **enabled target** inside the disabled preset watch; baseline before resume |
 | Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel, Meta, Wellfound | 1 | legacy direct-company inventory with Canada post-filter scope | **enabled by operator request**; baseline each before resume; Microsoft's earlier live smoke timed out |
+| Uber, Notion, Ramp, Netflix, IBM | 1 | complete official boards; Notion/Ramp delegate to registered Ashby by fixed slug | **enabled revision 3 targets inside the disabled/uninitialized watch**; 10-minute Canada scope, `resultsWanted: 500`, disabled live smoke, baseline, and two observation cycles remain |
 | Canada Job Bank | 2 | Structured Canadian query source | **enabled target** inside the disabled preset watch; 12 of 76 matrix requests every 30 minutes |
 | Google Jobs | 2 | Canada/US query redundancy | **disabled**; fixtures/failure handling pass, but live smoke returned an enable-JavaScript shell |
 | LinkedIn public guest | 3 | Canada/US newest-first 72-hour query | **target-enabled inside the disabled/uninitialized watch**; listing/detail fixtures and unauthenticated live smoke pass; baseline and operator review remain |
+| RBC, TD, Scotiabank, BMO, CIBC | — | deferred official bank adapters | **uncovered by design for Phase 13** and visible in the coverage report |
 
 The target-enabled set is `google_careers`, `shopify`, `ashby:wealthsimple`,
-`ashby:plaid`, all 13 legacy direct-company targets, `canadajobbank`, and
-`linkedin`. Target-enabled does not start polling or notifications while the
-watch is paused. Only Google Jobs remains target-disabled.
+`ashby:plaid`, all 13 legacy direct-company targets, `uber`, `notion`, `ramp`,
+`netflix`, `ibm`, `canadajobbank`, and `linkedin`. Target-enabled does not start
+polling or notifications while the watch is paused. Only Google Jobs remains
+target-disabled.
 
-Recorded source evidence is six deterministic suites/59 tests; Google Careers
+The prestige inventory has one auditable classification per company: 21 names
+have an exact branded company/ATS target and five banks are explicitly deferred.
+Generic LinkedIn, Canada Job Bank, and Google Jobs results are redundancy and do
+not turn an uncovered company into covered status.
+
+Pre-Phase-13 source evidence was six deterministic suites/59 tests; Google Careers
 two live Canadian roles; Shopify valid empty; Wealthsimple 37 live Ashby roles
 with a capped mapped sample; LinkedIn public listing/detail pass; Microsoft
 timeout; and Google Jobs classified blocked by the enable-JavaScript shell.
@@ -64,6 +72,13 @@ smoke before target enablement, then keep the global watch paused. Inspect all
 normalized locations and employer application URLs, apply the preset, targeted-
 baseline added/materially changed targets, and run two additional
 no-notification observation cycles before resume.
+
+For Uber, Notion, Ramp, Netflix, and IBM, the operator-authorized disabled smoke
+must inspect source-prefixed stable IDs, official job and application URLs, every
+advertised location, posting dates, employment types, and the source's validated
+jobs-collection or empty-board marker. A transport error, non-success response,
+malformed payload, missing delegated Ashby plugin, or blocked HTML shell is a
+hard failure and cannot establish an empty baseline.
 
 Every scheduled run follows this order:
 
@@ -225,25 +240,32 @@ npm run cli -- watch preset apply prestige-internships-v2 \
 
 Preset merge preserves notification destinations, score thresholds, history,
 and unrelated operator edits. It rejects an enabled watch. Material target
-changes include site, company slug/name, tier, interval, or search scope.
+changes include site, company slug/name, tier, interval, `resultsWanted`, or
+search scope. `resultsWanted` accepts only integers from 1 through 1000, is
+stored in the existing target JSON, and is forwarded to the scraper. Omitting it
+from legacy watch JSON retains the executor default.
 
 Run initialization only for target keys reported as added or materially changed:
 
 ```bash
 npm run cli -- watch initialize <watch-id> \
-  --target google_careers \
-  --target shopify \
-  --target ashby:wealthsimple \
-  --target ashby:plaid \
-  --target canadajobbank \
-  --target linkedin \
+  --target uber \
+  --target notion \
+  --target ramp \
+  --target netflix \
+  --target ibm \
   --json
 ```
 
 `--target` is repeatable. Omit it to force every enabled target now rather than
-waiting for its 3/15/60-minute cadence. Unknown, disabled, or duplicate keys are
+waiting for its configured cadence. Unknown, disabled, or duplicate keys are
 validated errors. Depending on target count, query-matrix budgets, and timeouts,
 initialize-all can take longer than a normal Tier 1 run.
+
+For an upgrade from revision 2, the preview should report exactly `uber`,
+`notion`, `ramp`, `netflix`, and `ibm` as added and requiring initialization.
+For a fresh watch, initialize every key that the preview reports; do not assume
+only those five need a baseline.
 
 Review the returned and persisted run summary, especially:
 
@@ -264,6 +286,7 @@ Inspect run history when needed:
 
 ```bash
 npm run cli -- watch runs <watch-id> --json
+npm run cli -- watch coverage --id <watch-id> --json
 ```
 
 If a required target hard-failed, leave it disabled or correct the source and run
@@ -272,9 +295,37 @@ targets keep their baseline. A hard-failed target never receives
 `initializedAt`, and a blocked/malformed response must not be accepted as an
 empty success.
 
+If one of the five new sources fails its disabled live smoke or baseline,
+disable that target individually and rerun the coverage report. Its company must
+remain visible as `disabled`; the failure must not block healthy sibling targets
+or be reclassified as a valid empty board.
+
 Baseline mode prevents an initial flood; it cannot infer jobs from a target that
 never completed. A valid parsed empty board may initialize successfully, but its
 empty-run count and last non-empty time remain visible for collapse monitoring.
+
+### Inspect company coverage
+
+The CLI and authenticated API expose the same company-level projection:
+
+```bash
+npm run cli -- watch coverage --id <watch-id> --json
+curl -H "x-api-key: $EVER_JOBS_API_KEY" \
+  http://localhost:3001/api/watches/<watch-id>/coverage
+```
+
+`CompanyCoverageReport.summary` contains `configured`, `active`, `disabled`,
+`uncovered`, `initialized`, and `degraded` counts. Its `companies[]` rows contain
+the configured company name, coverage status, matching target keys,
+initialization state, last attempt/success/non-empty timestamps, consecutive hard
+failures, and degradation flag.
+
+Matching normalizes case, Unicode, punctuation, and common legal suffixes, then
+requires an exact company name match against `sourceTargets[].companyName`. An enabled matching
+target yields `active`, only disabled matching targets yield `disabled`, and no
+matching branded target yields `uncovered`. Generic job boards do not count.
+Before baselines or runtime failures affect the health counts, preset revision 3
+should show 21 active companies and the five deferred banks as uncovered.
 
 ## 7. Test Discord without creating a fake match
 
@@ -296,7 +347,7 @@ If it fails:
 
 Do not print the environment variable or include the URL in diagnostic output.
 
-## 8. Enable the reviewed 3/15/60 pipeline
+## 8. Enable the reviewed 10/30/60 pipeline
 
 After a satisfactory baseline and Discord test, resume the watch:
 
@@ -386,6 +437,9 @@ Important series include:
 - `ever_jobs_watcher_target_last_success_timestamp_seconds{watch,target,tier}`
 - `ever_jobs_watcher_target_last_non_empty_timestamp_seconds{watch,target,tier}`
 - `ever_jobs_watcher_tier1_coverage_degraded{watch}`
+- `ever_jobs_watcher_company_coverage{watch_id,status}` with bounded `status`
+  values `configured`, `active`, `disabled`, `uncovered`, `initialized`, and
+  `degraded`
 
 Retain the target key/tier labels in alerts. Alert operationally when:
 
@@ -404,6 +458,11 @@ failure. Investigate it against `lastNonEmptyAt` and the target's historical
 baseline rather than paging on every naturally empty board. One target failure
 does not erase successful siblings or make the whole worker unavailable, but a
 degraded Tier 1 signal is an explicit coverage incident.
+
+The API's `ever_jobs_sources_total` gauge is set from the plugin registry's
+actual discovered size during application initialization. Do not compare it to
+the old hard-coded value of 160; alert on unexpected changes relative to the
+deployment's enabled plugin configuration.
 
 Prometheus in-process counters reset on restart. PostgreSQL run and delivery history is durable and remains the audit source.
 
@@ -454,7 +513,7 @@ The watcher HTTP process exposes only `/health` and `/metrics`. To manage watche
 npm run start:dev
 ```
 
-Use the repository's API-key authentication convention for watcher management endpoints. The API provides watch CRUD, default creation, manual run, initialization, pause/resume, run history, matches, metrics, observed-job queries, delivery history, and notification tests.
+Use the repository's API-key authentication convention for watcher management endpoints. The API provides watch CRUD, default creation, manual run, initialization, pause/resume, run history, matches, metrics, company coverage (`GET /api/watches/:id/coverage`), observed-job queries, delivery history, and notification tests.
 
 For a single local operator, the CLI is the simplest path and does not require the API process. The CLI loads the watcher module with scheduling disabled, so commands cannot create a second scheduler.
 
@@ -506,9 +565,11 @@ hard failure.
 Do not shorten intervals, add credentials, reuse cookies, bypass access controls,
 or enable a target merely to remove a warning. Disable the individual target,
 repair its public path, rerun fixtures and failure cases, perform the disabled
-smoke, and baseline that target before enabling it again. Meta and Wellfound
-direct remain disabled. Wealthsimple and Plaid use Ashby slugs `wealthsimple`
-and `plaid`; no private or guessed board endpoint is allowed.
+smoke, and baseline that target before enabling it again. Keep the company
+visible as disabled coverage while its target is off. Wealthsimple and Plaid use
+Ashby slugs `wealthsimple` and `plaid`; Notion and Ramp delegate through the
+plugin registry using their fixed official Ashby slugs. No private or guessed
+board endpoint is allowed.
 
 ### A duplicate Discord message appears
 
@@ -531,7 +592,7 @@ evidence that every target was baselined.
 
 ### The ten-minute target is missed
 
-Check scheduler poll freshness, previous run duration, source timeouts/retries, lease state, PostgreSQL health, and process uptime. The scheduler does not overlap a slow run of the same watch. A source publication timestamp can also be delayed or absent; Ever Jobs does not fabricate it.
+Check scheduler poll freshness, previous run duration, source timeouts/retries, lease state, PostgreSQL health, and process uptime. The scheduler does not overlap a slow run of the same watch. A source publication timestamp can also be delayed or absent; rad.ar does not fabricate it.
 
 ## 14. Readiness checklist
 
@@ -543,6 +604,8 @@ Check scheduler poll freshness, previous run duration, source timeouts/retries, 
 - [ ] Discord configuration is reported as present.
 - [ ] `watch preset apply prestige-internships-v2 --watch <id>` was reviewed as a dry run before `--apply`.
 - [ ] The preset was applied only while the watch was paused.
+- [ ] Revision 3 preview/apply reported only `uber`, `notion`, `ramp`, `netflix`, and `ibm` as new baseline work on a revision 2 watch.
+- [ ] `watch coverage --id <id>` reports all 26 prestige companies, with 21 active and RBC, TD, Scotiabank, BMO, and CIBC uncovered before health-state changes.
 - [ ] Every added/materially changed enabled target has its own successful `initializedAt` and baseline sent zero notifications.
 - [ ] Hard-failed targets were repaired and re-baselined or explicitly left disabled.
 - [ ] Every enabled Tier 1 target has fixture-backed Canada-wide query/post-filter evidence.
@@ -552,6 +615,7 @@ Check scheduler poll freshness, previous run duration, source timeouts/retries, 
 - [ ] Two additional no-notification observation runs appear in history for the
       target-enabled set, including both Tier 1 cycles.
 - [ ] `ever_jobs_watcher_tier1_coverage_degraded{watch}` is zero and no enabled Tier 1 target is degraded.
+- [ ] `ever_jobs_watcher_company_coverage{watch_id,status}` reflects the coverage report counts.
 - [ ] Delivery and match queries work.
 - [ ] The webhook URL exists only in local environment/secret storage.
 

@@ -209,13 +209,13 @@ export function buildDiscordWebhookPayload(
     ),
     fields: fields.slice(0, MAX_EMBED_FIELDS),
     timestamp: detectedAt.toISOString(),
-    footer: { text: "Ever Jobs watcher" },
+    footer: { text: "rad.ar watcher" },
   };
 
   enforceEmbedCombinedLimit(embed);
 
   return {
-    username: "Ever Jobs",
+    username: "rad.ar",
     content: truncateDiscordText(
       `${urgency.icon} **${urgency.label} — ${score}/100 MATCH**`,
       MAX_CONTENT_LENGTH,

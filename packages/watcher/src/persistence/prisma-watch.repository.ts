@@ -1292,6 +1292,9 @@ function sourceTargetsForStorage(
     tier: target.tier,
     intervalMinutes: target.intervalMinutes,
     enabled: target.enabled,
+    ...(target.resultsWanted === undefined
+      ? {}
+      : { resultsWanted: target.resultsWanted }),
     ...(target.companySlug === undefined
       ? {}
       : { companySlug: target.companySlug }),
@@ -1345,6 +1348,15 @@ function sourceTargetsFromStorage(
       tier,
       intervalMinutes: candidate.intervalMinutes,
       enabled: candidate.enabled,
+      ...(typeof candidate.resultsWanted === "number" &&
+      Number.isFinite(candidate.resultsWanted)
+        ? {
+            resultsWanted: Math.min(
+              1_000,
+              Math.max(1, Math.trunc(candidate.resultsWanted)),
+            ),
+          }
+        : {}),
       ...(typeof candidate.companySlug === "string"
         ? { companySlug: candidate.companySlug }
         : {}),

@@ -20,6 +20,8 @@ import {
   ApiTags,
 } from "@nestjs/swagger";
 import {
+  CompanyCoverageReport,
+  CompanyCoverageService,
   defaultInternshipWatch,
   DiscordNotificationProvider,
   JobWatch,
@@ -33,6 +35,7 @@ import {
 } from "@ever-jobs/watcher";
 import { AdminAuth } from "../auth/admin-auth.decorator";
 import {
+  CompanyCoverageReportDto,
   CreateWatchDto,
   DiscordNotificationTestDto,
   InitializeWatchDto,
@@ -65,6 +68,7 @@ export class WatchesController {
     private readonly repository: WatchRepository,
     private readonly execution: WatchExecutionService,
     private readonly validation: WatchValidationService,
+    private readonly companyCoverage: CompanyCoverageService,
   ) {}
 
   @Post()
@@ -234,6 +238,20 @@ export class WatchesController {
   async metrics(@Param("id") id: string): Promise<Record<string, unknown>> {
     const watch = await this.requireWatch(id);
     return collectWatchMetrics(this.repository, watch);
+  }
+
+  @Get(":id/coverage")
+  @ApiOperation({
+    summary: "Get first-class company source coverage for a watch",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Company coverage report.",
+    type: CompanyCoverageReportDto,
+  })
+  @ApiResponse({ status: 404, description: "Watch not found." })
+  async coverage(@Param("id") id: string): Promise<CompanyCoverageReport> {
+    return this.companyCoverage.build(await this.requireWatch(id));
   }
 
   private async requireWatch(id: string): Promise<JobWatch> {

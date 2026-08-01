@@ -2,7 +2,7 @@
   "name": "@ever-jobs/mcp",
   "version": "0.1.0",
   "private": true,
-  "description": "MCP (Model Context Protocol) server for Ever Jobs — allows AI assistants like ChatGPT, Claude, Copilot to search and browse jobs",
+  "description": "MCP (Model Context Protocol) server for rad.ar — allows AI assistants like ChatGPT, Claude, and Copilot to search and browse jobs",
   "main": "dist/index.js",
   "bin": {
     "ever-jobs-mcp": "dist/index.js"

@@ -2,6 +2,7 @@ import { Inject } from "@nestjs/common";
 import { Command, CommandRunner, Option } from "nest-commander";
 import * as fs from "fs";
 import {
+  buildCompanyCoverageReport,
   defaultInternshipWatch,
   DiscordNotificationProvider,
   JobWatch,
@@ -24,6 +25,7 @@ import { collectWatchMetrics } from "../../../api/src/watches/watch-metrics";
 
 interface WatchOptions {
   config?: string;
+  id?: string;
   json?: boolean;
   offset?: number;
   limit?: number;
@@ -175,6 +177,14 @@ export class WatchCommand extends CommandRunner {
         result = await collectWatchMetrics(this.repository, watch);
         break;
       }
+      case "coverage": {
+        const watchId = requireArgument(
+          id ?? options.id ?? options.watch,
+          "watch id",
+        );
+        result = buildCompanyCoverageReport(await this.requireWatch(watchId));
+        break;
+      }
       case "observed-jobs": {
         const page = await this.repository.listObservedJobs({
           ...pageOptions(options),
@@ -233,6 +243,11 @@ export class WatchCommand extends CommandRunner {
   @Option({ flags: "--json", description: "Pretty-print JSON output" })
   parseJson(): boolean {
     return true;
+  }
+
+  @Option({ flags: "--id <id>", description: "Watch ID" })
+  parseId(value: string): string {
+    return value;
   }
 
   @Option({ flags: "--offset <count>", description: "Pagination offset" })
@@ -318,7 +333,7 @@ export class WatchCommand extends CommandRunner {
 
   @Option({
     flags: "--watch <id>",
-    description: "Watch ID used by preset apply",
+    description: "Watch ID used by preset apply or coverage",
   })
   parseWatch(value: string): string {
     return value;
@@ -429,7 +444,7 @@ function usage(): string {
   return [
     "Usage: watch create|update <id>|list|show <id>|delete <id>|run <id>",
     "|initialize <id>|pause <id>|resume <id>|runs <id>|matches <id>",
-    "|match-status <match-id> <status>|metrics <id>|observed-jobs",
+    "|match-status <match-id> <status>|metrics <id>|coverage <id>|observed-jobs",
     "|deliveries [watch-id]|notifications-test <watch-id>",
     "|preset apply <preset-id> --watch <id> [--apply]",
   ].join(" ");

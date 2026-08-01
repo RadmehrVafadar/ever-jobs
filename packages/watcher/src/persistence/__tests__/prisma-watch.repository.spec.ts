@@ -2,6 +2,37 @@ import { PrismaWatchRepository } from "../prisma-watch.repository";
 import { WatcherPrismaService } from "../watcher-prisma.service";
 
 describe("PrismaWatchRepository", () => {
+  it("serializes per-target resultsWanted into watch JSON", async () => {
+    const create = jest.fn().mockRejectedValue(new Error("stop after capture"));
+    const repository = makeRepository({ jobWatch: { create } });
+
+    await expect(
+      repository.createWatch({
+        name: "Coverage",
+        sourceTargets: [
+          {
+            site: "uber",
+            tier: 1,
+            intervalMinutes: 10,
+            resultsWanted: 500,
+            enabled: true,
+          },
+        ],
+      }),
+    ).rejects.toThrow("stop after capture");
+
+    expect(create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        sourceTargets: [
+          expect.objectContaining({
+            site: "uber",
+            resultsWanted: 500,
+          }),
+        ],
+      }),
+    });
+  });
+
   it("claims a due watch with one conditional update", async () => {
     const updateMany = jest.fn().mockResolvedValue({ count: 1 });
     const repository = makeRepository({

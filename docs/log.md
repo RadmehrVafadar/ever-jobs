@@ -3,10 +3,22 @@
 > Append-only log of every doc/spec edit. **Newest entry at the top.** This is a
 > human-readable audit trail; for source-code history, see `git log`.
 
-## 2026-08-01 — Root README current-project refresh
+## 2026-08-01 — Spec 6001: rad.ar product branding
+
+- Established `rad.ar` as the canonical user-facing project name in the
+  authoritative agent rules, root overview, current reference docs, application
+  guides, API/MCP presentation, watcher logs, Discord messages, and descriptive
+  package/tool metadata.
+- Preserved `@ever-jobs/*`, `EVER_JOBS_*`, `ever_jobs_*`, existing CLI/MCP
+  identifiers, API routes, Docker services, and deployment resources as explicit
+  backward-compatibility contracts.
+- Added the Spec 6001 specification, plan, task ledger, human-readable mirror,
+  documentation-index entry, and focused presentation regression assertions.
+
+### Root README current-project refresh
 
 - Replaced the stale `rad.r` identity and duplicated 160-source catalogue with
-  a concise Ever Jobs overview grounded in the current monorepo.
+  a concise project overview, now using the canonical `rad.ar` branding.
 - Documented the API, CLI, MCP, and persistent watcher applications; verified
   local setup and development commands; and corrected the API documentation
   paths to Scalar `/docs` and Swagger `/swg`.

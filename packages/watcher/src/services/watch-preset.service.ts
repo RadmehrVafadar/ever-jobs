@@ -352,6 +352,7 @@ function materialTarget(target: WatchSourceTarget): Record<string, unknown> {
     companyName: target.companyName?.trim() ?? null,
     tier: target.tier,
     intervalMinutes: target.intervalMinutes,
+    resultsWanted: target.resultsWanted ?? null,
     searchScope: normalizedScope(target.searchScope),
   };
 }

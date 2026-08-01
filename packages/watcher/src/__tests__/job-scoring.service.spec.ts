@@ -3,6 +3,7 @@ import type { JobWatch } from "../interfaces/watch.types";
 import type { WatchSourceJob } from "../services/jobs-service-watch.executor";
 import { defaultInternshipWatch } from "../services/default-watch";
 import { JobScoringService } from "../services/job-scoring.service";
+import { prestigeInternshipsV2Watch } from "../services/prestige-internships-v2.preset";
 
 describe("JobScoringService internship eligibility", () => {
   const scorer = new JobScoringService();
@@ -278,7 +279,7 @@ describe("JobScoringService internship eligibility", () => {
         new JobPostDto({
           site: "linkedin",
           title: "Full Stack Software Engineer Intern, Summer 2027",
-          companyName: "Uber",
+          companyName: "RBC",
           employmentType: "internship",
           description:
             "Summer 2027. Python Java Go TypeScript Docker Kubernetes Terraform Kafka SQL distributed systems security React.",
@@ -322,6 +323,38 @@ describe("JobScoringService internship eligibility", () => {
       expect.arrayContaining([expect.stringContaining("score capped")]),
     );
   });
+
+  it.each(["Uber", "Notion", "Ramp", "Netflix", "IBM"])(
+    "derives LinkedIn urgent eligibility for the new Tier 1 target %s",
+    (companyName) => {
+      const prestigeWatch = prestigeInternshipsV2Watch() as JobWatch;
+      const score = scorer.score(
+        sourceJob(
+          new JobPostDto({
+            site: "linkedin",
+            title: "Software Engineer Intern, Summer 2027",
+            companyName,
+            employmentType: "internship",
+            description:
+              "Summer 2027. Python Java Go Docker Kubernetes distributed systems.",
+            location: {
+              city: "Toronto",
+              state: "ON",
+              country: "Canada",
+            } as any,
+          }),
+          3,
+          "linkedin",
+        ),
+        prestigeWatch,
+      );
+
+      expect(score.total).toBeGreaterThanOrEqual(prestigeWatch.urgentScore);
+      expect(score.reasons).not.toEqual(
+        expect.arrayContaining([expect.stringContaining("score capped")]),
+      );
+    },
+  );
 
   it("does not apply the LinkedIn cap to direct/ATS observations", () => {
     const score = scorer.score(

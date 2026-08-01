@@ -9,6 +9,7 @@ export * from "./services/default-watch";
 export * from "./services/default-watch-seeder.service";
 export * from "./services/prestige-internships-v2.preset";
 export * from "./services/watch-preset.service";
+export * from "./services/company-coverage.service";
 export * from "./services/notification-dispatcher.service";
 export * from "./services/discord-notification.provider";
 export * from "./services/webhook-notification.provider";

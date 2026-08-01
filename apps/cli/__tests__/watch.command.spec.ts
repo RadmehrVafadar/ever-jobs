@@ -1,4 +1,5 @@
 import {
+  buildCompanyCoverageReport,
   JobWatch,
   PRESTIGE_INTERNSHIPS_V2_ID,
   WatchPresetService,
@@ -144,6 +145,43 @@ describe("WatchCommand", () => {
     await expect(
       command.run(["match-status", "match-1", "invalid"], { json: true }),
     ).rejects.toThrow("Invalid match status");
+  });
+
+  it("prints the company coverage report for a positional watch id", async () => {
+    const watch = watchFixture({
+      companies: ["Shopify", "RBC"],
+      sourceTargets: [
+        {
+          site: "shopify_careers",
+          companyName: "Shopify",
+          tier: 1,
+          intervalMinutes: 10,
+          enabled: true,
+        },
+      ],
+    });
+    repository.getWatch.mockResolvedValue(watch);
+
+    await command.run(["coverage", "watch-1"], { json: true });
+
+    expect(repository.getWatch).toHaveBeenCalledWith("watch-1");
+    expect(stdout).toHaveBeenCalledWith(
+      `${JSON.stringify(buildCompanyCoverageReport(watch), null, 2)}\n`,
+    );
+  });
+
+  it("accepts --id and --watch coverage aliases with compact output", async () => {
+    const watch = watchFixture({ companies: ["RBC"] });
+    repository.getWatch.mockResolvedValue(watch);
+    const expected = `${JSON.stringify(buildCompanyCoverageReport(watch))}\n`;
+
+    await command.run(["coverage"], { id: "watch-1" });
+    await command.run(["coverage"], { watch: "watch-1" });
+
+    expect(repository.getWatch).toHaveBeenNthCalledWith(1, "watch-1");
+    expect(repository.getWatch).toHaveBeenNthCalledWith(2, "watch-1");
+    expect(stdout).toHaveBeenNthCalledWith(1, expected);
+    expect(stdout).toHaveBeenNthCalledWith(2, expected);
   });
 });
 

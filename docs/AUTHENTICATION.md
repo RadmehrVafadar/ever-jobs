@@ -1,6 +1,6 @@
 # Authentication
 
-Ever Jobs supports per-source authentication that can be configured globally via environment variables or overridden per-request through the API and CLI. This guide covers all supported authentication methods.
+rad.ar supports per-source authentication that can be configured globally via environment variables or overridden per-request through the API and CLI. This guide covers all supported authentication methods.
 
 ---
 

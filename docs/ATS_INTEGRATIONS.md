@@ -1,11 +1,11 @@
 # ATS Integrations
 
-Ever Jobs integrates directly with **41 applicant tracking systems** that power career pages at thousands of companies worldwide. When a recruiter publishes a new role through any supported ATS, Ever Jobs detects the posting at the source — often hours before it appears on aggregated job boards like LinkedIn or Indeed.
+rad.ar integrates directly with **41 applicant tracking systems** that power career pages at thousands of companies worldwide. When a recruiter publishes a new role through any supported ATS, rad.ar detects the posting at the source — often hours before it appears on aggregated job boards like LinkedIn or Indeed.
 
 ## How ATS Integration Works
 
 1. **Purpose-Built Adapters** — Each ATS has a dedicated scraper module that understands the platform's data format, API structure, and publishing workflow.
-2. **Direct Source Detection** — Ever Jobs reads from the ATS's structured JSON/XML feed or API endpoint, seeing jobs the moment they go live on the company's career page.
+2. **Direct Source Detection** — rad.ar reads from the ATS's structured JSON/XML feed or API endpoint, seeing jobs the moment they go live on the company's career page.
 3. **Normalized Output** — Despite each ATS having a different response schema, all results are normalized into the standard `JobPostDto` format with consistent fields across platforms.
 
 ### Usage
@@ -340,7 +340,7 @@ Talent marketplace (NOT a per-company ATS) where companies post contract / full-
 
 ### Tesla
 
-Single-company custom careers portal at `https://www.tesla.com/careers/search/`. Tesla operates its own internal `/cua-api/` endpoint pair (board + per-job detail) protected by Akamai Bot Manager. Ever Jobs ships **two** Tesla plugins:
+Single-company custom careers portal at `https://www.tesla.com/careers/search/`. Tesla operates its own internal `/cua-api/` endpoint pair (board + per-job detail) protected by Akamai Bot Manager. rad.ar ships **two** Tesla plugins:
 
 - **Default `source-tesla` (pure-HTTP):** Calls the board endpoint directly with rotated UA + `Accept: application/json`. Akamai-challenge surfaces (HTTP 403 / 503 OR a `text/html` body when JSON was requested) return an empty `JobResponseDto` with the `ERR_TESLA_AKAMAI_CHALLENGE` sentinel logged.
 - **Optional `source-tesla-playwright` (browser-automation companion):** Lazy-loads `playwright` via `Function('s', 'return import(s)')(specifier)` indirection (defeats ts-jest's static module resolution). Launches headless Chromium with `--disable-blink-features=AutomationControlled`, navigates to the careers-search landing page, settles 5 s for Akamai's challenge JS to resolve, then issues in-page `fetch()` calls through the established session. Per Q-028, this companion is **NOT** auto-registered via `ALL_SOURCE_MODULES` — operators opt in by importing `TeslaPlaywrightModule` directly.
@@ -365,7 +365,7 @@ Enterprise talent-management suite whose Cornerstone Recruiting product powers t
 
 ### Dayforce (Ceridian Dayforce HCM)
 
-Cloud HCM platform whose candidate career portals are hosted at `https://{client}.dayforcehcm.com/CandidatePortal/`. Ever Jobs reads the consolidated **no-auth geo job-posting search feed**.
+Cloud HCM platform whose candidate career portals are hosted at `https://{client}.dayforcehcm.com/CandidatePortal/`. rad.ar reads the consolidated **no-auth geo job-posting search feed**.
 
 - **Method**: `POST https://jobs.dayforcehcm.com/api/geo/{client}/jobposting/search` with body `{ clientNamespace, jobBoardCode: 'CANDIDATEPORTAL', cultureCode: 'en-US', distanceUnit, paginationStart }`; server-fixed page size 25 paginated via `paginationStart`, bounded `Promise.allSettled` fan-out
 - **Auth**: None (public candidate-portal feed)
@@ -385,7 +385,7 @@ Recruitment ATS in the Zoho suite; career sites are hosted per-tenant at `https:
 
 ### ClearCompany
 
-Talent-management ATS whose career sites are hosted at `https://careers-page.clearcompany.com/jobs/{slug}/...`. Ever Jobs reads the **verified public careers feed**.
+Talent-management ATS whose career sites are hosted at `https://careers-page.clearcompany.com/jobs/{slug}/...`. rad.ar reads the **verified public careers feed**.
 
 - **Method**: GET `https://careers-page.clearcompany.com/api/v1/careers/jobs` with an `API-ShortName: {slug}` header — returns the tenant's full open-roles list in a single call (no auth, no pagination envelope)
 - **Auth**: None
@@ -397,7 +397,7 @@ Talent-management ATS whose career sites are hosted at `https://careers-page.cle
 
 ### Niceboard
 
-Hosted job-board platform; each board lives at `https://{slug}.niceboard.co`. Ever Jobs reads the **verified public board search feed** (the same call the board's SPA makes).
+Hosted job-board platform; each board lives at `https://{slug}.niceboard.co`. rad.ar reads the **verified public board search feed** (the same call the board's SPA makes).
 
 - **Method**: GET `https://{slug}.niceboard.co/api/jobs` with a fixed base query (JSON-encoded array filters + `custom_fields={}`), paginated by `limit`/`page`; remaining pages fanned out via bounded `Promise.allSettled`
 - **Auth**: None (the credentialed `/api/v1/jobs?key=` private API is deliberately not used)
@@ -409,7 +409,7 @@ Hosted job-board platform; each board lives at `https://{slug}.niceboard.co`. Ev
 
 ### GoHire
 
-Hosted careers boards at `jobs.gohire.io`, keyed by an opaque client hash. Ever Jobs reads the **verified public widget feeds**.
+Hosted careers boards at `jobs.gohire.io`, keyed by an opaque client hash. rad.ar reads the **verified public widget feeds**.
 
 - **Method**: list feed GET `https://api2.gohire.io/widget-jobs/{clientHash}` → `{ jobs: [...] }`; per-role detail GET `https://api.gohire.io/widget-job?clientHash={hash}&jobId={id}` hydrates the full HTML description + structured city/county/country via a bounded `Promise.allSettled` (max 8) fan-out
 - **Auth**: None (a browser `User-Agent` header is required; the authenticated dashboard route is not used)
@@ -421,7 +421,7 @@ Hosted careers boards at `jobs.gohire.io`, keyed by an opaque client hash. Ever 
 
 ### Recooty
 
-Recruiting platform with hosted career pages. Ever Jobs reads the **verified public Job Widget feed**.
+Recruiting platform with hosted career pages. rad.ar reads the **verified public Job Widget feed**.
 
 - **Method**: GET `https://standaloneapi.recooty.app/api/widget/{widgetId}?language=en` → one envelope `{ career_page_url, team:{ name, slug, jobPosts[] }, translation }`
 - **Auth**: None — the 32-char hex widget id functions as a public read key supplied in the URL path
@@ -433,7 +433,7 @@ Recruiting platform with hosted career pages. Ever Jobs reads the **verified pub
 
 ### Polymer
 
-Modern ATS/careers-page platform. Ever Jobs reads the **verified unauthenticated Public API** (documented at `developer.polymer.co`).
+Modern ATS/careers-page platform. rad.ar reads the **verified unauthenticated Public API** (documented at `developer.polymer.co`).
 
 - **Method**: list feed GET `https://api.polymer.co/v1/hire/organizations/{slug}/jobs?page={n}&per_page=50` (paginated `{ items, meta }`, walked via `meta.is_last`); per-job detail GET `.../jobs/{id}` hydrates HTML description + department via a bounded (concurrency 5) fan-out
 - **Auth**: None
@@ -445,7 +445,7 @@ Modern ATS/careers-page platform. Ever Jobs reads the **verified unauthenticated
 
 ### VivaHR (AvaHR)
 
-Multi-tenant ATS; public careers sites are server-rendered HTML at `https://jobs.avahr.com/{tenant}/jobs` (legacy `jobs.vivahr.com` 301-redirects after the AvaHR rebrand). No anonymous JSON API exists, so Ever Jobs scrapes the **verified public HTML + schema.org JSON-LD**.
+Multi-tenant ATS; public careers sites are server-rendered HTML at `https://jobs.avahr.com/{tenant}/jobs` (legacy `jobs.vivahr.com` 301-redirects after the AvaHR rebrand). No anonymous JSON API exists, so rad.ar scrapes the **verified public HTML + schema.org JSON-LD**.
 
 - **Method**: GET the listing page to enumerate each role's `/{tenant}/{jobId}-{jobSlug}/` detail URL, then parse the `JobPosting` JSON-LD embedded in each detail page via a bounded `Promise.allSettled` fan-out
 - **Auth**: None (the developer API and WordPress plugin both require a per-tenant API key and are intentionally not used)
@@ -457,7 +457,7 @@ Multi-tenant ATS; public careers sites are server-rendered HTML at `https://jobs
 
 ### Occupop
 
-Dublin-based ATS; tenant careers sites (`{slug}.occupop-careers.com`) are backed by a public Apollo GraphQL gateway. Ever Jobs reads the **verified unauthenticated GraphQL feed**.
+Dublin-based ATS; tenant careers sites (`{slug}.occupop-careers.com`) are backed by a public Apollo GraphQL gateway. rad.ar reads the **verified unauthenticated GraphQL feed**.
 
 - **Method**: POST `https://gateway.server.occupop.com/graphql`, operation `LiveJobs`, variables `{ companyKey: "{slug}", tags: [], includeAllBrandsJobs: false }` → `data.careersPage.liveJobs[]`
 - **Auth**: None (the GraphQL query + gateway host were extracted verbatim from the careers SPA bundle; introspection is disabled)
@@ -469,7 +469,7 @@ Dublin-based ATS; tenant careers sites (`{slug}.occupop-careers.com`) are backed
 
 ### JobAdder
 
-ATS powering many hosted job boards. The structured v2 API requires OAuth2, so Ever Jobs scrapes the **verified anonymous hosted Careerpage HTML**.
+ATS powering many hosted job boards. The structured v2 API requires OAuth2, so rad.ar scrapes the **verified anonymous hosted Careerpage HTML**.
 
 - **Method**: GET `https://clientapps.jobadder.com/{accountId}/{slug}` (server-rendered HTML), parse each `job_items` card for title/jobId/date/location/employmentType/department, then lazily fetch each detail page `/{accountId}/{slug}/{jobId}/{titleSlug}` for the full description via a bounded `Promise.allSettled` fan-out
 - **Auth**: None (the OAuth2 v2 jobs API and opaque-key JS widget endpoints are not used)
@@ -481,7 +481,7 @@ ATS powering many hosted job boards. The structured v2 API requires OAuth2, so E
 
 ### Hireology
 
-Multi-tenant SMB/automotive/healthcare careers platform at `careers.hireology.com/{slug}`. Ever Jobs reads the **verified public jobs feed**, bootstrapping the anonymous token the careers page mints.
+Multi-tenant SMB/automotive/healthcare careers platform at `careers.hireology.com/{slug}`. rad.ar reads the **verified public jobs feed**, bootstrapping the anonymous token the careers page mints.
 
 - **Method**: scrape the careers shell for `window.startingData.apiToken` (an anonymous, short-lived public bearer minted into every careers page), then GET `https://api.hireology.com/v2/public/careers/{slug}?page={n}&page_size=50` with `Authorization: Bearer {token}` → `{ data, count, page, page_size }`; remaining pages fanned out via bounded `Promise.allSettled`
 - **Auth**: None in practice — the bearer is not a private credential; it is minted unauthenticated into the public careers page and only authorizes the read-only public feed (re-scraped per run)
@@ -493,7 +493,7 @@ Multi-tenant SMB/automotive/healthcare careers platform at `careers.hireology.co
 
 ### Applied
 
-Values-based hiring platform whose public org career pages live at `app.beapplied.com/org/{orgId}/{orgSlug}`. Applied exposes **no anonymous JSON API** (every `/api/v1/` path returns HTTP 401), so Ever Jobs reads the **verified public HTML** surface.
+Values-based hiring platform whose public org career pages live at `app.beapplied.com/org/{orgId}/{orgSlug}`. Applied exposes **no anonymous JSON API** (every `/api/v1/` path returns HTTP 401), so rad.ar reads the **verified public HTML** surface.
 
 - **Method**: GET `https://app.beapplied.com/org/{orgId}/{orgSlug}` (org listing) → parse `/apply/{jobSlug}` anchors with `cheerio`, then bounded `Promise.allSettled` fan-out to each `https://app.beapplied.com/apply/{jobSlug}` detail page for title, company, location, salary, employment type and description
 - **Auth**: None — public HTML only; all REST endpoints require authentication and are not used
@@ -505,7 +505,7 @@ Values-based hiring platform whose public org career pages live at `app.beapplie
 
 ### CATS
 
-Recruiting ATS whose hosted public career portals live at `https://{slug}.catsone.com/careers/{portalID}-{name}`. The authenticated v3 REST API requires `Authorization: Token` and is not used; Ever Jobs reads the public server-rendered HTML.
+Recruiting ATS whose hosted public career portals live at `https://{slug}.catsone.com/careers/{portalID}-{name}`. The authenticated v3 REST API requires `Authorization: Token` and is not used; rad.ar reads the public server-rendered HTML.
 
 - **Method**: GET `https://{slug}.catsone.com/careers/{portalID}-{name}?page={n}` → parse `.cats-job` listing cards with `cheerio` (three fallback selector layers), then per-job detail fetches at `/careers/{portalID}-{name}/jobs/{jobID}-{slug}` for descriptions; pagination via `?page=N`
 - **Auth**: None — public portal HTML only
@@ -517,7 +517,7 @@ Recruiting ATS whose hosted public career portals live at `https://{slug}.catson
 
 ### Recruit CRM
 
-Recruiting-agency CRM/ATS whose public agency jobs pages live at `https://recruitcrm.io/jobs/{accountSlug}`. Ever Jobs calls the same anonymous backend endpoint the listing SPA uses.
+Recruiting-agency CRM/ATS whose public agency jobs pages live at `https://recruitcrm.io/jobs/{accountSlug}`. rad.ar calls the same anonymous backend endpoint the listing SPA uses.
 
 - **Method**: POST `https://albatross.recruitcrm.io/v1/external-pages/jobs-by-account/get?account={accountSlug}&batch=true` with `Origin: https://recruitcrm.io` and JSON body `{ limit, offset, search_data: {}, onlyJobs: true }`; paginated by `offset` (exhausted when the returned array is shorter than `limit`) with bounded `Promise.allSettled`
 - **Auth**: None — the credentialed `api.recruitcrm.io/v1/jobs` Bearer API is not used
@@ -529,7 +529,7 @@ Recruiting-agency CRM/ATS whose public agency jobs pages live at `https://recrui
 
 ### Vincere
 
-Recruitment-agency ATS/CRM whose public Instant Job Board is served at `https://{slug}.vincere.io/careers/`. Ever Jobs uses the same CSRF-gated AJAX endpoint the board calls — no secret API keys.
+Recruitment-agency ATS/CRM whose public Instant Job Board is served at `https://{slug}.vincere.io/careers/`. rad.ar uses the same CSRF-gated AJAX endpoint the board calls — no secret API keys.
 
 - **Method**: anonymous GET `/careers/` to obtain the per-session `X-CSRF-TOKEN` + `laravel_session` cookie, then page POST `https://{slug}.vincere.io/careers/ajax/search-jobs` (10/page) → `{ items, total, more }` with structured JSON (HTML descriptions, location, employment type, publish date)
 - **Auth**: None secret — the CSRF token is obtained anonymously from the public careers page; the OAuth2 `/api/v2/job/search/` REST API is not used
@@ -541,7 +541,7 @@ Recruitment-agency ATS/CRM whose public Instant Job Board is served at `https://
 
 ### Factorial
 
-HRIS platform with an integrated ATS that hosts public career pages for every tenant at `https://{slug}.factorialhr.com`. No anonymous JSON API exists; Ever Jobs reads the **verified public HTML** + sitemap.
+HRIS platform with an integrated ATS that hosts public career pages for every tenant at `https://{slug}.factorialhr.com`. No anonymous JSON API exists; rad.ar reads the **verified public HTML** + sitemap.
 
 - **Method**: GET `/` (index page — job metadata embedded in `data-controller="job-postings"` HTML attributes), GET `/sitemap.xml` for `lastmod` dates, and per-job detail pages at `/job_posting/{title-slug}-{id}` for the full HTML description (`div.styledText`) + apply URL; detail fan-out bounded by `Promise.allSettled` (concurrency 6)
 - **Auth**: None — the OAuth2 `api.factorialhr.com/api/v1/ats/…` REST API is not used
@@ -553,7 +553,7 @@ HRIS platform with an integrated ATS that hosts public career pages for every te
 
 ### Workstream
 
-All-in-one HR/payroll/hiring platform for the hourly/deskless workforce. Public careers pages are served as HTML at `https://www.workstream.us/j/{accountId}/{brandSlug}`. No anonymous JSON API; Ever Jobs reads the public HTML.
+All-in-one HR/payroll/hiring platform for the hourly/deskless workforce. Public careers pages are served as HTML at `https://www.workstream.us/j/{accountId}/{brandSlug}`. No anonymous JSON API; rad.ar reads the public HTML.
 
 - **Method**: GET `https://www.workstream.us/j/{accountId}/{brandSlug}/positions` → extract job href links, then bounded `Promise.allSettled` fan-out to each `/j/{accountId}/{brandSlug}/{locationSlug}/{jobSlug}-{jobId}?locale=en` detail page; `atsId` is the 8-char hex suffix of the job path
 - **Auth**: None — the OAuth2 `public-api.workstream.us` REST API is not used
@@ -565,7 +565,7 @@ All-in-one HR/payroll/hiring platform for the hourly/deskless workforce. Public 
 
 ### Harri
 
-All-in-one workforce-management and talent-acquisition platform for the hospitality/service industries. Employer careers pages are public HTML at `https://harri.com/{employerSlug}`. No anonymous JSON API; Ever Jobs reads the public HTML.
+All-in-one workforce-management and talent-acquisition platform for the hospitality/service industries. Employer careers pages are public HTML at `https://harri.com/{employerSlug}`. No anonymous JSON API; rad.ar reads the public HTML.
 
 - **Method**: GET `https://harri.com/{employerSlug}` → parse job href links matching `/{slug}/job/{jobId}-{titleSlug}`, then bounded `Promise.allSettled` fan-out to each detail page for title/location/description via Open Graph meta tags + heuristic HTML extraction
 - **Auth**: None — Harri's underlying REST API is not used
@@ -577,7 +577,7 @@ All-in-one workforce-management and talent-acquisition platform for the hospital
 
 ### Tribepad
 
-UK enterprise ATS powering large public- and private-sector career sites. Each tenant site is public at `https://{slug}.tribepad-gro.com` (Gro tier) or a custom domain. No anonymous JSON API; Ever Jobs reads the public sitebuilder HTML.
+UK enterprise ATS powering large public- and private-sector career sites. Each tenant site is public at `https://{slug}.tribepad-gro.com` (Gro tier) or a custom domain. No anonymous JSON API; rad.ar reads the public sitebuilder HTML.
 
 - **Method**: GET `https://{slug}.tribepad-gro.com/v2/job/search?page={n}&records_per_page={size}` → parse `.sitebuilder-job-results-item` cards with `cheerio`, then per-job detail fetches at `/members/modules/job/detail.php?record={id}` for the full HTML description; pagination via `?page=N`
 - **Auth**: None — public HTML only

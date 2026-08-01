@@ -1,6 +1,6 @@
 # API Changelog
 
-## [Unreleased] — 2026-07-19 — Spec 6000
+## [Unreleased] — 2026-07-21 — Spec 6000
 
 ### Added
 
@@ -9,7 +9,20 @@
   field and is populated from the first normalized location when needed.
 - Watch source targets accept optional `companyName`, nested `searchScope`
   (`countryCodes`, `locations`, optional `searchTerms`, optional
-  `maxRequestsPerRun`), and target-level `initializedAt`.
+  `maxRequestsPerRun`), target-level `initializedAt`, and optional
+  `resultsWanted`. Target result limits accept integers from 1 through 1000,
+  persist in existing source-target JSON, participate in material preset diffs,
+  and are forwarded to the scraper. Omitted values keep the executor default.
+- `GET /api/watches/:id/coverage` and
+  `watch coverage --id <watch-id>` return a `CompanyCoverageReport`. Its summary
+  contains configured, active, disabled, uncovered, initialized, and degraded
+  counts. One row per configured company includes status, target keys,
+  initialization, last attempt/success/non-empty timestamps, consecutive hard
+  failures, and degradation state. Coverage requires a normalized exact match
+  against `sourceTargets[].companyName`; generic job boards do not count.
+- `ever_jobs_watcher_company_coverage{watch_id,status}` exposes the same
+  configured, active, disabled, uncovered, initialized, and degraded counts to
+  Prometheus.
 - Match/score explanations include `sourceTargetKey`, matched country, location
   confidence, and geography decision/suppression reason.
 - `POST /api/watches/:id/initialize` accepts an optional JSON body:
@@ -48,6 +61,17 @@
 - Prestige Internships v2 now runs Google Careers at one rotating request every
   10 minutes. Direct-company/ATS board targets use 10 minutes, Wellfound and
   Canada Job Bank use 30 minutes, and LinkedIn remains at 60 minutes.
+- Prestige Internships v2 retains its identifier and advances to revision 3.
+  Enabled Canada-only Tier 1 board targets for Uber, Notion, Ramp, Netflix, and
+  IBM run every 10 minutes with `resultsWanted: 500`. The preset now partitions
+  its 26 prestige companies into 21 first-class covered names and five explicit
+  deferrals: RBC, TD, Scotiabank, BMO, and CIBC.
+- Uber, Notion, Ramp, Netflix, and IBM treat transport, HTTP, blocked-shell,
+  malformed-payload, and delegated-plugin failures as hard failures. A zero-job
+  response is valid only after its official jobs collection or empty marker is
+  validated. Notion and Ramp delegate to Ashby through `PluginRegistry`.
+- The API initializes `ever_jobs_sources_total` from the discovered plugin
+  registry size instead of the former hard-coded value of 160.
 
 - Geography eligibility is target-tier-specific: Tier 1 accepts Canada; Tier
   2/3 accept Canada or the United States. Location preference scoring is
@@ -65,22 +89,30 @@
 ### Compatibility and rollout
 
 - All fields and schema changes are additive. Legacy watches without target
-  scope/company/baseline fields inherit watch-level settings.
+  scope/company/baseline/result-limit fields inherit watch-level or executor
+  defaults. No Prisma migration is required for `resultsWanted`.
 - The shipped preset watch is globally disabled and uninitialized. Its
   target-enabled set is `google_careers`, `shopify`, `ashby:wealthsimple`,
-  `ashby:plaid`, all 13 legacy direct-company targets, `canadajobbank`, and
-  `linkedin`. Target-enabled does not permit polling or notifications while the
-  watch is paused.
+  `ashby:plaid`, all 13 legacy direct-company targets, `uber`, `notion`, `ramp`,
+  `netflix`, `ibm`, `canadajobbank`, and `linkedin`. Target-enabled does not
+  permit polling or notifications while the watch is paused.
 - Only Google Jobs remains target-disabled. Microsoft is operator-enabled even
   though its earlier live smoke timed out; Google Jobs returned the classified
   enable-JavaScript shell.
-- Six deterministic source suites passed (59 tests). Disabled live evidence
+- Before the Phase 13 additions, six deterministic source suites passed (59
+  tests). Disabled live evidence
   returned two Canadian Google Careers roles, a marker-validated valid empty
   Shopify board, 37 Wealthsimple Ashby roles with a capped mapped sample, and a
   successful unauthenticated LinkedIn listing/detail result.
 - Operators must targeted-baseline every target-enabled source and complete two
   additional no-notification observation cycles before resuming. Registration,
   tests, and live smoke do not enable notifications by themselves.
+- For a revision 2 watch, preview and apply revision 3 while paused. Only
+  `uber`, `notion`, `ramp`, `netflix`, and `ibm` should require a new baseline.
+  Run operator-authorized disabled live smokes, inspect stable IDs, official
+  URLs, locations and payload markers, baseline those five, and complete two
+  no-notification observation cycles. A failing target remains individually
+  disabled and visible as disabled coverage while healthy siblings continue.
 
 ---
 

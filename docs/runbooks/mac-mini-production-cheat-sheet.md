@@ -1,4 +1,4 @@
-# Ever Jobs Mac Mini Production Cheat Sheet
+# rad.ar Mac Mini Production Cheat Sheet
 
 Production installation:
 

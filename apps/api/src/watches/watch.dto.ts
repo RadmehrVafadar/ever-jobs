@@ -96,6 +96,13 @@ export class WatchSourceTargetDto {
   @Max(1_440)
   intervalMinutes!: number;
 
+  @ApiPropertyOptional({ minimum: 1, maximum: 1000, example: 500 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(1_000)
+  resultsWanted?: number;
+
   @ApiPropertyOptional({ example: "shopify" })
   @IsOptional()
   @IsString()
@@ -546,4 +553,64 @@ export class DiscordNotificationTestDto {
   @IsOptional()
   @IsIn(["default", "DISCORD_WEBHOOK_URL"])
   destinationRef?: "default" | "DISCORD_WEBHOOK_URL";
+}
+
+export class CompanyCoverageSummaryDto {
+  @ApiProperty({ example: 26 })
+  configured!: number;
+
+  @ApiProperty({ example: 21 })
+  active!: number;
+
+  @ApiProperty({ example: 0 })
+  disabled!: number;
+
+  @ApiProperty({ example: 5 })
+  uncovered!: number;
+
+  @ApiProperty({ example: 16 })
+  initialized!: number;
+
+  @ApiProperty({ example: 1 })
+  degraded!: number;
+}
+
+export class CompanyCoverageCompanyDto {
+  @ApiProperty({ example: "Uber" })
+  company!: string;
+
+  @ApiProperty({ enum: ["active", "disabled", "uncovered"] })
+  status!: "active" | "disabled" | "uncovered";
+
+  @ApiProperty({ type: [String], example: ["uber"] })
+  targetKeys!: string[];
+
+  @ApiProperty({ example: false })
+  initialized!: boolean;
+
+  @ApiProperty({ type: String, format: "date-time", nullable: true })
+  lastAttemptAt!: Date | null;
+
+  @ApiProperty({ type: String, format: "date-time", nullable: true })
+  lastSuccessAt!: Date | null;
+
+  @ApiProperty({ type: String, format: "date-time", nullable: true })
+  lastNonEmptyAt!: Date | null;
+
+  @ApiProperty({ example: 0 })
+  consecutiveHardFailures!: number;
+
+  @ApiProperty({ example: false })
+  degraded!: boolean;
+}
+
+export class CompanyCoverageReportDto {
+  @ApiProperty({ format: "uuid" })
+  watchId!: string;
+
+  @ApiProperty({ type: () => CompanyCoverageSummaryDto })
+  summary!: CompanyCoverageSummaryDto;
+
+  @ApiProperty({ type: () => [CompanyCoverageCompanyDto] })
+  companies!: CompanyCoverageCompanyDto[];
 }

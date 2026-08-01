@@ -61,7 +61,7 @@ Client Request
 ## Project Structure
 
 ```
-ever-jobs/
+rad.ar/
 ├── apps/
 │   ├── api/src/             # NestJS API server
 │   │   ├── auth/            #   API key guard
