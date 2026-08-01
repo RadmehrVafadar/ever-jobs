@@ -3,6 +3,33 @@
 > Append-only log of every doc/spec edit. **Newest entry at the top.** This is a
 > human-readable audit trail; for source-code history, see `git log`.
 
+## 2026-08-01 — Root README current-project refresh
+
+- Replaced the stale `rad.r` identity and duplicated 160-source catalogue with
+  a concise Ever Jobs overview grounded in the current monorepo.
+- Documented the API, CLI, MCP, and persistent watcher applications; verified
+  local setup and development commands; and corrected the API documentation
+  paths to Scalar `/docs` and Swagger `/swg`.
+- Summarized the revision 3 prestige-company coverage contract (21 covered,
+  five explicitly uncovered), safe disabled-by-default watcher posture, package
+  architecture, configuration boundaries, and links to canonical documentation.
+
+## 2026-07-21 — Spec 6000 Phase 13: prestige-company coverage
+
+- Specified first-class targets for Uber, Notion, Ramp, Netflix, and IBM,
+  raising the prestige inventory from 16 to 21 covered companies.
+- Explicitly deferred RBC, TD, Scotiabank, BMO, and CIBC and required them to
+  remain visible as uncovered until a later official-source adapter phase.
+- Added the bounded `WatchSourceTarget.resultsWanted` contract, hard-failure
+  semantics, coverage REST/CLI/metrics surfaces, dynamic source totals, fixture
+  test plan, and paused targeted-baseline rollout.
+- Updated the tool manifest, watcher guide, CLI reference, local operations
+  runbook, and API changelog with revision 3 coverage semantics and rollout.
+- Validated 17 focused suites / 181 tests, watcher/API/CLI/worker TypeScript
+  compilation, manifest parsing, and a clean diff check. Production live smokes,
+  baselines, and observation cycles remain explicit operator gates; no watch was
+  resumed or mutated during implementation.
+
 ## 2026-07-20 — Mac Mini production cheat sheet refresh
 
 Added a consolidated, copy-ready Mac Mini runbook for compiled-CLI operations,
