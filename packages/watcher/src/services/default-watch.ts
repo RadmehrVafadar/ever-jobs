@@ -1,21 +1,21 @@
 import { JobWatch } from "../interfaces/watch.types";
 import {
-  prestigeInternshipsV2Watch,
-  PRESTIGE_INTERNSHIPS_V2_NAME,
-} from "./prestige-internships-v2.preset";
+  canadianTechInternshipsWatch,
+  CANADIAN_TECH_INTERNSHIPS_NAME,
+} from "./canadian-tech-internships.preset";
 
-/** @deprecated Use `prestigeInternshipsV2Watch` and the versioned preset ID. */
+/** @deprecated Use `canadianTechInternshipsWatch` and the versioned preset ID. */
 export function defaultInternshipWatch(): Partial<JobWatch> {
-  return prestigeInternshipsV2Watch();
+  return canadianTechInternshipsWatch();
 }
 
-/** @deprecated Use `PRESTIGE_INTERNSHIPS_V2_NAME`. */
-export const DEFAULT_WATCH_NAME = PRESTIGE_INTERNSHIPS_V2_NAME;
+/** @deprecated Use `CANADIAN_TECH_INTERNSHIPS_NAME`. */
+export const DEFAULT_WATCH_NAME = CANADIAN_TECH_INTERNSHIPS_NAME;
 
 export {
-  prestigeInternshipsV2Watch,
-  PRESTIGE_INTERNSHIPS_V2_ID,
-  PRESTIGE_INTERNSHIPS_V2_NAME,
-  PRESTIGE_INTERNSHIPS_V2_PRESET,
-  PRESTIGE_INTERNSHIPS_V2_VERSION,
-} from "./prestige-internships-v2.preset";
+  canadianTechInternshipsWatch,
+  CANADIAN_TECH_INTERNSHIPS_ID,
+  CANADIAN_TECH_INTERNSHIPS_NAME,
+  CANADIAN_TECH_INTERNSHIPS_PRESET,
+  CANADIAN_TECH_INTERNSHIPS_VERSION,
+} from "./canadian-tech-internships.preset";

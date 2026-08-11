@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { WatcherModule } from "@ever-jobs/watcher";
+import { NotificationSecretLocalModule } from "@ever-jobs/notification-secret-local";
 import { AppConfigModule } from "../../api/src/config/config.module";
 import { AppCacheModule } from "../../api/src/cache/cache.module";
 import { JobsModule } from "../../api/src/jobs/jobs.module";
@@ -13,7 +14,7 @@ import { WatcherHealthController } from "./watcher-health.controller";
     AppCacheModule,
     MetricsProvidersModule,
     WatcherModule.register({
-      imports: [JobsModule],
+      imports: [JobsModule, NotificationSecretLocalModule],
       jobsServiceToken: JobsService,
       enableScheduler: true,
     }),

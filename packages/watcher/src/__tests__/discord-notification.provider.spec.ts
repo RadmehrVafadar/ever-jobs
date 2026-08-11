@@ -10,6 +10,7 @@ import {
   JobNotificationMessage,
   NotificationDestination,
 } from "../interfaces/watch.types";
+import type { INotificationSecretStore } from "@ever-jobs/plugin";
 
 const WEBHOOK_URL =
   "https://discord.com/api/webhooks/123456789/test_webhook_token";
@@ -81,6 +82,39 @@ describe("DiscordNotificationProvider", () => {
         }),
       ]),
     );
+  });
+
+  it("resolves an arbitrary named destination through the secret-store contract", async () => {
+    const fetchMock = jest.fn<
+      ReturnType<DiscordFetch>,
+      Parameters<DiscordFetch>
+    >(async () => new Response(null, { status: 204 }));
+    const secretStore = {
+      resolve: jest.fn().mockResolvedValue(WEBHOOK_URL),
+    } as unknown as INotificationSecretStore;
+    const provider = new DiscordNotificationProvider(
+      { env: {}, fetch: fetchMock, timeoutMs: 1_000 },
+      secretStore,
+    );
+
+    const result = await provider.send(notificationMessage(), {
+      type: "discord",
+      destinationRef: "tier-one",
+    });
+
+    expect(secretStore.resolve).toHaveBeenCalledWith("tier-one");
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${WEBHOOK_URL}?wait=true`,
+      expect.any(Object),
+    );
+    expect(result).toEqual({
+      status: "sent",
+      providerResponse: {
+        status: 204,
+        category: "success",
+        retryable: false,
+      },
+    });
   });
 
   it("does not accept a raw webhook URL stored in the destination", async () => {

@@ -19,6 +19,24 @@ export {
   PluginCategory,
   SourceWatchMode,
 } from "./interfaces/plugin-metadata.interface";
+export {
+  INotificationSecretStore,
+  NOTIFICATION_SECRET_STORE,
+  NotificationSecretSource,
+  NotificationSecretStatus,
+} from "./interfaces/notification-secret-store.interface";
+export {
+  IUiPlugin,
+  UI_PLUGIN_TOKEN,
+  UiNavigationItem,
+  UiPluginManifest,
+} from "./interfaces/ui-plugin.interface";
+export {
+  ERR_UI_PLUGIN_DUPLICATE_ID,
+  ERR_UI_PLUGIN_DUPLICATE_ROUTE,
+  UiPluginRegistry,
+  UiPluginRegistryError,
+} from "./ui/ui-plugin.registry";
 
 // Configuration
 export {

@@ -33,6 +33,7 @@ model JobWatch {
   urgentScore            Int          @default(80)
   digestScore            Int          @default(40)
   notificationChannels   Json
+  notificationRoutes     Json         @default("[]")
   initializationMode     String       @default("baseline")
   recentWindowMinutes    Int          @default(180)
   weights                Json?

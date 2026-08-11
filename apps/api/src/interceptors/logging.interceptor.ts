@@ -51,10 +51,19 @@ export class LoggingInterceptor implements NestInterceptor {
         error: (err: Error) => {
           const elapsed = Date.now() - startTime;
           this.logger.error(
-            `✕ ${request.method} ${request.url} ${elapsed}ms [${requestId}] ${err.message}`,
+            `✕ ${request.method} ${request.url} ${elapsed}ms [${requestId}] ${redactLogValue(err.message)}`,
           );
         },
       }),
     );
   }
+}
+
+function redactLogValue(value: string): string {
+  return value
+    .replace(/https:\/\/[^\s]+/gi, '[REDACTED_URL]')
+    .replace(
+      /((?:authorization|token|api[-_ ]?key|secret|password)[=: ]+)[^\s,;]+/gi,
+      '$1[REDACTED]',
+    );
 }

@@ -1,5 +1,170 @@
 # API Changelog
 
+## [Unreleased] — 2026-08-10 — Spec 6003
+
+### Changed
+
+- Replaced the selectable `prestige-internships-v2` watch preset with the sole
+  current preset, `canadian-tech-internships` revision 1, displayed as
+  **Canadian Tech Internships**.
+- The template retains its 26-company inventory and curated search, required,
+  preferred, and excluded terms, but every preset-owned source scope now uses
+  `CA` and the Toronto/GTA location list.
+- Preset definitions may opt into `replace` semantics for locations and country
+  codes. Canadian Tech Internships uses replacement, so applying it to an older
+  watch removes stale `US`, `United States`, broad-Canada, and Waterloo scope.
+- Preset preview field diffs now include `locationsRemoved` and
+  `countryCodesRemoved` alongside the existing added-field arrays.
+- `WatchSearchScope.strictLocations?: boolean` is an additive JSON/API field.
+  When true, at least one returned job location must match the configured
+  target locations. The Canadian template enables it for every target.
+- Fresh-database default seeding now creates a disabled, uninitialized Canadian
+  Tech Internships watch. Existing watch rows remain untouched at startup.
+
+### Compatibility
+
+- The retired preset string ID is no longer listed or accepted by the current
+  preset REST/CLI/GUI surfaces. Deprecated TypeScript exports remain aliases to
+  the new factory so existing source imports continue compiling.
+- No database migration is required. Existing watches migrate only through an
+  explicit paused preset apply followed by no-notification baseline and resume.
+
+## [Unreleased] — 2026-08-04 — Spec 6002
+
+> Implemented in the working tree. This entry records the additive contract and
+> compatibility policy; the Spec 6002 task ledger records completed validation
+> and the environment-blocked real-stack acceptance gates.
+
+### Added
+
+- `JobWatch.notificationRoutes` is an optional API field backed by a
+  default-empty PostgreSQL JSON column. A route has this public shape:
+
+  ```ts
+  interface NotificationRoute {
+    id: string;
+    name: string;
+    enabled: boolean;
+    provider: "discord";
+    destinationRef: string;
+    conditions?: {
+      sourceTiers?: Array<1 | 2 | 3>;
+      notificationTypes?: Array<"urgent" | "standard" | "digest">;
+      minimumScore?: number;
+      maximumScore?: number;
+    };
+  }
+  ```
+
+  Conditions across fields use AND semantics, entries inside an array use OR
+  semantics, and score bounds are inclusive. An enabled rule without conditions
+  is a catch-all. Tier-constrained routes do not match when the source target
+  tier cannot be resolved from `WatchMatch.sourceTargetKey`.
+
+- `POST /api/watches/:id/apply` adds an optimistic, atomic update path for GUI
+  and other administrative clients. Its request contains the version originally
+  read and a normal validated watch patch:
+
+  ```json
+  {
+    "expectedUpdatedAt": "2026-08-04T20:00:00.000Z",
+    "patch": {
+      "locations": ["Toronto, Ontario", "Waterloo, Ontario"],
+      "notificationRoutes": []
+    }
+  }
+  ```
+
+  The response contains the public watch, a field-level diff, whether Apply
+  paused the watch, and enabled target keys requiring no-notification baseline.
+  A version mismatch returns HTTP 409 without mutation. Metadata, schedule,
+  interval, timezone, and notification-only changes retain the current enabled
+  state. Changes to sources/targets, companies, query/filter scope, eligibility,
+  thresholds, or weights atomically pause the watch and require baseline before
+  an explicit Resume.
+
+- Authenticated preset list, preview, and apply REST operations expose the
+  existing `WatchPresetService` contract. Preview is non-mutating. Apply retains
+  the existing paused-watch requirement and merge behavior rather than
+  implementing preset logic in the browser.
+
+- Authenticated destination management under
+  `/api/notification-destinations` adds:
+
+  - masked list;
+  - create or rotate a GUI-managed Discord alias;
+  - delete a GUI-managed alias only when no legacy destination or route refers
+    to it;
+  - non-persistent destination test.
+
+  Responses include only destination alias, provider, configuration source,
+  and configured status. They never include a webhook URL or environment key.
+  Process-environment entries take precedence and are read-only. GUI-managed
+  values live only in ignored `.env.local` storage.
+
+- `POST /api/jobs/compare` accepts the normal job-search input plus a bounded
+  source selection and returns per-source successes, aggregate comparison data,
+  and sanitized per-source failures. Source work uses configured bounded
+  concurrency and `Promise.allSettled`; one source failure does not discard
+  successful results.
+
+- Authenticated `GET /api/operator/overview` distinguishes API, database, worker,
+  scheduler, Discord, and source-coverage health from per-watch enabled state.
+  An unavailable worker is not reported as a paused watch, and a paused watch
+  is not reported as a stopped worker.
+
+### Changed
+
+- Notification dispatch selects every distinct provider/destination pair whose
+  enabled route matches the message. Overlapping routes to the same pair are
+  deduplicated before outbox enqueue.
+- Whenever `notificationRoutes` is non-empty, routes are authoritative and
+  legacy `notificationChannels` are not also broadcast. Legacy channels
+  preserve their previous behavior only when the route array is absent or
+  empty; disabling every configured route therefore cannot reactivate broad
+  legacy delivery.
+- Delivery idempotency remains watch + canonical episode + provider/channel +
+  destination reference. Route ID and notification type remain excluded, so a
+  route edit or score-band change cannot resend an episode to the same
+  destination.
+- Route-configured matches with no destination are suppressed with
+  `notificationSuppressionReason: "routing"`. Route edits do not replay these
+  historical matches. Pending-delivery retries use the provider and destination
+  persisted on the outbox row and do not re-evaluate current routes.
+- GUI configuration downloads omit secrets and runtime-only state. CLI
+  watch JSON may opt into `notificationRoutes`; existing CLI and MCP behavior is
+  otherwise unchanged.
+
+### Security
+
+- `default` continues to resolve `DISCORD_WEBHOOK_URL`. A custom bounded
+  lowercase alias maps deterministically to an environment key; for example,
+  `tier-one` maps to `DISCORD_WEBHOOK_TIER_ONE`.
+- GUI-managed webhook writes validate approved HTTPS Discord hosts and webhook
+  paths, use a same-directory temporary file plus atomic rename, and reload in
+  API and worker through a small mtime cache without restarting either process.
+- Webhook values and secret-bearing inputs are redacted from validation errors,
+  request/application logs, provider responses, database rows, exports, and API
+  responses.
+- All mutation and destination-management routes use the existing admin API-key
+  guard. The local GUI keeps that key in browser `sessionStorage` only.
+
+### Compatibility and migration
+
+- The Prisma migration is additive:
+  `JobWatch.notificationRoutes Json @default("[]")`. It removes or rewrites no
+  existing data.
+- Existing rows and clients that omit `notificationRoutes` read an empty array
+  and continue through `notificationChannels`.
+- Legacy channels may remain stored beside routes for rollback, but they do not
+  double-send while a non-empty route set is configured, even if every route is
+  disabled.
+- Existing REST, GraphQL, CLI, MCP, package scopes, environment names, metric
+  names, Docker service names, and deployment resources remain compatibility
+  contracts.
+
+---
+
 ## [Unreleased] — 2026-07-21 — Spec 6000
 
 ### Added

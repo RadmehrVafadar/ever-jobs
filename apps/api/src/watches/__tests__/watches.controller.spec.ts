@@ -17,6 +17,8 @@ describe("watcher management controllers", () => {
   let repository: jest.Mocked<WatchRepository>;
   let execution: { runWatch: jest.Mock };
   let companyCoverage: { build: jest.Mock };
+  let presets: { list: jest.Mock; apply: jest.Mock };
+  let watchApply: { apply: jest.Mock };
   let controller: WatchesController;
 
   beforeEach(() => {
@@ -38,11 +40,15 @@ describe("watcher management controllers", () => {
     } as unknown as jest.Mocked<WatchRepository>;
     execution = { runWatch: jest.fn() };
     companyCoverage = { build: jest.fn() };
+    presets = { list: jest.fn(), apply: jest.fn() };
+    watchApply = { apply: jest.fn() };
     controller = new WatchesController(
       repository,
       execution as never,
       new WatchValidationService(),
       companyCoverage as never,
+      presets as never,
+      watchApply as never,
     );
   });
 
@@ -78,6 +84,84 @@ describe("watcher management controllers", () => {
     expect(result).not.toHaveProperty("leaseOwnerId");
     expect(result).not.toHaveProperty("leaseToken");
     expect(JSON.stringify(result)).not.toContain("secret-lease-token");
+  });
+
+  it("delegates optimistic draft application to the atomic apply service", async () => {
+    const watch = watchFixture();
+    const response = {
+      watch,
+      diff: [],
+      systemChanges: [],
+      changed: false,
+      behaviorChanged: false,
+      paused: true,
+      pausedByApply: false,
+      resumeRequired: false,
+      targetKeysRequiringInitialization: [],
+    };
+    watchApply.apply.mockResolvedValue(response);
+    const body = {
+      expectedUpdatedAt: watch.updatedAt.toISOString(),
+      patch: { name: "Renamed" },
+    };
+
+    await expect(controller.apply(watch.id, body)).resolves.toBe(response);
+    expect(watchApply.apply).toHaveBeenCalledWith(watch.id, body);
+  });
+
+  it("lists, previews, and applies presets through WatchPresetService", async () => {
+    const watch = watchFixture({
+      leaseToken: "internal-token",
+      leaseOwnerId: "worker-1",
+    });
+    const descriptor = { id: "preset-1", version: 1, name: "Preset" };
+    const preview = {
+      preset: descriptor,
+      watchId: watch.id,
+      dryRun: true,
+      applied: false,
+      targets: {
+        unchanged: [],
+        added: [],
+        materiallyChanged: [],
+        disabled: [],
+        operatorOnly: [],
+      },
+      fields: {
+        intervalMinutes: null,
+        sourcesAdded: [],
+        searchTermsAdded: [],
+        locationsAdded: [],
+        locationsRemoved: [],
+        countryCodesAdded: [],
+        countryCodesRemoved: [],
+        removedLegacyRequiredTerms: [],
+        removedLegacyExcludedTerms: [],
+      },
+      targetKeysRequiringInitialization: [],
+    };
+    presets.list.mockReturnValue([descriptor]);
+    presets.apply.mockResolvedValueOnce(preview).mockResolvedValueOnce({
+      ...preview,
+      dryRun: false,
+      applied: true,
+      watch,
+    });
+
+    expect(controller.listPresets()).toEqual([descriptor]);
+    await expect(
+      controller.previewPreset(watch.id, descriptor.id),
+    ).resolves.toBe(preview);
+    const applied = await controller.applyPreset(watch.id, descriptor.id);
+
+    expect(presets.apply).toHaveBeenNthCalledWith(1, descriptor.id, watch.id, {
+      apply: false,
+    });
+    expect(presets.apply).toHaveBeenNthCalledWith(2, descriptor.id, watch.id, {
+      apply: true,
+    });
+    expect(applied.watch).not.toHaveProperty("leaseToken");
+    expect(JSON.stringify(applied)).not.toContain("internal-token");
   });
 
   it("baselines an uninitialized manual run and never passes notify-all", async () => {

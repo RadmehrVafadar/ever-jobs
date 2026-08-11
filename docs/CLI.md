@@ -218,15 +218,15 @@ non-empty timestamps, consecutive hard failures, and degradation state.
 
 Coverage is a normalized exact company-name match against
 `sourceTargets[].companyName`. Generic discovery boards do not count. The
-revision 3 prestige preset therefore reports 21 first-class covered companies
-and leaves RBC, TD, Scotiabank, BMO, and CIBC visibly uncovered.
+Canadian Tech Internships preset reports 21 first-class covered companies and
+leaves RBC, TD, Scotiabank, BMO, and CIBC visibly uncovered.
 
-#### Apply the Prestige Internships v2 preset
+#### Apply the Canadian Tech Internships preset
 
 Preset application is a dry run by default:
 
 ```bash
-npm run cli -- watch preset apply prestige-internships-v2 --watch <watch-id>
+npm run cli -- watch preset apply canadian-tech-internships --watch <watch-id>
 ```
 
 The JSON diff classifies targets as unchanged, added, materially changed,
@@ -235,7 +235,7 @@ watch, and mutate only with the explicit flag:
 
 ```bash
 npm run cli -- watch pause <watch-id> --json
-npm run cli -- watch preset apply prestige-internships-v2 \
+npm run cli -- watch preset apply canadian-tech-internships \
   --watch <watch-id> \
   --apply
 ```
@@ -249,19 +249,172 @@ reported as added or materially changed, inspect their locations/application
 URLs and health, then repeat targeted initialization for two additional
 no-notification observation cycles before resume.
 
-The preset defaults to Canada-only Tier 1 and Canada/US Tier 2/3. Its 19 search
-terms form 76-entry Canadian matrices for Google Careers and Canada Job Bank and
-95-entry Canada/US matrices for Google Jobs and LinkedIn. Per-run request budgets
-are 1, 12, 12, and 8 respectively; LinkedIn uses a newest-first 72-hour recent
-window. Revision 3 adds enabled 10-minute, Canada-scoped `uber`, `notion`,
-`ramp`, `netflix`, and `ibm` board targets, each with `resultsWanted: 500`. The
+The preset uses `CA` for every tier and limits its location matrix to Toronto,
+the GTA, Mississauga, Brampton, Vaughan, Richmond Hill, Markham, Oakville,
+Burlington, Pickering, and Ajax. Its 19 search terms form 209-entry matrices.
+Every target uses `strictLocations: true`, so postings outside that municipality
+list are ineligible even when they are elsewhere in Canada. Per-run request
+budgets remain 1, 12, 12, and 8 respectively, and LinkedIn uses
+a newest-first 72-hour recent window. The retained enabled 10-minute `uber`,
+`notion`, `ramp`, `netflix`, and `ibm` board targets each use
+`resultsWanted: 500`. The
 target-enabled set inside the globally disabled/uninitialized watch also
 includes `google_careers`, `shopify`, `ashby:wealthsimple`, `ashby:plaid`, all
 13 legacy direct-company targets, `canadajobbank`, and `linkedin`; only Google
-Jobs remains target-disabled. When upgrading revision 2, preview/apply should
-identify only the five new targets as requiring baseline. Disabled live smokes,
-targeted baselines, and both observation cycles still gate resume and
-notifications.
+Jobs remains target-disabled. Applying the template to an older Canada/USA
+watch replaces its locations and country codes, so every target whose scope
+changes requires a fresh no-notification baseline before resume.
+
+---
+
+## Local Operator GUI (Spec 6002)
+
+Spec 6002 adds a browser operator layer over the same API, watcher repositories,
+jobs service, analytics service, and preset service used by the CLI. It does not
+replace the CLI or create a second watch store.
+
+Start the development stack from the repository root:
+
+```bash
+npm run gui:dev
+```
+
+Start the built local stack with:
+
+```bash
+npm run gui
+```
+
+Both commands run checked-in migrations, start the API on
+`127.0.0.1:3001`, watcher health service on `127.0.0.1:3002`, and GUI on
+`127.0.0.1:3000`, then print:
+
+```text
+http://127.0.0.1:3000
+```
+
+The launcher owns the three local child processes. The browser itself never
+starts, stops, or restarts a process. A GUI control labeled Start watcher or
+Resume updates `enabled=true` for the selected persisted watch; it does not
+start the worker executable. API, worker, scheduler, and per-watch state remain
+separately visible on Overview.
+
+### API-key session
+
+Read-only health can render without mutation authority. To create or change
+watches, destinations, matches, or other protected resources, enter the
+existing admin API key in Settings. The GUI stores it in browser
+`sessionStorage` only. Closing the tab session clears it. The key is not written
+to watch JSON, `.env.local`, PostgreSQL, local storage, IndexedDB, cookies,
+query strings, or downloaded files.
+
+### CLI-to-GUI mapping
+
+| CLI capability | GUI surface | Notes |
+| --- | --- | --- |
+| `search` | Search | Structured search controls, paginated results, job details, JSON/CSV download. |
+| `search --analyze` | Analysis | Summary, source comparison, and company intelligence use the API analytics service. |
+| `search --bd` | Analysis / companies | Company intelligence is rendered in the browser. |
+| `compare` | Compare | Selected or all sources run with bounded concurrency; successful rows remain when another source fails. |
+| `watch create --config` | Watches / New watch | Create with forms, import API-compatible JSON, or start from the safe default preset. |
+| `watch update --config` | Watch editor / Apply | Validate, preview a field diff, and apply with optimistic concurrency. |
+| `watch list`, `show`, `delete` | Watches | Delete requires confirmation. |
+| `watch preset apply` | Watch editor / Presets | Preview is non-mutating; Apply delegates to the server preset service. |
+| `watch run` | Watch detail / Run now | Uninitialized watches retain baseline safety; initialized watches use recent-only behavior. |
+| `watch initialize [--target]` | Watch detail / Initialize | Select all or specific enabled target keys for a no-notification baseline. |
+| `watch pause`, `resume` | Watch detail | Resume is the GUI's Start watcher operation. |
+| `watch runs`, `metrics`, `coverage` | Overview and watch detail | Includes target outcomes, coverage, degradation, and next-run state. |
+| `watch matches`, `match-status` | Matches | Filter details and update the existing workflow status values. |
+| `watch observed-jobs` | Jobs | Filter and inspect durable observations. |
+| `watch deliveries` | Notifications / Deliveries | Filter provider, destination, type, status, date, watch, and match. |
+| `watch notifications-test` | Notifications / Test | Sends a non-persistent configuration test without a fake job or delivery row. |
+| `--stdin` | JSON import | Pasted or selected JSON becomes a validated browser draft. |
+| `--output`, stdout formats | Download | The browser downloads sanitized JSON or CSV; it does not accept an arbitrary server filesystem path. |
+| `--verbose` and stderr diagnostics | CLI only | Runtime logs remain in the process terminal; the GUI shows sanitized operational errors. |
+
+### Watch Apply safety
+
+The GUI does not send every keystroke to PostgreSQL. It holds an unsaved draft,
+validates it, and displays a field-level diff. Apply sends the last observed
+`updatedAt`; HTTP 409 means a different client changed the watch and no part of
+the stale patch was written.
+
+Name, description, schedule, interval, timezone, and notification-only changes
+apply without forcing a pause. Source, source-target, company, location,
+country, term/filter, eligibility, score-threshold, or weight changes atomically
+pause the watch and mark all enabled target keys for baseline. Initialize those
+targets, inspect their baseline jobs and target health, and invoke Resume
+explicitly. Apply never resumes a behavior-changed watch.
+
+Advanced JSON represents the same API-compatible watch configuration accepted
+by the CLI. Exports exclude runtime IDs/timestamps, initialization and health
+state, histories, leases, API keys, and notification secrets.
+
+### Conditional Discord routes
+
+Watch JSON can opt into `notificationRoutes` while retaining the legacy
+`notificationChannels` field for compatibility:
+
+```json
+{
+  "notificationRoutes": [
+    {
+      "id": "tier-1-urgent",
+      "name": "Tier 1 urgent",
+      "enabled": true,
+      "provider": "discord",
+      "destinationRef": "tier-one",
+      "conditions": {
+        "sourceTiers": [1],
+        "notificationTypes": ["urgent"]
+      }
+    },
+    {
+      "id": "tier-2-score-band",
+      "name": "Tier 2 score 60-79",
+      "enabled": true,
+      "provider": "discord",
+      "destinationRef": "tier-two",
+      "conditions": {
+        "sourceTiers": [2],
+        "minimumScore": 60,
+        "maximumScore": 79
+      }
+    }
+  ]
+}
+```
+
+Different condition fields are ANDed, array entries are ORed, and score bounds
+are inclusive. An enabled conditionless route is a catch-all. Tier conditions
+use the match's source target and do not match an unknown tier. Every distinct
+matching provider/destination receives a delivery, but overlapping rules for the
+same pair enqueue once. A non-empty route array is authoritative, even when
+every route is disabled; existing legacy destinations are used only when the
+route array is absent or empty.
+
+Delivery identity remains watch + canonical episode + provider/destination, so
+route edits and notification type changes do not resend an existing episode.
+When configured routes select no destination, the match is terminally
+suppressed with reason `routing`; later route edits do not replay it.
+
+### Named destination secrets
+
+The GUI stores only non-secret aliases in watch JSON. `default` resolves the
+existing `DISCORD_WEBHOOK_URL`; `tier-one` resolves
+`DISCORD_WEBHOOK_TIER_ONE`. Custom aliases are normalized to bounded lowercase
+slugs and GUI-managed webhook values are stored only in the ignored
+`.env.local`. Process environment has precedence and appears read-only.
+
+Destination list/create-or-rotate/delete/test operations are authenticated and
+return only masked metadata. A referenced alias cannot be deleted. Webhook URLs
+are validated as approved HTTPS Discord webhooks and never returned, logged,
+stored in PostgreSQL, included in exported watch JSON, or rendered in delivery
+history.
+
+The complete operational workflow is in the
+[local watcher runbook](runbooks/watcher-local.md), and the authoritative
+contract is [Spec 6002](../.specify/specs/6002-local-operator-gui/spec.md).
 
 ---
 

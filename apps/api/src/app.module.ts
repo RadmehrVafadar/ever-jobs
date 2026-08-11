@@ -17,6 +17,8 @@ import { ApiKeyGuard } from './auth/api-key.guard';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { HttpExceptionFilter } from './filters/http-exception.filter';
 import { resolveStoreBootstrap } from './jobs/store-bootstrap.factory';
+import { NotificationDestinationsModule } from './notification-destinations/notification-destinations.module';
+import { OperatorModule } from './operator/operator.module';
 
 /**
  * Spec 004 / T12 — `EVER_JOBS_STORE` env-var honoured at bootstrap.
@@ -98,6 +100,12 @@ const ACTIVE_STORE = resolveStoreBootstrap();
 
     // Persistent job watches
     WatchesModule,
+
+    // Local operator notification aliases (masked management only)
+    NotificationDestinationsModule,
+
+    // Local-only operator status aggregation
+    OperatorModule,
 
     // Health endpoints (after WatchesModule so watcher coverage is injectable)
     HealthModule,

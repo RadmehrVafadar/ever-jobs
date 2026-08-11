@@ -1,6 +1,6 @@
 {
-  "name": "Prestige Software Internships — Canada and USA",
-  "description": "Versioned, target-scoped monitoring for Summer 2027 software internships and co-ops across Canada, with Canada/USA discovery redundancy.",
+  "name": "DEPRECATED — Prestige Software Internships Canada and USA",
+  "description": "DEPRECATED compatibility example. Use canadian-tech-internships.watch.json for the current Toronto/GTA-only template.",
   "enabled": false,
   "intervalMinutes": 10,
   "timezone": "America/Toronto",

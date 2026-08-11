@@ -5,6 +5,14 @@ import { JobWatch } from "../interfaces/watch.types";
 
 const initializationModes = ["baseline", "recent-only", "notify-all"] as const;
 const workplaceTypes = ["remote", "hybrid", "on-site"] as const;
+const notificationTypes = ["urgent", "standard", "digest"] as const;
+const notificationProviders = ["telegram", "discord", "webhook"] as const;
+const discordDestinationRefPattern =
+  /^(?:default|DISCORD_WEBHOOK_URL|[a-z0-9]+(?:-[a-z0-9]+)*)$/;
+
+function nonSecretDestinationRef(value: string): boolean {
+  return !value.includes("://") && !/^https?%3a/i.test(value);
+}
 
 export const watchSearchScopeSchema = z
   .object({
@@ -19,6 +27,7 @@ export const watchSearchScopeSchema = z
       .min(1)
       .max(25),
     locations: z.array(z.string().trim().min(1)).min(1).max(100),
+    strictLocations: z.boolean().optional(),
     searchTerms: z.array(z.string().trim().min(1)).min(1).max(100).optional(),
     maxRequestsPerRun: z.number().int().min(1).max(1_000).optional(),
   })
@@ -47,7 +56,111 @@ export const notificationDestinationSchema = z
     type: z.enum(["telegram", "discord", "webhook"]),
     destinationRef: z.string().trim().min(1).max(100).default("default"),
   })
-  .strict();
+  .strict()
+  .superRefine((destination, context) => {
+    if (!nonSecretDestinationRef(destination.destinationRef)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["destinationRef"],
+        message: "destinationRef must be a non-secret alias",
+      });
+    }
+    if (
+      destination.type === "discord" &&
+      (destination.destinationRef.length > 64 ||
+        !discordDestinationRefPattern.test(destination.destinationRef))
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["destinationRef"],
+        message: "Discord destinationRef must be a lowercase alias",
+      });
+    }
+  });
+
+export const notificationRouteConditionsSchema = z
+  .object({
+    sourceTiers: z
+      .array(z.union([z.literal(1), z.literal(2), z.literal(3)]))
+      .min(1)
+      .max(3)
+      .refine((values) => new Set(values).size === values.length, {
+        message: "sourceTiers must not contain duplicates",
+      })
+      .optional(),
+    notificationTypes: z
+      .array(z.enum(notificationTypes))
+      .min(1)
+      .max(notificationTypes.length)
+      .refine((values) => new Set(values).size === values.length, {
+        message: "notificationTypes must not contain duplicates",
+      })
+      .optional(),
+    minimumScore: z.number().int().min(0).max(500).optional(),
+    maximumScore: z.number().int().min(0).max(500).optional(),
+  })
+  .strict()
+  .superRefine((conditions, context) => {
+    if (
+      conditions.minimumScore !== undefined &&
+      conditions.maximumScore !== undefined &&
+      conditions.minimumScore > conditions.maximumScore
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["maximumScore"],
+        message: "maximumScore must be greater than or equal to minimumScore",
+      });
+    }
+  });
+
+export const notificationRouteSchema = z
+  .object({
+    id: z.string().trim().min(1).max(100),
+    name: z.string().trim().min(1).max(200),
+    enabled: z.boolean(),
+    provider: z.enum(notificationProviders),
+    destinationRef: z.string().trim().min(1).max(100),
+    conditions: notificationRouteConditionsSchema.optional(),
+  })
+  .strict()
+  .superRefine((route, context) => {
+    if (!nonSecretDestinationRef(route.destinationRef)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["destinationRef"],
+        message: "destinationRef must be a non-secret alias",
+      });
+    }
+    if (
+      route.provider === "discord" &&
+      (route.destinationRef.length > 64 ||
+        !discordDestinationRefPattern.test(route.destinationRef))
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["destinationRef"],
+        message: "Discord destinationRef must be a lowercase alias",
+      });
+    }
+  });
+
+export const notificationRoutesSchema = z
+  .array(notificationRouteSchema)
+  .max(100)
+  .superRefine((routes, context) => {
+    const ids = new Set<string>();
+    routes.forEach((route, index) => {
+      if (ids.has(route.id)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [index, "id"],
+          message: `notification route id must be unique: ${route.id}`,
+        });
+      }
+      ids.add(route.id);
+    });
+  });
 
 const watchObjectSchema = z
   .object({
@@ -94,6 +207,7 @@ const watchObjectSchema = z
       .array(notificationDestinationSchema)
       .max(10)
       .optional(),
+    notificationRoutes: notificationRoutesSchema.optional(),
     initializationMode: z.enum(initializationModes).optional(),
     recentWindowMinutes: z
       .number()

@@ -770,6 +770,9 @@ function resolveSearchScope(
     countryCodes: countryCodes.length > 0 ? countryCodes : ["CA"],
     locations: locations.length > 0 ? locations : ["Canada"],
     searchTerms,
+    ...(configured?.strictLocations === undefined
+      ? {}
+      : { strictLocations: configured.strictLocations }),
     ...(configured?.maxRequestsPerRun === undefined
       ? {}
       : { maxRequestsPerRun: configured.maxRequestsPerRun }),

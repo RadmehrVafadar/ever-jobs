@@ -11,6 +11,10 @@ import {
   WatchRepository,
 } from "../interfaces/watch.types";
 import { WatcherMetricsService } from "./watcher-metrics.service";
+import {
+  notificationDestinationRef,
+  selectNotificationDestinations,
+} from "./notification-routing.service";
 
 export const NOTIFICATION_PROVIDERS = Symbol("NOTIFICATION_PROVIDERS");
 export const NOTIFICATION_DISPATCH_OPTIONS = Symbol(
@@ -61,9 +65,22 @@ export class NotificationDispatcher {
 
   /** Persist an outbox row before attempting any provider I/O. */
   async dispatch(message: JobNotificationMessage): Promise<number> {
+    const destinations = selectNotificationDestinations(
+      message.watch,
+      message.match,
+      message.type,
+    );
+    if (destinations.length === 0) {
+      await this.repo.updateMatch(message.match.id, {
+        notificationState: "suppressed",
+        notificationSuppressionReason: "routing",
+      });
+      return 0;
+    }
+
     let sent = 0;
-    for (const destination of message.watch.notificationChannels) {
-      const destinationRef = this.destinationRef(destination);
+    for (const destination of destinations) {
+      const destinationRef = notificationDestinationRef(destination);
       const key = this.idempotencyKey(
         message.watch.id,
         message.match.canonicalEpisodeKey ?? message.job.id,
@@ -278,14 +295,6 @@ export class NotificationDispatcher {
       clearClaim: true,
       errorMessage,
     });
-  }
-
-  private destinationRef(destination: NotificationDestination): string {
-    return (
-      destination.destinationRef?.trim() ||
-      destination.secretRef?.trim() ||
-      "default"
-    );
   }
 
   private idempotencyKey(

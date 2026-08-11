@@ -1,5 +1,40 @@
 # Upgrade Guide
 
+## Spec 6003 — Canadian Tech Internships (2026-08-10)
+
+The current starter template is `canadian-tech-internships` revision 1. It
+replaces the selectable Canada/USA prestige preset and narrows every preset
+source scope to `CA` plus Toronto and the GTA.
+
+Existing watches are not modified during application startup. To migrate one:
+
+1. Pause it and preview the new preset:
+
+   ```bash
+   npm run cli -- watch pause <watch-id> --json
+   npm run cli -- watch preset apply canadian-tech-internships --watch <watch-id>
+   ```
+
+2. Confirm the preview removes `US`, `United States`, broad `Canada`, and
+   Waterloo while retaining the intended companies and term filters.
+3. Apply explicitly:
+
+   ```bash
+   npm run cli -- watch preset apply canadian-tech-internships \
+     --watch <watch-id> \
+     --apply
+   ```
+
+4. Initialize every enabled target reported by
+   `targetKeysRequiringInitialization` without notifications, review partial
+   failures and baseline results, and explicitly resume only when complete.
+
+Fresh databases seed the new watch disabled and uninitialized. No schema
+migration is required. Deprecated TypeScript names remain compilation aliases,
+but the old string ID is no longer a selectable template. The canonical import
+example is
+[`examples/canadian-tech-internships.watch.json`](../examples/canadian-tech-internships.watch.json).
+
 ## Spec 6000 — Prestige Internship Coverage Expansion (2026-07-19)
 
 This is an additive watcher upgrade. It introduces multi-location jobs,

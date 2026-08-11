@@ -1,6 +1,10 @@
 import { Inject, Injectable, Optional } from "@nestjs/common";
 import { createHttpClient, HttpClient } from "@ever-jobs/common";
 import {
+  INotificationSecretStore,
+  NOTIFICATION_SECRET_STORE,
+} from "@ever-jobs/plugin";
+import {
   JobNotificationMessage,
   NotificationDestination,
   NotificationProvider,
@@ -238,6 +242,9 @@ export class DiscordNotificationProvider implements NotificationProvider {
     @Optional()
     @Inject(DISCORD_NOTIFICATION_OPTIONS)
     options: DiscordNotificationProviderOptions = {},
+    @Optional()
+    @Inject(NOTIFICATION_SECRET_STORE)
+    private readonly secretStore?: INotificationSecretStore,
   ) {
     this.env = options.env ?? process.env;
     this.timeoutMs = normalizeTimeout(options.timeoutMs);
@@ -254,7 +261,7 @@ export class DiscordNotificationProvider implements NotificationProvider {
     message: JobNotificationMessage,
     destination: NotificationDestination,
   ): Promise<NotificationResult> {
-    const resolved = resolveDiscordWebhook(destination, this.env);
+    const resolved = await this.resolveWebhook(destination);
     if ("errorMessage" in resolved) {
       return {
         status: "failed",
@@ -318,6 +325,26 @@ export class DiscordNotificationProvider implements NotificationProvider {
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  private async resolveWebhook(
+    destination: NotificationDestination,
+  ): Promise<{ url: string } | { errorMessage: string }> {
+    const destinationRef =
+      destination.destinationRef?.trim() ||
+      destination.secretRef?.trim() ||
+      DISCORD_DEFAULT_DESTINATION_REF;
+    if (this.secretStore) {
+      try {
+        const configuredValue = await this.secretStore.resolve(destinationRef);
+        if (configuredValue) return validateDiscordWebhook(configuredValue);
+      } catch {
+        return {
+          errorMessage: "Discord webhook destination could not be resolved",
+        };
+      }
+    }
+    return resolveDiscordWebhook(destination, this.env);
   }
 }
 
@@ -446,6 +473,12 @@ function resolveDiscordWebhook(
     };
   }
 
+  return validateDiscordWebhook(configuredValue);
+}
+
+function validateDiscordWebhook(
+  configuredValue: string,
+): { url: string } | { errorMessage: string } {
   try {
     const url = new URL(configuredValue);
     const validHostname =

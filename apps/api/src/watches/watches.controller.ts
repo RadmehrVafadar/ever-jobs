@@ -29,6 +29,8 @@ import {
   RunWatchOptions,
   WATCH_REPOSITORY,
   WatchExecutionService,
+  WatchPresetApplyResult,
+  WatchPresetService,
   WatchRepository,
   WatchValidationService,
   validateWatchTargetKeys,
@@ -36,6 +38,7 @@ import {
 import { AdminAuth } from "../auth/admin-auth.decorator";
 import {
   CompanyCoverageReportDto,
+  ApplyWatchDto,
   CreateWatchDto,
   DiscordNotificationTestDto,
   InitializeWatchDto,
@@ -46,6 +49,7 @@ import {
   WatchMatchQueryDto,
   WatchRunQueryDto,
 } from "./watch.dto";
+import { WatchApplyResult, WatchApplyService } from "./watch-apply.service";
 import {
   createDiscordTestMessage,
   publicNotificationDelivery,
@@ -58,6 +62,10 @@ import {
 } from "./watch-management.helpers";
 import { collectWatchMetrics } from "./watch-metrics";
 
+type PublicWatchPresetApplyResult = Omit<WatchPresetApplyResult, "watch"> & {
+  watch?: Record<string, unknown>;
+};
+
 @ApiTags("Watches")
 @ApiSecurity("api-key")
 @AdminAuth()
@@ -69,6 +77,8 @@ export class WatchesController {
     private readonly execution: WatchExecutionService,
     private readonly validation: WatchValidationService,
     private readonly companyCoverage: CompanyCoverageService,
+    private readonly presets: WatchPresetService,
+    private readonly watchApply: WatchApplyService,
   ) {}
 
   @Post()
@@ -82,7 +92,7 @@ export class WatchesController {
 
   @Post("default")
   @ApiOperation({
-    summary: "Create the safe prestige Canada/USA internship watch",
+    summary: "Create the safe Canadian Tech Internships watch",
     description:
       "Creates the repository default disabled and in baseline mode. Initialize it before resuming.",
   })
@@ -95,6 +105,12 @@ export class WatchesController {
   @ApiOperation({ summary: "List job watches" })
   async list(): Promise<Array<Record<string, unknown>>> {
     return (await this.repository.listWatches()).map(publicWatch);
+  }
+
+  @Get("presets")
+  @ApiOperation({ summary: "List available watch presets" })
+  listPresets(): Array<{ id: string; version: number; name: string }> {
+    return this.presets.list();
   }
 
   @Get(":id")
@@ -112,6 +128,44 @@ export class WatchesController {
     const current = await this.requireWatch(id);
     const input = this.validation.parsePatch(body, current);
     return publicWatch(await this.repository.updateWatch(id, input));
+  }
+
+  @Post(":id/apply")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Atomically apply an optimistic watch draft",
+    description:
+      "Rejects stale drafts. Search, filter, scoring, or eligibility changes pause the watch and invalidate enabled target baselines.",
+  })
+  @ApiResponse({ status: 200, description: "Watch draft applied." })
+  @ApiResponse({ status: 409, description: "Watch draft is stale." })
+  apply(
+    @Param("id") id: string,
+    @Body() body: ApplyWatchDto,
+  ): Promise<WatchApplyResult> {
+    return this.watchApply.apply(id, body);
+  }
+
+  @Post(":id/presets/:presetId/preview")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Preview a watch preset diff" })
+  async previewPreset(
+    @Param("id") id: string,
+    @Param("presetId") presetId: string,
+  ): Promise<WatchPresetApplyResult> {
+    return this.presets.apply(presetId, id, { apply: false });
+  }
+
+  @Post(":id/presets/:presetId/apply")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Apply a preset to a paused watch" })
+  async applyPreset(
+    @Param("id") id: string,
+    @Param("presetId") presetId: string,
+  ): Promise<PublicWatchPresetApplyResult> {
+    const result = await this.presets.apply(presetId, id, { apply: true });
+    const { watch, ...metadata } = result;
+    return watch ? { ...metadata, watch: publicWatch(watch) } : metadata;
   }
 
   @Delete(":id")

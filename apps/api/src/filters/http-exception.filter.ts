@@ -42,9 +42,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
       const exceptionResponse = exception.getResponse();
 
       if (typeof exceptionResponse === 'string') {
+        const safeMessage = redactSensitiveText(exceptionResponse);
         errorPayload = {
-          error: exceptionResponse,
-          detail: exceptionResponse,
+          error: safeMessage,
+          detail: safeMessage,
         };
       } else if (typeof exceptionResponse === 'object') {
         const res = exceptionResponse as Record<string, any>;
@@ -55,25 +56,37 @@ export class HttpExceptionFilter implements ExceptionFilter {
             error: 'Validation Error',
             detail: 'One or more parameters are invalid',
             validationErrors: res.message.map((msg: string) => ({
-              message: msg,
+              message: redactSensitiveText(msg),
               suggestion: 'Check the API documentation for valid parameter values',
             })),
           };
         } else {
+          const safeError = redactSensitiveText(
+            String(res.error || res.message || 'Error'),
+          );
+          const safeDetail = redactSensitiveText(
+            String(res.message || res.error || 'Unknown error'),
+          );
           errorPayload = {
-            error: res.error || res.message || 'Error',
-            detail: res.message || res.error || 'Unknown error',
+            error: safeError,
+            detail: safeDetail,
+            ...(typeof res.code === 'string'
+              ? { code: redactSensitiveText(res.code).slice(0, 100) }
+              : {}),
+            ...(typeof res.currentUpdatedAt === 'string'
+              ? { currentUpdatedAt: res.currentUpdatedAt }
+              : {}),
           };
         }
       }
     } else if (exception instanceof Error) {
       this.logger.error(
-        `Unhandled exception: ${exception.message}`,
-        exception.stack,
+        `Unhandled exception: ${redactSensitiveText(exception.message)}`,
+        redactSensitiveText(exception.stack ?? ''),
       );
       errorPayload = {
         error: 'Internal Server Error',
-        detail: exception.message,
+        detail: 'An unexpected error occurred',
       };
     }
 
@@ -87,7 +100,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
         `Validation errors: ${JSON.stringify(errorPayload.validationErrors)}`,
       );
       this.logger.warn(
-        `Request body: ${JSON.stringify(request.body)}`,
+        `Request body: ${JSON.stringify(redactSensitiveObject(request.body))}`,
       );
     }
 
@@ -98,4 +111,28 @@ export class HttpExceptionFilter implements ExceptionFilter {
       timestamp: new Date().toISOString(),
     });
   }
+}
+
+function redactSensitiveText(value: string): string {
+  return value
+    .replace(/https:\/\/[^\s]+/gi, '[REDACTED_URL]')
+    .replace(
+      /((?:authorization|token|api[-_ ]?key|secret|password)[=: ]+)[^\s,;]+/gi,
+      '$1[REDACTED]',
+    );
+}
+
+function redactSensitiveObject(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(redactSensitiveObject);
+  if (value === null || typeof value !== 'object') {
+    return typeof value === 'string' ? redactSensitiveText(value) : value;
+  }
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, item]) => [
+      key,
+      /webhook|authorization|token|api[-_]?key|secret|password/i.test(key)
+        ? '[REDACTED]'
+        : redactSensitiveObject(item),
+    ]),
+  );
 }

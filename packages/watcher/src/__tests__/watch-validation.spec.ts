@@ -45,6 +45,7 @@ describe("WatchValidationService", () => {
           searchScope: {
             countryCodes: ["ca", "us"],
             locations: ["Canada", "United States"],
+            strictLocations: true,
             searchTerms: ["software intern"],
             maxRequestsPerRun: 8,
           },
@@ -66,6 +67,7 @@ describe("WatchValidationService", () => {
         initializedAt: null,
         searchScope: expect.objectContaining({
           countryCodes: ["CA", "US"],
+          strictLocations: true,
           maxRequestsPerRun: 8,
         }),
       }),
@@ -158,6 +160,94 @@ describe("WatchValidationService", () => {
           {
             type: "discord",
             destination: "https://discord.com/api/webhooks/secret",
+          },
+        ],
+      }),
+    ).toThrow(BadRequestException);
+
+    expect(() =>
+      service.parseCreate({
+        name: "secret destination reference",
+        notificationChannels: [
+          {
+            type: "discord",
+            destinationRef:
+              "https://discord.com/api/webhooks/123/should-not-persist",
+          },
+        ],
+      }),
+    ).toThrow(BadRequestException);
+
+    expect(() =>
+      service.parseCreate({
+        name: "secret route reference",
+        notificationRoutes: [
+          {
+            id: "secret-route",
+            name: "Secret route",
+            enabled: true,
+            provider: "discord",
+            destinationRef:
+              "https://discord.com/api/webhooks/123/should-not-persist",
+          },
+        ],
+      }),
+    ).toThrow(BadRequestException);
+  });
+
+  it("accepts strict conditional notification routes", () => {
+    const result = service.parseCreate({
+      name: "Routed notifications",
+      notificationRoutes: [
+        {
+          id: "tier-one-urgent",
+          name: "Tier 1 urgent",
+          enabled: true,
+          provider: "discord",
+          destinationRef: "tier-one",
+          conditions: {
+            sourceTiers: [1],
+            notificationTypes: ["urgent"],
+            minimumScore: 80,
+            maximumScore: 100,
+          },
+        },
+      ],
+    });
+
+    expect(result.notificationRoutes).toEqual([
+      expect.objectContaining({
+        id: "tier-one-urgent",
+        provider: "discord",
+        destinationRef: "tier-one",
+        conditions: expect.objectContaining({
+          sourceTiers: [1],
+          notificationTypes: ["urgent"],
+        }),
+      }),
+    ]);
+  });
+
+  it("rejects invalid route bounds, duplicates, and secret-bearing fields", () => {
+    expect(() =>
+      service.parseCreate({
+        name: "Bad routes",
+        notificationRoutes: [
+          {
+            id: "duplicate",
+            name: "First",
+            enabled: true,
+            provider: "discord",
+            destinationRef: "first",
+            conditions: { minimumScore: 90, maximumScore: 80 },
+          },
+          {
+            id: "duplicate",
+            name: "Second",
+            enabled: true,
+            provider: "discord",
+            destinationRef: "second",
+            webhookUrl: "https://discord.com/api/webhooks/1/secret",
           },
         ],
       }),

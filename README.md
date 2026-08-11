@@ -19,6 +19,19 @@ present in the catalog does not by itself mean it is enabled for unattended moni
 The `@ever-jobs/*` npm scope, `EVER_JOBS_*` environment variables, `ever_jobs_*`
 metrics, and existing CLI/MCP identifiers are retained for backward compatibility.
 
+## Start the operator GUI
+
+Once dependencies and `.env` are prepared, start the complete local stack—GUI,
+API, watcher worker, and database migrations—with:
+
+```bash
+npm run gui:dev
+```
+
+Then open [`http://127.0.0.1:3000`](http://127.0.0.1:3000). PostgreSQL must be
+running and `DATABASE_URL` must contain valid credentials; see the full
+[quick start](#quick-start) below.
+
 ## Applications
 
 | Application | Purpose | Default interface |
@@ -27,6 +40,7 @@ metrics, and existing CLI/MCP identifiers are retained for backward compatibilit
 | [`apps/cli`](apps/cli) | Search, compare, and administer persistent watches from a terminal or JSON stdin | `npm run cli -- <command>` |
 | [`apps/mcp`](apps/mcp) | Makes rad.ar search tools available to MCP-compatible AI clients | stdio, backed by the API |
 | [`apps/watcher`](apps/watcher) | Schedules persistent watches and exposes worker health and Prometheus metrics | health/metrics on `http://localhost:3002` |
+| [`apps/web`](apps/web) | Local operator GUI for watches, notifications, matches, search, and analysis | `http://127.0.0.1:3000` |
 
 The API publishes an interactive Scalar reference at
 [`http://localhost:3001/docs`](http://localhost:3001/docs) and Swagger UI at
@@ -74,8 +88,7 @@ recommended. You also need npm; Docker with Compose is required for the PostgreS
 ```bash
 cp .env.example .env
 npm ci
-npm run db:generate
-npm run start:dev
+npm run gui:dev
 ```
 
 On PowerShell, replace the first command with:
@@ -84,7 +97,9 @@ On PowerShell, replace the first command with:
 Copy-Item .env.example .env
 ```
 
-The API starts on port `3001`. Search it directly:
+The launcher applies database migrations, generates the Prisma client, and
+starts the GUI on port `3000`, API on `3001`, and watcher health service on
+`3002`. Search the API directly:
 
 ```bash
 curl --request POST http://localhost:3001/api/jobs/search \
@@ -137,7 +152,7 @@ npm run cli -- watch list --json
 npm run cli -- watch coverage --id <watch-id> --json
 ```
 
-The seeded prestige watch is globally disabled and uninitialized. Review source results, initialize
+The seeded Canadian Tech Internships watch is globally disabled and uninitialized. Review source results, initialize
 changed targets without notifications, and complete the documented observation cycles before
 resuming it. Notification secrets belong only in environment variables.
 
@@ -145,13 +160,19 @@ Use the [watcher guide](apps/watcher/README.md) and
 [local operations runbook](docs/runbooks/watcher-local.md) for the complete safe activation
 sequence.
 
-## Prestige internship coverage
+## Canadian Tech Internships template
 
-The included `prestige-internships-v2` preset is currently revision 3. Its inventory contains 26
-companies:
+The only included starter template is `canadian-tech-internships` (revision 1).
+It searches Summer 2027 technology internships and co-ops in Toronto and the
+Greater Toronto Area: Toronto, Mississauga, Brampton, Vaughan, Richmond Hill,
+Markham, Oakville, Burlington, Pickering, and Ajax. Every preset-owned source
+scope uses the Canadian country code; the template contains no U.S. discovery
+scope, and unexpected U.S. results are rejected during eligibility scoring.
+
+The retained inventory contains 26 target companies:
 
 - 21 companies have at least one first-class company or ATS target.
-- Uber, Notion, Ramp, Netflix, and IBM are included as bounded, board-mode targets in revision 3.
+- Uber, Notion, Ramp, Netflix, and IBM remain bounded, board-mode targets.
 - RBC, TD, Scotiabank, BMO, and CIBC are intentionally deferred and remain visible as
   `uncovered`.
 
@@ -168,12 +189,13 @@ npm run cli -- watch coverage --id <watch-id>
 
 The report distinguishes active, disabled, uncovered, uninitialized, and degraded coverage. The
 aligned preset example is
-[`examples/prestige-internships-v2-canada-usa.watch.json`](examples/prestige-internships-v2-canada-usa.watch.json).
+[`examples/canadian-tech-internships.watch.json`](examples/canadian-tech-internships.watch.json).
 
 ## Common development commands
 
 | Command | Purpose |
 | --- | --- |
+| `npm run gui:dev` | Start the local GUI, API, watcher worker, migrations, and Prisma generation |
 | `npm run start:dev` | Start the API in watch mode |
 | `npm run start:watcher:dev` | Start the watcher worker in development |
 | `npm run cli -- search --help` | Show CLI search options |

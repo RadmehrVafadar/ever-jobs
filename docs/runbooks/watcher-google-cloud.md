@@ -133,7 +133,7 @@ and target health/baseline state. Existing watch JSON without `companyName`,
 `searchScope`, or target `initializedAt` inherits watch-level settings. Do not
 roll back these columns after a target rollback; disable the target instead.
 
-The seed creates `prestige-internships-v2` disabled and uninitialized for a new
+The seed creates `canadian-tech-internships` disabled and uninitialized for a new
 installation. Re-running seed preserves the operational state of an existing
 watch and legacy seed compatibility. This invariant allows the Cloud Run
 scheduler to start safely before baseline. The deployment command below sets
@@ -215,16 +215,9 @@ From the trusted CLI environment using the production database and Discord secre
 
 ```bash
 npm run cli -- watch list --json
-npm run cli -- watch preset apply prestige-internships-v2 --watch <watch-id>
-npm run cli -- watch preset apply prestige-internships-v2 --watch <watch-id> --apply
-npm run cli -- watch initialize <watch-id> \
-  --target google_careers \
-  --target shopify \
-  --target ashby:wealthsimple \
-  --target ashby:plaid \
-  --target canadajobbank \
-  --target linkedin \
-  --json
+npm run cli -- watch preset apply canadian-tech-internships --watch <watch-id>
+npm run cli -- watch preset apply canadian-tech-internships --watch <watch-id> --apply
+npm run cli -- watch initialize <watch-id> --json
 # Repeat the same targeted initialize command for two additional
 # no-notification observation cycles while the watch remains paused.
 npm run cli -- watch notifications-test <watch-id> --json

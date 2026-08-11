@@ -14,6 +14,7 @@ import { SourcesHealthController } from './health.controller';
 import { MetricsCircuitBreakerBridge } from './metrics-circuit-breaker.bridge';
 import { PluginPolicyBootstrapper } from './plugin-policy.bootstrapper';
 import { HealthSnapshotCron } from './health-snapshot.cron';
+import { JobComparisonService } from './job-comparison.service';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { HealthSnapshotCron } from './health-snapshot.cron';
     // (uses `setInterval` rather than `@nestjs/schedule` per Q-020 /
     // Option A).
     HealthSnapshotCron,
+    JobComparisonService,
   ],
   exports: [JobsService, JobsAggregator],
 })

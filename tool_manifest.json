@@ -38,11 +38,11 @@
     },
     "watch_management": {
       "description": "Persist, baseline, schedule, inspect, and safely update target-aware job watches",
-      "preset": "prestige-internships-v2",
-      "preset_revision": 3,
+      "preset": "canadian-tech-internships",
+      "preset_revision": 1,
       "preset_apply": {
-        "dry_run_command": "npm run cli -- watch preset apply prestige-internships-v2 --watch <watch-id>",
-        "apply_command": "npm run cli -- watch preset apply prestige-internships-v2 --watch <watch-id> --apply",
+        "dry_run_command": "npm run cli -- watch preset apply canadian-tech-internships --watch <watch-id>",
+        "apply_command": "npm run cli -- watch preset apply canadian-tech-internships --watch <watch-id> --apply",
         "mutation_requires_paused_watch": true
       },
       "targeted_initialize": {
@@ -69,7 +69,7 @@
         "matching": "Normalized exact company name against sourceTargets[].companyName; generic discovery boards do not count.",
         "statuses": ["active", "disabled", "uncovered"],
         "summary_counts": ["configured", "active", "disabled", "uncovered", "initialized", "degraded"],
-        "prestige_inventory": {
+        "target_company_inventory": {
           "configured": 26,
           "covered": 21,
           "deferred_uncovered": ["RBC", "TD", "Scotiabank", "BMO", "CIBC"]
@@ -77,8 +77,10 @@
       },
       "geography": {
         "tier_1": ["CA"],
-        "tier_2": ["CA", "US"],
-        "tier_3": ["CA", "US"]
+        "tier_2": ["CA"],
+        "tier_3": ["CA"],
+        "strict_locations": true,
+        "locations": ["Toronto, Ontario", "Greater Toronto Area", "Mississauga, Ontario", "Brampton, Ontario", "Vaughan, Ontario", "Richmond Hill, Ontario", "Markham, Ontario", "Oakville, Ontario", "Burlington, Ontario", "Pickering, Ontario", "Ajax, Ontario"]
       },
       "shipped_preset_state": {
         "watch_enabled": false,
@@ -86,16 +88,16 @@
         "target_enabled_does_not_poll_or_notify_while_watch_disabled": true,
         "enabled_target_keys": ["google_careers", "shopify", "ashby:wealthsimple", "ashby:plaid", "amazon", "microsoft", "apple", "nvidia", "stripe", "openai", "datadog", "doordash", "coinbase", "figma", "vercel", "meta", "wellfound", "uber", "notion", "ramp", "netflix", "ibm", "canadajobbank", "linkedin"],
         "disabled_target_keys": ["google"],
-        "phase_13_target_keys": ["uber", "notion", "ramp", "netflix", "ibm"],
-        "phase_13_results_wanted": 500
+        "bounded_board_target_keys": ["uber", "notion", "ramp", "netflix", "ibm"],
+        "bounded_board_results_wanted": 500
       },
       "query_matrices": {
-        "google_careers": { "entries": 76, "max_requests_per_run": 1 },
-        "canadajobbank": { "entries": 76, "max_requests_per_run": 12 },
-        "google": { "entries": 95, "max_requests_per_run": 12 },
-        "linkedin": { "entries": 95, "max_requests_per_run": 8, "recent_window_hours": 72 }
+        "google_careers": { "entries": 209, "max_requests_per_run": 1 },
+        "canadajobbank": { "entries": 209, "max_requests_per_run": 12 },
+        "google": { "entries": 209, "max_requests_per_run": 12 },
+        "linkedin": { "entries": 209, "max_requests_per_run": 8, "recent_window_hours": 72 }
       },
-      "activation_policy": "Keep the watch paused; for the revision 3 upgrade, preview/apply the preset, disabled-live-smoke and baseline only uber, notion, ramp, netflix, and ibm, then complete two additional no-notification observation cycles before resume",
+      "activation_policy": "Keep the watch paused; preview/apply the Canadian Tech Internships preset, baseline every added or materially changed enabled target without notifications, review failures and results, then explicitly resume",
       "canonical_identity": {
         "delivery_key": ["watch", "canonical_episode", "channel", "destination"],
         "notification_type_in_key": false,

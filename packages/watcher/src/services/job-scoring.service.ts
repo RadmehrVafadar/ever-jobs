@@ -32,7 +32,13 @@ const DIRECT_OR_ATS_SOURCE =
 
 interface ResolvedScoringInput {
   job: JobPostDto;
-  target: { key: string; tier: 1 | 2 | 3 };
+  target: {
+    key: string;
+    tier: 1 | 2 | 3;
+    countryCodes?: readonly string[];
+    locations?: readonly string[];
+    strictLocations?: boolean;
+  };
 }
 
 /**
@@ -340,7 +346,16 @@ export class JobScoringService {
     if (isWatchSourceJob(input)) {
       return {
         job: input.job,
-        target: { key: input.target.key, tier: input.target.tier },
+        target: {
+          key: input.target.key,
+          tier: input.target.tier,
+          countryCodes:
+            input.countryCodes.length > 0
+              ? input.countryCodes
+              : input.target.searchScope?.countryCodes,
+          locations: input.target.searchScope?.locations,
+          strictLocations: input.target.searchScope?.strictLocations,
+        },
       };
     }
 
@@ -358,7 +373,16 @@ export class JobScoringService {
           .filter(Boolean)
           .join(":")
       : site || "legacy-watch-source";
-    return { job: input, target: { key, tier } };
+    return {
+      job: input,
+      target: {
+        key,
+        tier,
+        countryCodes: configuredTarget?.searchScope?.countryCodes,
+        locations: configuredTarget?.searchScope?.locations,
+        strictLocations: configuredTarget?.searchScope?.strictLocations,
+      },
+    };
   }
 
   private locationText(job: JobPostDto): string {

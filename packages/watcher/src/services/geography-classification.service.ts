@@ -21,6 +21,10 @@ export type GeographyPreference =
 export interface GeographyTargetContext {
   key: string;
   tier: 1 | 2 | 3;
+  /** Explicit source scope; omitted/empty retains legacy tier policy. */
+  countryCodes?: readonly string[];
+  locations?: readonly string[];
+  strictLocations?: boolean;
 }
 
 export interface GeographyClassification extends GeographyExplanation {
@@ -50,6 +54,17 @@ export class GeographyClassificationService {
   ): GeographyClassification {
     const hints = this.locationHints(job);
     const preferences = this.preferences(hints);
+    const configuredCountries = new Set(
+      (target.countryCodes ?? [])
+        .map((code) => code.trim().toUpperCase())
+        .filter(Boolean),
+    );
+    const hasConfiguredCountries = configuredCountries.size > 0;
+    const allowsCanada =
+      !hasConfiguredCountries || configuredCountries.has("CA");
+    const allowsUnitedStates = hasConfiguredCountries
+      ? configuredCountries.has("US")
+      : target.tier !== 1;
     const canadian = bestHint(hints.filter((hint) => hint.region === "canada"));
     const american = bestHint(
       hints.filter((hint) => hint.region === "united-states"),
@@ -60,7 +75,24 @@ export class GeographyClassificationService {
       ),
     );
 
-    if (canadian) {
+    if (
+      target.strictLocations === true &&
+      target.locations &&
+      target.locations.length > 0 &&
+      !matchesConfiguredLocation(hints, target.locations)
+    ) {
+      return {
+        sourceTargetKey: target.key,
+        locationConfidence: bestHint(hints)?.confidence ?? "unknown",
+        geographyDecision: "outside-target-scope",
+        eligible: false,
+        suppressionReason: "outside-target-scope",
+        preferences,
+        hints,
+      };
+    }
+
+    if (canadian && allowsCanada) {
       return this.eligible(
         target.key,
         "eligible-canada",
@@ -71,7 +103,7 @@ export class GeographyClassificationService {
       );
     }
 
-    if (target.tier !== 1 && american) {
+    if (american && allowsUnitedStates) {
       return this.eligible(
         target.key,
         "eligible-united-states",
@@ -83,7 +115,8 @@ export class GeographyClassificationService {
     }
 
     if (
-      target.tier !== 1 &&
+      allowsCanada &&
+      allowsUnitedStates &&
       regional &&
       !explicitlyExcludesCanadaAndUnitedStates(job.description)
     ) {
@@ -101,10 +134,10 @@ export class GeographyClassificationService {
       hints.filter(
         (hint) =>
           hint.region === "other" ||
-          (target.tier === 1 &&
-            (hint.region === "united-states" ||
-              hint.region === "north-america" ||
-              hint.region === "americas")),
+          (hint.region === "canada" && !allowsCanada) ||
+          (hint.region === "united-states" && !allowsUnitedStates) ||
+          ((hint.region === "north-america" || hint.region === "americas") &&
+            !(allowsCanada && allowsUnitedStates)),
       ),
     );
     if (
@@ -235,6 +268,24 @@ function bestHint(
         : best,
     undefined,
   );
+}
+
+function matchesConfiguredLocation(
+  hints: readonly LocationGeographyHint[],
+  configuredLocations: readonly string[],
+): boolean {
+  const configuredKeys = new Set(
+    configuredLocations
+      .map((location) => placeKey(parseLocationGeography(location)))
+      .filter(Boolean),
+  );
+  return hints.some((hint) => configuredKeys.has(placeKey(hint)));
+}
+
+function placeKey(hint: LocationGeographyHint): string {
+  const value = hint.location?.city ?? hint.normalizedLabel.split(",")[0] ?? "";
+  const normalized = value.toLocaleLowerCase("en-CA").replace(/[^a-z0-9]/g, "");
+  return normalized === "gta" ? "greatertorontoarea" : normalized;
 }
 
 function explicitlyExcludesCanadaAndUnitedStates(

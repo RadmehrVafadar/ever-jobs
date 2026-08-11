@@ -32,3 +32,18 @@ services:
       - /app/node_modules
     command: ["npx", "ts-node-dev", "--respawn", "--transpile-only", "apps/api/src/main.ts"]
     restart: unless-stopped
+
+  ever-jobs-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    environment:
+      NODE_ENV: development
+      VITE_API_BASE_URL: /api
+      VITE_PROXY_TARGET: http://ever-jobs-api:3001
+    volumes:
+      - .:/app
+      - /app/node_modules
+    working_dir: /app
+    command: ["npm", "--workspace", "@ever-jobs/web", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000", "--strictPort"]

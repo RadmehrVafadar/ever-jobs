@@ -5,6 +5,7 @@ import {
   ArrayUnique,
   IsArray,
   IsBoolean,
+  IsDefined,
   IsIn,
   IsInt,
   IsISO8601,
@@ -44,7 +45,7 @@ const WATCH_RUN_STATUSES = [
 ] as const;
 
 export class WatchSearchScopeDto {
-  @ApiProperty({ type: [String], example: ["CA", "US"] })
+  @ApiProperty({ type: [String], example: ["CA"] })
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(25)
@@ -54,13 +55,22 @@ export class WatchSearchScopeDto {
 
   @ApiProperty({
     type: [String],
-    example: ["Canada", "Toronto, Ontario", "United States"],
+    example: ["Toronto, Ontario", "Greater Toronto Area", "Markham, Ontario"],
   })
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(100)
   @IsString({ each: true })
   locations!: string[];
+
+  @ApiPropertyOptional({
+    description:
+      "Require at least one returned job location to match the configured locations.",
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  strictLocations?: boolean;
 
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()
@@ -157,6 +167,77 @@ export class NotificationDestinationDto {
   @IsNotEmpty()
   @MaxLength(100)
   destinationRef!: string;
+}
+
+export class NotificationRouteConditionsDto {
+  @ApiPropertyOptional({ enum: [1, 2, 3], isArray: true })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(3)
+  @ArrayUnique()
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  @Max(3, { each: true })
+  sourceTiers?: Array<1 | 2 | 3>;
+
+  @ApiPropertyOptional({
+    enum: ["urgent", "standard", "digest"],
+    isArray: true,
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(3)
+  @ArrayUnique()
+  @IsIn(["urgent", "standard", "digest"], { each: true })
+  notificationTypes?: Array<"urgent" | "standard" | "digest">;
+
+  @ApiPropertyOptional({ minimum: 0, maximum: 500 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(500)
+  minimumScore?: number;
+
+  @ApiPropertyOptional({ minimum: 0, maximum: 500 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(500)
+  maximumScore?: number;
+}
+
+export class NotificationRouteDto {
+  @ApiProperty({ example: "tier-one-urgent" })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  id!: string;
+
+  @ApiProperty({ example: "Tier 1 urgent roles" })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  name!: string;
+
+  @ApiProperty({ default: true })
+  @IsBoolean()
+  enabled!: boolean;
+
+  @ApiProperty({ enum: ["discord", "telegram", "webhook"] })
+  @IsIn(["discord", "telegram", "webhook"])
+  provider!: "discord" | "telegram" | "webhook";
+
+  @ApiProperty({ example: "tier-one" })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  destinationRef!: string;
+
+  @ApiPropertyOptional({ type: () => NotificationRouteConditionsDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => NotificationRouteConditionsDto)
+  conditions?: NotificationRouteConditionsDto;
 }
 
 export class CreateWatchDto {
@@ -324,6 +405,14 @@ export class CreateWatchDto {
   @Type(() => NotificationDestinationDto)
   notificationChannels?: NotificationDestinationDto[];
 
+  @ApiPropertyOptional({ type: [NotificationRouteDto] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(100)
+  @ValidateNested({ each: true })
+  @Type(() => NotificationRouteDto)
+  notificationRoutes?: NotificationRouteDto[];
+
   @ApiPropertyOptional({
     enum: ["baseline", "recent-only", "notify-all"],
     default: "baseline",
@@ -349,6 +438,22 @@ export class CreateWatchDto {
 }
 
 export class UpdateWatchDto extends PartialType(CreateWatchDto) {}
+
+export class ApplyWatchDto {
+  @ApiProperty({
+    format: "date-time",
+    description: "The updatedAt value from the draft's source watch.",
+  })
+  @IsISO8601({ strict: true })
+  expectedUpdatedAt!: string;
+
+  @ApiProperty({ type: () => UpdateWatchDto })
+  @IsDefined()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => UpdateWatchDto)
+  patch!: UpdateWatchDto;
+}
 
 export class InitializeWatchDto {
   @ApiPropertyOptional({

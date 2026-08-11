@@ -14,13 +14,18 @@ export type WatchMatchStatus =
   | "rejected"
   | "offer";
 export type NotificationStatus = "pending" | "sent" | "failed" | "suppressed";
-export type NotificationSuppressionReason = "baseline" | "eligibility";
+export type NotificationSuppressionReason =
+  | "baseline"
+  | "eligibility"
+  | "routing";
 export type NotificationType = "urgent" | "standard" | "digest";
 export type WatchRunStatus = "running" | "completed" | "failed" | "partial";
 
 export interface WatchSearchScope {
   countryCodes: string[];
   locations: string[];
+  /** Require at least one returned job location to match this location list. */
+  strictLocations?: boolean;
   searchTerms?: string[];
   maxRequestsPerRun?: number;
 }
@@ -104,6 +109,11 @@ export interface JobWatch {
   urgentScore: number;
   digestScore: number;
   notificationChannels: NotificationDestination[];
+  /**
+   * Conditional notification routing. A non-empty array is authoritative;
+   * legacy notificationChannels are used only when this is absent or empty.
+   */
+  notificationRoutes?: NotificationRoute[];
   initializationMode: WatchInitializationMode;
   recentWindowMinutes?: number;
   weights?: Record<string, number>;
@@ -258,6 +268,28 @@ export interface NotificationDestination {
   /** @deprecated Use destinationRef. Retained for existing watch documents. */
   destination?: string;
   secretRef?: string;
+}
+
+export interface NotificationRouteConditions {
+  /** Match any listed source tier. An unknown source tier never matches. */
+  sourceTiers?: Array<1 | 2 | 3>;
+  /** Match any listed delivery band. */
+  notificationTypes?: NotificationType[];
+  /** Inclusive lower score boundary. */
+  minimumScore?: number;
+  /** Inclusive upper score boundary. */
+  maximumScore?: number;
+}
+
+export interface NotificationRoute {
+  id: string;
+  name: string;
+  enabled: boolean;
+  provider: NotificationDestination["type"];
+  /** A non-secret destination alias resolved by the provider. */
+  destinationRef: string;
+  /** Different condition groups use AND; values within arrays use OR. */
+  conditions?: NotificationRouteConditions;
 }
 
 export interface JobNotificationMessage {
@@ -450,6 +482,11 @@ export interface WatchRepository {
   getWatch(id: string): Promise<JobWatch | null>;
   createWatch(input: Partial<JobWatch>): Promise<JobWatch>;
   updateWatch(id: string, input: Partial<JobWatch>): Promise<JobWatch>;
+  updateWatchIfCurrent(
+    id: string,
+    expectedUpdatedAt: Date,
+    input: Partial<JobWatch>,
+  ): Promise<JobWatch | null>;
   deleteWatch(id: string): Promise<boolean>;
   createRun(input: Partial<WatchRun> & { watchId: string }): Promise<WatchRun>;
   getRun(id: string): Promise<WatchRun | null>;

@@ -93,7 +93,8 @@ Results are cached (when enabled) to improve performance and reduce load on job 
 
   // ── Start ──────────────────────────────
   const port = config.get<number>('port', 3001);
-  await app.listen(port);
+  const host = config.get<string>('host', '0.0.0.0');
+  await app.listen(port, host);
 
   const authEnabled = config.get<boolean>('auth.enabled', false);
   const rateLimitEnabled = config.get<boolean>('rateLimit.enabled', false);
@@ -102,7 +103,8 @@ Results are cached (when enabled) to improve performance and reduce load on job 
   const graphqlEnabled = config.get<boolean>('graphql.enabled', true);
   const graphqlPath = config.get<string>('graphql.path', 'graphql');
 
-  logger.log(`🚀 rad.ar API is running on: http://localhost:${port}`);
+  const displayHost = host === '0.0.0.0' ? 'localhost' : host;
+  logger.log(`🚀 rad.ar API is running on: http://${displayHost}:${port}`);
   logger.log(`🔑 API key auth: ${authEnabled ? 'ENABLED' : 'disabled'}`);
   logger.log(`⏱️  Rate limiting: ${rateLimitEnabled ? 'ENABLED' : 'disabled'}`);
   logger.log(`📦 Caching: ${cacheEnabled ? `ENABLED (${redisUrl ? 'Redis' : 'in-memory'})` : 'disabled'}`);

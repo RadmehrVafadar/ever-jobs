@@ -1,7 +1,7 @@
 import { ConfigService } from "@nestjs/config";
 import { InMemoryWatchRepository } from "../persistence/in-memory-watch.repository";
 import { DefaultWatchSeederService } from "../services/default-watch-seeder.service";
-import { PRESTIGE_INTERNSHIPS_V2_NAME } from "../services/prestige-internships-v2.preset";
+import { CANADIAN_TECH_INTERNSHIPS_NAME } from "../services/canadian-tech-internships.preset";
 import { watchSourceTargetKey } from "../services/watch-preset.service";
 
 describe("DefaultWatchSeederService", () => {
@@ -16,7 +16,8 @@ describe("DefaultWatchSeederService", () => {
     const [created] = await repository.listWatches();
     expect(created).toEqual(
       expect.objectContaining({
-        name: PRESTIGE_INTERNSHIPS_V2_NAME,
+        name: CANADIAN_TECH_INTERNSHIPS_NAME,
+        countryCodes: ["CA"],
         enabled: false,
         initializationMode: "baseline",
         intervalMinutes: 10,
@@ -44,6 +45,11 @@ describe("DefaultWatchSeederService", () => {
       "vercel",
       "meta",
       "wellfound",
+      "uber",
+      "notion",
+      "ramp",
+      "netflix",
+      "ibm",
       "canadajobbank",
       "linkedin",
     ]);

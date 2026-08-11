@@ -3,6 +3,87 @@
 > Append-only log of every doc/spec edit. **Newest entry at the top.** This is a
 > human-readable audit trail; for source-code history, see `git log`.
 
+## 2026-08-10 — Spec 6003: Canadian Tech Internships
+
+- Replaced the selectable Canada/USA prestige preset with the sole current
+  `canadian-tech-internships` revision-1 template, displayed as **Canadian Tech
+  Internships**.
+- Retained the 26-company inventory, 19 Summer 2027 searches, required,
+  preferred, and excluded terms, scoring, cadence, notifications, and disabled
+  baseline posture while making every preset-owned source scope `CA` and
+  Toronto/GTA-only.
+- Added preset-level geography replacement so applying the template removes
+  stale U.S., broad-Canada, and Waterloo geography; preview now reports removed
+  locations and country codes. Existing database watches are never changed at
+  startup and still require paused apply, baseline, review, and explicit resume.
+- Enforced explicit target country scopes during geography classification, so
+  an unexpected U.S. result from a Tier 2/3 provider remains ineligible for the
+  Canadian-only template while unscoped legacy watches retain tier behavior.
+- Added optional `WatchSearchScope.strictLocations` persistence, validation,
+  API/GUI editing, material diffing, and eligibility enforcement. Every
+  Canadian template target enables it so non-GTA Canadian postings are also
+  suppressed.
+- Added the canonical JSON example, deprecated the old example paths without
+  deleting them, changed fresh-install seeding and GUI/API presentation, and
+  updated README quick start, CLI, runbooks, manifest, API changelog, upgrade
+  guide, documentation mirror, and index.
+- Preserved the former TypeScript exports as deprecated aliases to the new
+  implementation while removing the retired string ID from preset discovery.
+
+## 2026-08-04 — Spec 6002: local operator GUI and notification routing
+
+- Added the authoritative Spec 6002 specification, implementation plan, task
+  ledger, and human-readable mirror for a TypeScript-only React/Vite operator
+  GUI served on loopback alongside the existing API and watcher worker.
+- Implemented `apps/web` and the replaceable `ui-operator` plugin with Overview,
+  watch/profile editing, optimistic diff/Apply and activation flow, presets,
+  notifications and routing, matches/jobs/history, search, analysis, source
+  comparison, JSON/CSV downloads, responsive layouts, accessible controls, and
+  session-only admin API-key handling.
+- Added additive `JobWatch.notificationRoutes` persistence and dispatch:
+  AND-across-fields/OR-within-arrays matching, inclusive scores, source-tier
+  resolution, provider/destination deduplication, legacy fallback,
+  canonical-episode idempotency, persisted retry destinations, and terminal
+  `routing` suppression when an active route set selects no destination.
+- Added masked named Discord destination management backed by environment or an
+  ignored, atomically updated `.env.local`, with environment precedence,
+  reference-protected deletion, mtime reload, HTTPS Discord validation, and
+  webhook redaction. Added optimistic safe Apply, preset REST, bounded partial
+  source comparison, and operator-status APIs.
+- Added the forward-only default-empty notification-route Prisma migration,
+  in-memory/Prisma repository parity, API DTOs, regression coverage, root
+  `gui:dev`/`gui` launchers, loopback runtime configuration, and environment
+  examples. Existing CLI, MCP, watcher, legacy channels, package scopes,
+  environment names, metrics, Docker services, and deployment identifiers remain
+  compatible.
+- Added optional Compose profile service `ever-jobs-web`. Production local
+  startup is `docker compose --profile gui up --build`; development override
+  startup is
+  `docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile gui up --build`.
+- Added the latest stable React, Vite, and web-testing stack available during
+  implementation. A root `undici` override at `7.29.0` resolves reported high
+  advisories. `react-router-dom` is `7.18.2`; the reported React Server
+  Components advisory does not apply to this static BrowserRouter client.
+- Updated the API changelog, CLI reference, local watcher runbook, and
+  documentation index with the GUI, destination, routing, apply, preset,
+  comparison, migration, security, rollout, and rollback contracts.
+
+### Validation evidence and remaining gates
+
+- Passed 18 focused Jest suites / 103 tests, 6 web Vitest files / 19 tests, the
+  14-test CLI suite, and one route-mocked Playwright browser scenario.
+- Passed API, web, and watcher TypeScript checks/builds; Prisma schema
+  validation; desktop and mobile browser inspection; and `git diff --check`.
+- The complete PostgreSQL plus fake-source/fake-Discord Playwright scenario is
+  still outstanding. The route-mocked browser pass does not replace that gate.
+- ESLint is unavailable because the repository has no ESLint configuration.
+  Documentation lint reports only pre-existing repository failures. Neither is
+  claimed as a successful Spec 6002 gate.
+- Docker is unavailable and local PostgreSQL port 5432 is closed, so the
+  one-command real-stack smoke, persisted legacy-watch/apply/baseline/resume
+  workflow, fake Discord routing, worker interruption/restart, and duplicate
+  recovery acceptance remain blocked and unclaimed.
+
 ## 2026-08-01 — Spec 6001: rad.ar product branding
 
 - Established `rad.ar` as the canonical user-facing project name in the

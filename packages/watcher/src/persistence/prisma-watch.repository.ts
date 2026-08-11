@@ -70,7 +70,7 @@ export class PrismaWatchRepository implements WatchRepository {
       // Connectivity alone is insufficient: the scheduler cannot operate
       // until watcher migrations have created its durable tables.
       await this.prisma.$queryRaw(
-        Prisma.sql`SELECT "targetHealth" FROM "JobWatch" LIMIT 0`,
+        Prisma.sql`SELECT "targetHealth", "notificationRoutes" FROM "JobWatch" LIMIT 0`,
       );
       await this.prisma.$queryRaw(
         Prisma.sql`SELECT "sourceTargetKey", "locations", "canonicalEpisodeKey", "canonicalEpisodeStartedAt" FROM "ObservedJob" LIMIT 0`,
@@ -202,6 +202,22 @@ export class PrismaWatchRepository implements WatchRepository {
       data: watchUpdateData(input),
     });
     return mapWatch(row);
+  }
+
+  async updateWatchIfCurrent(
+    id: string,
+    expectedUpdatedAt: Date,
+    input: Partial<JobWatch>,
+  ): Promise<JobWatch | null> {
+    return this.serializableTransaction(async (transaction) => {
+      const updated = await transaction.jobWatch.updateMany({
+        where: { id, updatedAt: expectedUpdatedAt },
+        data: watchUpdateData(input),
+      });
+      if (updated.count !== 1) return null;
+      const row = await transaction.jobWatch.findUnique({ where: { id } });
+      return row ? mapWatch(row) : null;
+    });
   }
 
   async deleteWatch(id: string): Promise<boolean> {
@@ -857,6 +873,7 @@ function watchCreateData(
     urgentScore: input.urgentScore ?? 80,
     digestScore: input.digestScore ?? 40,
     notificationChannels: jsonInput(input.notificationChannels ?? []),
+    notificationRoutes: jsonInput(input.notificationRoutes ?? []),
     initializationMode: input.initializationMode ?? "baseline",
     recentWindowMinutes: input.recentWindowMinutes ?? 180,
     weights: optionalJson(input.weights),
@@ -928,6 +945,9 @@ function watchUpdateData(
   if (input.digestScore !== undefined) data.digestScore = input.digestScore;
   if (input.notificationChannels !== undefined) {
     data.notificationChannels = jsonInput(input.notificationChannels);
+  }
+  if (input.notificationRoutes !== undefined) {
+    data.notificationRoutes = jsonInput(input.notificationRoutes);
   }
   if (input.initializationMode !== undefined) {
     data.initializationMode = input.initializationMode;
@@ -1165,6 +1185,9 @@ function mapWatch(row: PrismaJobWatch): JobWatch {
     notificationChannels: Array.isArray(row.notificationChannels)
       ? (row.notificationChannels as unknown as JobWatch["notificationChannels"])
       : [],
+    notificationRoutes: Array.isArray(row.notificationRoutes)
+      ? (row.notificationRoutes as unknown as JobWatch["notificationRoutes"])
+      : [],
     initializationMode: row.initializationMode as WatchInitializationMode,
     recentWindowMinutes: row.recentWindowMinutes,
     weights: row.weights ? numberRecord(row.weights) : undefined,
@@ -1307,6 +1330,9 @@ function sourceTargetsForStorage(
           searchScope: {
             countryCodes: target.searchScope.countryCodes,
             locations: target.searchScope.locations,
+            ...(target.searchScope.strictLocations === undefined
+              ? {}
+              : { strictLocations: target.searchScope.strictLocations }),
             ...(target.searchScope.searchTerms === undefined
               ? {}
               : { searchTerms: target.searchScope.searchTerms }),
@@ -1522,9 +1548,14 @@ function searchScopeFromStorage(
     Number.isFinite(value.maxRequestsPerRun)
       ? Math.max(1, Math.trunc(value.maxRequestsPerRun))
       : undefined;
+  const strictLocations =
+    typeof value.strictLocations === "boolean"
+      ? value.strictLocations
+      : undefined;
   return {
     countryCodes,
     locations,
+    ...(strictLocations === undefined ? {} : { strictLocations }),
     ...(searchTerms === undefined ? {} : { searchTerms }),
     ...(maxRequestsPerRun === undefined ? {} : { maxRequestsPerRun }),
   };

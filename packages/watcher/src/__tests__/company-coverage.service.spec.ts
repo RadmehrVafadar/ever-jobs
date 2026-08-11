@@ -4,9 +4,9 @@ import {
   CompanyCoverageService,
 } from "../services/company-coverage.service";
 import {
-  PRESTIGE_DEFERRED_COMPANIES,
-  prestigeInternshipsV2Watch,
-} from "../services/prestige-internships-v2.preset";
+  CANADIAN_TECH_INTERNSHIP_DEFERRED_COMPANIES,
+  canadianTechInternshipsWatch,
+} from "../services/canadian-tech-internships.preset";
 
 describe("buildCompanyCoverageReport", () => {
   it("partitions configured companies using exact normalized branded targets", () => {
@@ -72,7 +72,9 @@ describe("buildCompanyCoverageReport", () => {
       initialized: 2,
       degraded: 1,
     });
-    expect(report.companies.map(({ company, status }) => [company, status])).toEqual([
+    expect(
+      report.companies.map(({ company, status }) => [company, status]),
+    ).toEqual([
       ["Acme, Inc.", "active"],
       ["Beta", "disabled"],
       ["Gamma", "active"],
@@ -185,9 +187,9 @@ describe("buildCompanyCoverageReport", () => {
     );
   });
 
-  it("keeps all five deferred banks visibly uncovered in prestige revision 3", () => {
+  it("keeps all five deferred banks visibly uncovered", () => {
     const report = buildCompanyCoverageReport(
-      watchFixture(prestigeInternshipsV2Watch()),
+      watchFixture(canadianTechInternshipsWatch()),
     );
 
     expect(report.summary).toEqual({
@@ -202,7 +204,7 @@ describe("buildCompanyCoverageReport", () => {
       report.companies
         .filter(({ status }) => status === "uncovered")
         .map(({ company }) => company),
-    ).toEqual(PRESTIGE_DEFERRED_COMPANIES);
+    ).toEqual(CANADIAN_TECH_INTERNSHIP_DEFERRED_COMPANIES);
   });
 });
 

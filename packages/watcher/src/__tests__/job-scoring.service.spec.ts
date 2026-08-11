@@ -3,7 +3,10 @@ import type { JobWatch } from "../interfaces/watch.types";
 import type { WatchSourceJob } from "../services/jobs-service-watch.executor";
 import { defaultInternshipWatch } from "../services/default-watch";
 import { JobScoringService } from "../services/job-scoring.service";
-import { prestigeInternshipsV2Watch } from "../services/prestige-internships-v2.preset";
+import {
+  CANADIAN_TECH_INTERNSHIP_LOCATIONS,
+  canadianTechInternshipsWatch,
+} from "../services/canadian-tech-internships.preset";
 
 describe("JobScoringService internship eligibility", () => {
   const scorer = new JobScoringService();
@@ -97,6 +100,58 @@ describe("JobScoringService internship eligibility", () => {
     expect(tier2.geographyDecision).toBe("eligible-united-states");
     expect(tier3.exclusionReason).toBeUndefined();
     expect(tier3.geographyDecision).toBe("eligible-united-states");
+  });
+
+  it("suppresses an unexpected US result from the CA-only Canadian template", () => {
+    const canadianWatch = canadianTechInternshipsWatch() as JobWatch;
+    const score = scorer.score(
+      sourceJob(
+        new JobPostDto({
+          site: "linkedin",
+          title: "Software Engineer Intern, Summer 2027",
+          companyName: "Example",
+          employmentType: "internship",
+          description: "Summer 2027 internship opportunity.",
+          location: { city: "Seattle", state: "WA", country: "USA" } as any,
+        }),
+        3,
+        "linkedin",
+        ["CA"],
+      ),
+      canadianWatch,
+    );
+
+    expect(score.exclusionReason).toBe("outside-target-scope");
+    expect(score.geographyDecision).toBe("outside-target-scope");
+  });
+
+  it("suppresses a Canadian result outside the template's strict GTA locations", () => {
+    const canadianWatch = canadianTechInternshipsWatch() as JobWatch;
+    const score = scorer.score(
+      sourceJob(
+        new JobPostDto({
+          site: "linkedin",
+          title: "Software Engineer Intern, Summer 2027",
+          companyName: "Example",
+          employmentType: "internship",
+          description: "Summer 2027 internship opportunity.",
+          location: {
+            city: "Vancouver",
+            state: "BC",
+            country: "Canada",
+          } as any,
+        }),
+        3,
+        "linkedin",
+        ["CA"],
+        [...CANADIAN_TECH_INTERNSHIP_LOCATIONS],
+        true,
+      ),
+      canadianWatch,
+    );
+
+    expect(score.exclusionReason).toBe("outside-target-scope");
+    expect(score.geographyDecision).toBe("outside-target-scope");
   });
 
   it("suppresses unresolved geography with a deterministic explanation", () => {
@@ -327,7 +382,7 @@ describe("JobScoringService internship eligibility", () => {
   it.each(["Uber", "Notion", "Ramp", "Netflix", "IBM"])(
     "derives LinkedIn urgent eligibility for the new Tier 1 target %s",
     (companyName) => {
-      const prestigeWatch = prestigeInternshipsV2Watch() as JobWatch;
+      const canadianWatch = canadianTechInternshipsWatch() as JobWatch;
       const score = scorer.score(
         sourceJob(
           new JobPostDto({
@@ -346,10 +401,10 @@ describe("JobScoringService internship eligibility", () => {
           3,
           "linkedin",
         ),
-        prestigeWatch,
+        canadianWatch,
       );
 
-      expect(score.total).toBeGreaterThanOrEqual(prestigeWatch.urgentScore);
+      expect(score.total).toBeGreaterThanOrEqual(canadianWatch.urgentScore);
       expect(score.reasons).not.toEqual(
         expect.arrayContaining([expect.stringContaining("score capped")]),
       );
@@ -388,6 +443,9 @@ function sourceJob(
   job: JobPostDto,
   tier: 1 | 2 | 3,
   key: string,
+  countryCodes: string[] = [],
+  locations: string[] = [],
+  strictLocations = false,
 ): WatchSourceJob {
   return {
     job,
@@ -399,10 +457,10 @@ function sourceJob(
       kind: "aggregate",
       mode: "search",
       intervalMinutes: 60,
-      searchScope: { countryCodes: [], locations: [] },
+      searchScope: { countryCodes, locations, strictLocations },
     } as unknown as WatchSourceJob["target"],
     requestId: `${key}:1`,
-    countryCodes: [],
+    countryCodes,
     matrixIndex: 0,
   };
 }

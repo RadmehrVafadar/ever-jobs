@@ -7,9 +7,10 @@ async function bootstrap() {
   const app = await NestFactory.create(WatcherAppModule, { bufferLogs: true });
   app.enableShutdownHooks();
   const port = positivePort(process.env.WATCHER_HEALTH_PORT, 3002);
-  await app.listen(port, "0.0.0.0");
+  const host = process.env.WATCHER_HEALTH_HOST?.trim() || "0.0.0.0";
+  await app.listen(port, host);
   Logger.log(
-    `rad.ar watcher started; health endpoint listening on ${port}`,
+    `rad.ar watcher started; health endpoint listening on ${host}:${port}`,
     "Watcher",
   );
 }

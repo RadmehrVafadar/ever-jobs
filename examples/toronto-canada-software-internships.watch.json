@@ -1,6 +1,6 @@
 {
-  "name": "Toronto and Canada Software Internships",
-  "description": "DEPRECATED: legacy Toronto/Canada example retained for compatibility. Use prestige-internships-v2-canada-usa.watch.json for new watches.",
+  "name": "DEPRECATED — Toronto and Canada Software Internships",
+  "description": "DEPRECATED compatibility example. Use canadian-tech-internships.watch.json for the current Toronto/GTA-only template.",
   "enabled": false,
   "intervalMinutes": 3,
   "timezone": "America/Toronto",

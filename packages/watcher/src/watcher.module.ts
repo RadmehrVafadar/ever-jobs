@@ -159,6 +159,7 @@ export class WatcherModule {
         CompanyCoverageService,
         WatcherMetricsService,
         JobsServiceWatchExecutor,
+        DiscordNotificationProvider,
         NotificationDispatcher,
         WatchExecutionService,
         DailyDigestService,

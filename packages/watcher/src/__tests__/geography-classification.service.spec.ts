@@ -60,6 +60,62 @@ describe("GeographyClassificationService", () => {
     }
   });
 
+  it("enforces an explicit CA-only source scope for Tier 2 and Tier 3", () => {
+    const posting = job(
+      new LocationDto({ city: "New York", state: "NY", country: "USA" }),
+    );
+
+    for (const tier of [2, 3] as const) {
+      expect(
+        service.classify(posting, {
+          ...target(tier),
+          countryCodes: ["CA"],
+        }),
+      ).toMatchObject({
+        eligible: false,
+        geographyDecision: "outside-target-scope",
+        suppressionReason: "outside-target-scope",
+      });
+    }
+  });
+
+  it("enforces an explicit Toronto/GTA location allowlist", () => {
+    const scopedTarget: GeographyTargetContext = {
+      ...target(1),
+      countryCodes: ["CA"],
+      locations: ["Toronto, Ontario", "Markham, Ontario"],
+      strictLocations: true,
+    };
+
+    expect(
+      service.classify(
+        job(new LocationDto({ city: "Toronto", state: "ON" })),
+        scopedTarget,
+      ),
+    ).toMatchObject({ eligible: true, matchedCountry: "CA" });
+    expect(
+      service.classify(
+        job(new LocationDto({ city: "Vancouver", state: "BC" })),
+        scopedTarget,
+      ),
+    ).toMatchObject({
+      eligible: false,
+      geographyDecision: "outside-target-scope",
+    });
+
+    const multiLocation = job(
+      new LocationDto({ city: "Vancouver", state: "BC" }),
+    );
+    multiLocation.locations = [
+      new LocationDto({ city: "Vancouver", state: "BC" }),
+      new LocationDto({ city: "Markham", state: "ON" }),
+    ];
+    expect(service.classify(multiLocation, scopedTarget)).toMatchObject({
+      eligible: true,
+      matchedCountry: "CA",
+    });
+  });
+
   it("applies regional remote policy by tier", () => {
     const remoteCanada = job(
       new LocationDto({ city: "Remote", country: "Canada" }),
