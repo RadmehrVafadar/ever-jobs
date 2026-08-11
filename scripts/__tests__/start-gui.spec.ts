@@ -1,4 +1,6 @@
+import { createServer } from "node:net";
 import {
+  assertServicePortsAvailable,
   createRuntimeConfiguration,
   parseMode,
   parsePort,
@@ -99,5 +101,33 @@ describe("start-gui launcher", () => {
       "model Changed {}",
     );
     expect(prismaClientIsCurrent(workspace, reader)).toBe(false);
+  });
+
+  it("rejects startup before spawning services when a configured port is occupied", async () => {
+    const server = createServer();
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    const address = server.address();
+    if (address === null || typeof address === "string") {
+      server.close();
+      throw new Error("Expected a TCP test address.");
+    }
+    const configuration = createRuntimeConfiguration("development", {
+      WEB_PORT: String(address.port),
+      PORT: String(address.port),
+      WATCHER_HEALTH_PORT: String(address.port),
+    });
+
+    try {
+      await expect(assertServicePortsAvailable(configuration)).rejects.toThrow(
+        `127.0.0.1:${address.port}`,
+      );
+    } finally {
+      await new Promise<void>((resolve, reject) =>
+        server.close((error) => (error ? reject(error) : resolve())),
+      );
+    }
   });
 });

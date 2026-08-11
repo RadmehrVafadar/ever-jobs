@@ -11,6 +11,10 @@
 - Added a focused launcher regression test and a clearer recovery message for
   the case where regeneration is genuinely required while an existing rad.ar
   API, watcher, or GUI process still holds the DLL open.
+- Added an up-front availability check for the GUI, API, and watcher ports;
+  ordered development startup by TCP readiness so Vite cannot start before the
+  API and watcher are listening; and made Windows shutdown terminate each
+  scoped Nx process tree so watcher children do not remain bound to port 3002.
 
 ## 2026-08-10 — Spec 6003: Canadian Tech Internships
 

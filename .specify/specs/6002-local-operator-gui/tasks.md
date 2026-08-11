@@ -97,3 +97,9 @@
   - **Acceptance:** focused launcher tests cover both current and stale generated
     artifacts, and stale artifacts still require regeneration with an actionable
     Windows process-lock diagnostic.
+- [x] T27 — Prevent partial local-stack startup by checking configured ports,
+      waiting for API, watcher, and GUI TCP readiness in dependency order, and
+      terminating spawned Nx process trees during Windows shutdown.
+  - **Acceptance:** occupied ports fail before migrations or service spawning,
+    Vite starts only after its proxy target is reachable, and Ctrl+C cannot leave
+    a launcher-owned watcher child bound to port 3002.

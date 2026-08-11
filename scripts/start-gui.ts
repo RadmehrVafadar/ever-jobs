@@ -1,5 +1,6 @@
 import { ChildProcess, spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import { createConnection, createServer } from "node:net";
 import { resolve } from "node:path";
 import { config as loadDotEnv } from "dotenv";
 
@@ -15,6 +16,12 @@ interface CommandSpec {
 interface PrismaArtifactReader {
   exists(path: string): boolean;
   read(path: string): string;
+}
+
+interface ServiceEndpoint {
+  readonly name: string;
+  readonly host: string;
+  readonly port: number;
 }
 
 export interface GuiRuntimeConfiguration {
@@ -210,6 +217,8 @@ async function run(): Promise<void> {
     "nx.js",
   );
 
+  await assertServicePortsAvailable(configuration);
+
   await runToCompletion(
     {
       name: "database migration",
@@ -259,9 +268,52 @@ async function run(): Promise<void> {
   }
 
   registerShutdownHandlers();
-  for (const specification of serviceCommands(configuration)) {
-    startService(specification, configuration.workspaceRoot, environment);
+  const [api, watcher, web] = serviceCommands(configuration);
+  if (!api || !watcher || !web) {
+    throw new Error("The GUI launcher service configuration is incomplete.");
   }
+
+  const apiProcess = startService(
+    api,
+    configuration.workspaceRoot,
+    environment,
+  );
+  await waitForService(
+    {
+      name: "API",
+      host: configuration.apiHost,
+      port: configuration.apiPort,
+    },
+    apiProcess,
+  );
+
+  const watcherProcess = startService(
+    watcher,
+    configuration.workspaceRoot,
+    environment,
+  );
+  await waitForService(
+    {
+      name: "watcher health service",
+      host: configuration.watcherHost,
+      port: configuration.watcherPort,
+    },
+    watcherProcess,
+  );
+
+  const webProcess = startService(
+    web,
+    configuration.workspaceRoot,
+    environment,
+  );
+  await waitForService(
+    {
+      name: "GUI",
+      host: configuration.webHost,
+      port: configuration.webPort,
+    },
+    webProcess,
+  );
 
   process.stdout.write(
     `\nrad.ar operator GUI: http://${configuration.webHost}:${configuration.webPort}\n` +
@@ -340,7 +392,7 @@ function startService(
   specification: CommandSpec,
   cwd: string,
   environment: NodeJS.ProcessEnv,
-): void {
+): ChildProcess {
   const child = spawn(specification.command, [...specification.args], {
     cwd,
     env: { ...environment, ...specification.environment },
@@ -362,6 +414,107 @@ function startService(
     );
     void shutdown(code && code > 0 ? code : 1);
   });
+  return child;
+}
+
+export async function assertServicePortsAvailable(
+  configuration: GuiRuntimeConfiguration,
+): Promise<void> {
+  const endpoints: readonly ServiceEndpoint[] = [
+    {
+      name: "GUI",
+      host: configuration.webHost,
+      port: configuration.webPort,
+    },
+    {
+      name: "API",
+      host: configuration.apiHost,
+      port: configuration.apiPort,
+    },
+    {
+      name: "watcher health service",
+      host: configuration.watcherHost,
+      port: configuration.watcherPort,
+    },
+  ];
+  const checks = await Promise.all(
+    endpoints.map(async (endpoint) => ({
+      endpoint,
+      available: await portIsAvailable(endpoint.host, endpoint.port),
+    })),
+  );
+  const occupied = checks
+    .filter(({ available }) => !available)
+    .map(
+      ({ endpoint }) => `${endpoint.name} (${endpoint.host}:${endpoint.port})`,
+    );
+  if (occupied.length > 0) {
+    throw new Error(
+      `Cannot start because ${occupied.join(", ")} ${occupied.length === 1 ? "is" : "are"} already in use. ` +
+        "Stop the previous rad.ar terminal with Ctrl+C, then run npm run gui:dev again.",
+    );
+  }
+}
+
+async function portIsAvailable(host: string, port: number): Promise<boolean> {
+  return new Promise<boolean>((resolvePromise, reject) => {
+    const server = createServer();
+    server.unref();
+    server.once("error", (error: NodeJS.ErrnoException) => {
+      if (error.code === "EADDRINUSE") resolvePromise(false);
+      else reject(error);
+    });
+    server.listen(port, host, () => {
+      server.close((error) => {
+        if (error) reject(error);
+        else resolvePromise(true);
+      });
+    });
+  });
+}
+
+async function waitForService(
+  endpoint: ServiceEndpoint,
+  child: ChildProcess,
+  timeoutMs = 180_000,
+): Promise<void> {
+  process.stdout.write(
+    `[gui] Waiting for ${endpoint.name} at ${endpoint.host}:${endpoint.port}...\n`,
+  );
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null || child.signalCode !== null) {
+      throw new Error(`${endpoint.name} exited before it became ready.`);
+    }
+    if (await canConnect(endpoint.host, endpoint.port)) {
+      process.stdout.write(`[gui] ${endpoint.name} is ready.\n`);
+      return;
+    }
+    await delay(250);
+  }
+  throw new Error(
+    `${endpoint.name} did not become ready at ${endpoint.host}:${endpoint.port} within ${Math.round(timeoutMs / 1_000)} seconds.`,
+  );
+}
+
+async function canConnect(host: string, port: number): Promise<boolean> {
+  return new Promise<boolean>((resolvePromise) => {
+    const socket = createConnection({ host, port });
+    const finish = (connected: boolean) => {
+      socket.destroy();
+      resolvePromise(connected);
+    };
+    socket.setTimeout(500);
+    socket.once("connect", () => finish(true));
+    socket.once("error", () => finish(false));
+    socket.once("timeout", () => finish(false));
+  });
+}
+
+async function delay(milliseconds: number): Promise<void> {
+  await new Promise<void>((resolvePromise) =>
+    setTimeout(resolvePromise, milliseconds),
+  );
 }
 
 function registerShutdownHandlers(): void {
@@ -380,6 +533,10 @@ async function shutdown(exitCode: number): Promise<void> {
           return;
         }
         child.once("exit", () => resolvePromise());
+        if (process.platform === "win32" && child.pid !== undefined) {
+          terminateWindowsProcessTree(child.pid).finally(resolvePromise);
+          return;
+        }
         child.kill("SIGTERM");
         setTimeout(() => {
           if (child.exitCode === null && child.signalCode === null) {
@@ -393,10 +550,43 @@ async function shutdown(exitCode: number): Promise<void> {
   process.exitCode = exitCode;
 }
 
+function terminateWindowsProcessTree(pid: number): Promise<void> {
+  return new Promise<void>((resolvePromise) => {
+    const fallBackToParent = () => {
+      try {
+        process.kill(pid, "SIGKILL");
+      } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (code !== "ESRCH") {
+          process.stderr.write(
+            `[gui] Could not terminate service process ${pid}; close the previous rad.ar terminal if a port remains occupied.\n`,
+          );
+        }
+      }
+    };
+    const terminator = spawn(
+      "taskkill.exe",
+      ["/PID", String(pid), "/T", "/F"],
+      {
+        stdio: "ignore",
+        windowsHide: true,
+      },
+    );
+    terminator.once("error", () => {
+      fallBackToParent();
+      resolvePromise();
+    });
+    terminator.once("exit", (code) => {
+      if (code !== 0) fallBackToParent();
+      resolvePromise();
+    });
+  });
+}
+
 if (require.main === module) {
-  void run().catch((error: unknown) => {
+  void run().catch(async (error: unknown) => {
     const message = error instanceof Error ? error.message : String(error);
     process.stderr.write(`[gui] ${message}\n`);
-    process.exitCode = 1;
+    await shutdown(1);
   });
 }
