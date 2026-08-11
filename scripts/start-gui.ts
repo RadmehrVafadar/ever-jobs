@@ -1,4 +1,5 @@
 import { ChildProcess, spawn } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { config as loadDotEnv } from "dotenv";
 
@@ -9,6 +10,11 @@ interface CommandSpec {
   readonly command: string;
   readonly args: readonly string[];
   readonly environment?: Readonly<Record<string, string>>;
+}
+
+interface PrismaArtifactReader {
+  exists(path: string): boolean;
+  read(path: string): string;
 }
 
 export interface GuiRuntimeConfiguration {
@@ -130,6 +136,58 @@ export function serviceCommands(
   ];
 }
 
+/**
+ * Prisma's Windows query-engine DLL cannot be replaced while an existing
+ * API/worker process has it loaded. Avoid that unnecessary write when the
+ * generated client already matches both the schema and installed client
+ * version.
+ */
+export function prismaClientIsCurrent(
+  workspaceRoot: string,
+  reader: PrismaArtifactReader = {
+    exists: existsSync,
+    read: (path) => readFileSync(path, "utf8"),
+  },
+): boolean {
+  const schema = resolve(workspaceRoot, "prisma", "schema.prisma");
+  const generatedRoot = resolve(
+    workspaceRoot,
+    "node_modules",
+    ".prisma",
+    "client",
+  );
+  const generatedSchema = resolve(generatedRoot, "schema.prisma");
+  const generatedEntry = resolve(generatedRoot, "index.js");
+  const installedPackage = resolve(
+    workspaceRoot,
+    "node_modules",
+    "@prisma",
+    "client",
+    "package.json",
+  );
+  const generatedPackage = resolve(generatedRoot, "package.json");
+  const required = [
+    schema,
+    generatedSchema,
+    generatedEntry,
+    installedPackage,
+    generatedPackage,
+  ];
+  if (!required.every((path) => reader.exists(path))) return false;
+
+  try {
+    const installedVersion = packageVersion(reader.read(installedPackage));
+    const generatedVersion = packageVersion(reader.read(generatedPackage));
+    return (
+      reader.read(schema) === reader.read(generatedSchema) &&
+      installedVersion !== null &&
+      installedVersion === generatedVersion
+    );
+  } catch {
+    return false;
+  }
+}
+
 async function run(): Promise<void> {
   const workspaceRoot = resolve(__dirname, "..");
   loadDotEnv({ path: resolve(workspaceRoot, ".env"), quiet: true });
@@ -162,15 +220,31 @@ async function run(): Promise<void> {
     environment,
   );
 
-  await runToCompletion(
-    {
-      name: "Prisma client generation",
-      command: process.execPath,
-      args: [prisma, "generate"],
-    },
-    configuration.workspaceRoot,
-    environment,
-  );
+  if (prismaClientIsCurrent(configuration.workspaceRoot)) {
+    process.stdout.write(
+      "[gui] Prisma client matches the schema; skipping generation.\n",
+    );
+  } else {
+    try {
+      await runToCompletion(
+        {
+          name: "Prisma client generation",
+          command: process.execPath,
+          args: [prisma, "generate"],
+        },
+        configuration.workspaceRoot,
+        environment,
+      );
+    } catch (error) {
+      if (process.platform === "win32") {
+        throw new Error(
+          "Prisma client generation could not replace its Windows query-engine DLL. " +
+            "Stop any existing rad.ar API/watcher/GUI Node processes, then run npm run gui:dev again.",
+        );
+      }
+      throw error;
+    }
+  }
 
   if (configuration.mode === "production") {
     await runToCompletion(
@@ -228,6 +302,11 @@ function runtimeEnvironment(
       process.env.EVER_JOBS_LOCAL_ENV_FILE ??
       resolve(configuration.workspaceRoot, ".env.local"),
   };
+}
+
+function packageVersion(value: string): string | null {
+  const parsed = JSON.parse(value) as { version?: unknown };
+  return typeof parsed.version === "string" ? parsed.version : null;
 }
 
 async function runToCompletion(

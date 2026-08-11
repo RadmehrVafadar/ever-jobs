@@ -88,3 +88,12 @@
       and duplicate protection.
   - **Blocked:** Docker is unavailable and local PostgreSQL port 5432 is closed,
     so the real-stack operational acceptance scenario has not run.
+
+## Maintenance
+
+- [x] T26 — Make Windows GUI startup resilient to a locked Prisma query-engine
+      DLL by skipping generation when the existing client exactly matches the
+      current schema and installed Prisma client version.
+  - **Acceptance:** focused launcher tests cover both current and stale generated
+    artifacts, and stale artifacts still require regeneration with an actionable
+    Windows process-lock diagnostic.

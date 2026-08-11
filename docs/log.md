@@ -3,6 +3,15 @@
 > Append-only log of every doc/spec edit. **Newest entry at the top.** This is a
 > human-readable audit trail; for source-code history, see `git log`.
 
+## 2026-08-11 — Windows-safe Prisma GUI startup
+
+- Changed the local GUI launcher to reuse an already-current Prisma client when
+  its generated schema and package version match the repository, avoiding an
+  unnecessary Windows query-engine DLL replacement on every launch.
+- Added a focused launcher regression test and a clearer recovery message for
+  the case where regeneration is genuinely required while an existing rad.ar
+  API, watcher, or GUI process still holds the DLL open.
+
 ## 2026-08-10 — Spec 6003: Canadian Tech Internships
 
 - Replaced the selectable Canada/USA prestige preset with the sole current
@@ -227,9 +236,10 @@ failure propagation; dry-run-first preset application; additive migration and
 rollback; deterministic fixture tests; and disabled operational smoke gates.
 Canonical fallback episodes are first-observation-anchored rolling 14-day
 windows rather than UTC buckets. Delivery identity is watch + canonical episode
-+ channel/destination and excludes notification type, preventing band-change
-resends. Success, valid-empty, and partial outcomes reset a target's consecutive
-hard-failure streak.
+
+- channel/destination and excludes notification type, preventing band-change
+  resends. Success, valid-empty, and partial outcomes reset a target's consecutive
+  hard-failure streak.
 
 **Acceptance hardening:** Preserved legacy match uniqueness through an additive
 episode-scoped observation snapshot when a stable source fingerprint begins a

@@ -2,6 +2,7 @@ import {
   createRuntimeConfiguration,
   parseMode,
   parsePort,
+  prismaClientIsCurrent,
   serviceCommands,
 } from "../start-gui";
 
@@ -63,5 +64,40 @@ describe("start-gui launcher", () => {
     expect(commands[0]?.args).toEqual(["dist/apps/api/main.js"]);
     expect(commands[1]?.args).toEqual(["dist/apps/watcher/main.js"]);
     expect(commands[2]?.args).toContain("web:preview");
+  });
+
+  it("skips Prisma generation only for matching complete artifacts", () => {
+    const workspace = "C:\\workspace";
+    const files = new Map<string, string>();
+    const path = (...parts: string[]) => [workspace, ...parts].join("\\");
+    files.set(path("prisma", "schema.prisma"), "model Job {}");
+    files.set(
+      path("node_modules", ".prisma", "client", "schema.prisma"),
+      "model Job {}",
+    );
+    files.set(path("node_modules", ".prisma", "client", "index.js"), "");
+    files.set(
+      path("node_modules", "@prisma", "client", "package.json"),
+      JSON.stringify({ version: "6.19.3" }),
+    );
+    files.set(
+      path("node_modules", ".prisma", "client", "package.json"),
+      JSON.stringify({ version: "6.19.3" }),
+    );
+    const reader = {
+      exists: (file: string) => files.has(file),
+      read: (file: string) => {
+        const value = files.get(file);
+        if (value === undefined) throw new Error(`missing ${file}`);
+        return value;
+      },
+    };
+
+    expect(prismaClientIsCurrent(workspace, reader)).toBe(true);
+    files.set(
+      path("node_modules", ".prisma", "client", "schema.prisma"),
+      "model Changed {}",
+    );
+    expect(prismaClientIsCurrent(workspace, reader)).toBe(false);
   });
 });
