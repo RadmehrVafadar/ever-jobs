@@ -85,6 +85,7 @@ npm run db:generate
 npm run db:migrate
 npx nx reset
 npx nx run watcher:build --skip-nx-cache
+npx nx run api:build --skip-nx-cache
 npx nx run cli:build --skip-nx-cache
 plutil -lint /Users/vafadar/Library/LaunchAgents/com.everjobs.watcher.plist
 launchctl bootstrap gui/$(id -u) /Users/vafadar/Library/LaunchAgents/com.everjobs.watcher.plist
@@ -98,7 +99,16 @@ codex-branch
 ```
 
 `npx nx reset` clears Nx daemon/cache state. `--skip-nx-cache` forces fresh
-watcher and CLI output, preventing an old `dist/` bundle from surviving a pull.
+watcher, API, and CLI output, preventing an old `dist/` bundle from surviving a
+pull. If the web GUI is hosted from this checkout, rebuild it in the same update
+window as well. Do not restore or compact a watch until every process that can
+read or write its configuration is on this revision.
+
+The number of watch definitions is not restricted to one. A Canadian watch and
+a US watch can run concurrently; leases are scoped by watch ID. The dangerous
+state is mixed program revisions, not multiple watches. Spec 6005 additionally
+ensures that a long-running scrape cannot overwrite a backup restore or source
+edit made after that run began.
 
 If dependencies and migrations are known to be unchanged, `npm ci`, Prisma
 generation, and migration still remain safe; the commands should be kept in the

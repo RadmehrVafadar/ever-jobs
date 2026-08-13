@@ -3,6 +3,25 @@
 > Append-only log of every doc/spec edit. **Newest entry at the top.** This is a
 > human-readable audit trail; for source-code history, see `git log`.
 
+## 2026-08-13 — run #6006 — Spec 6005 persistence and long-run overwrite hardening
+
+- Traced disappearing source targets to two independent persistence hazards:
+  an older worker silently filtered compact targets without explicit intervals,
+  and run completion saved its starting target snapshot over configuration
+  restored or edited while the run was active.
+- Kept API/export JSON sparse while encoding inherited intervals in PostgreSQL
+  with a numeric compatibility value and an internal inheritance marker, so the
+  preceding expanded-target worker can still decode the complete list.
+- Made persisted target decoding atomic: malformed target storage now fails the
+  watch read instead of returning and later persisting a shortened array.
+- Replaced unconditional run-snapshot persistence with a bounded optimistic
+  merge against the latest watch and made concurrent operator configuration
+  authoritative.
+- Added mixed-version reader and active-run backup-restore regressions, updated
+  Mac/local deployment guidance, and passed 15 watcher suites/222 tests, three
+  API watch suites/31 tests, watcher/API/CLI production builds, and diff
+  hygiene.
+
 ## 2026-08-13 — run #6005 — Watch default inheritance
 
 - Made watch-level interval, country-code, location, and search-term fields the

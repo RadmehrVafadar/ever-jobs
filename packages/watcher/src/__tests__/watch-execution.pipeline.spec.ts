@@ -270,6 +270,68 @@ describe("WatchExecutionService durable pipeline", () => {
     await expect(activeRun).resolves.toMatchObject({ status: "completed" });
   });
 
+  it("preserves a full backup restore applied while a long run is active", async () => {
+    const now = new Date("2026-08-13T12:00:00.000Z");
+    const repository = new InMemoryWatchRepository();
+    const watch = await repository.createWatch(pipelineWatch());
+    const deferred = deferredValue<WatchSourcesExecutionResult>();
+    const executor = fakeExecutor(() => deferred.promise);
+    const execution = executionService(
+      repository,
+      executor,
+      successfulProvider(),
+      () => now,
+      "restore-race-worker",
+    );
+
+    const activeRun = execution.runWatch(watch.id, "baseline");
+    await waitFor(() => executor.execute.mock.calls.length === 1);
+    await repository.updateWatch(watch.id, {
+      intervalMinutes: 30,
+      locations: ["Toronto, Ontario", "New York, New York"],
+      countryCodes: ["CA", "US"],
+      sourceTargets: [
+        {
+          site: Site.GOOGLE_CAREERS,
+          tier: 1,
+          enabled: true,
+          initializedAt: null,
+          nextRunAt: null,
+        },
+        {
+          site: Site.LINKEDIN,
+          tier: 3,
+          intervalMinutes: 60,
+          enabled: true,
+          initializedAt: null,
+          nextRunAt: null,
+        },
+      ],
+    });
+
+    deferred.resolve(sourceResult([]));
+    await expect(activeRun).resolves.toMatchObject({ status: "completed" });
+
+    const persisted = await repository.getWatch(watch.id);
+    expect(persisted).toEqual(
+      expect.objectContaining({
+        intervalMinutes: 30,
+        locations: ["Toronto, Ontario", "New York, New York"],
+        countryCodes: ["CA", "US"],
+      }),
+    );
+    expect(persisted?.sourceTargets).toHaveLength(2);
+    expect(persisted?.sourceTargets.map((target) => target.site)).toEqual([
+      Site.GOOGLE_CAREERS,
+      Site.LINKEDIN,
+    ]);
+    expect(persisted?.sourceTargets[0]).toEqual(
+      expect.objectContaining({ initializedAt: null, nextRunAt: null }),
+    );
+    expect(persisted?.sourceTargets[0]).not.toHaveProperty("intervalMinutes");
+    expect(persisted?.sourceTargets[1].intervalMinutes).toBe(60);
+  });
+
   it("keeps cross-source observations but sends one canonical notification", async () => {
     const initializedAt = new Date("2026-07-14T11:00:00.000Z");
     const now = new Date("2026-07-14T12:00:00.000Z");

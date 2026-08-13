@@ -52,6 +52,7 @@ import { WatcherPrismaService } from "./watcher-prisma.service";
 const DEFAULT_PAGE_LIMIT = 50;
 const MAX_PAGE_LIMIT = 200;
 const TRANSACTION_ATTEMPTS = 3;
+const INHERITED_INTERVAL_MARKER = "watch-default";
 
 type ObservationUpsertResult = {
   job: ObservedJob;
@@ -200,9 +201,13 @@ export class PrismaWatchRepository implements WatchRepository {
   }
 
   async updateWatch(id: string, input: Partial<JobWatch>): Promise<JobWatch> {
+    const inheritedIntervalMinutes = await this.inheritedIntervalForUpdate(
+      id,
+      input,
+    );
     const row = await this.prisma.jobWatch.update({
       where: { id },
-      data: watchUpdateData(input),
+      data: watchUpdateData(input, inheritedIntervalMinutes),
     });
     return mapWatch(row);
   }
@@ -212,15 +217,32 @@ export class PrismaWatchRepository implements WatchRepository {
     expectedUpdatedAt: Date,
     input: Partial<JobWatch>,
   ): Promise<JobWatch | null> {
+    const inheritedIntervalMinutes = await this.inheritedIntervalForUpdate(
+      id,
+      input,
+    );
     return this.serializableTransaction(async (transaction) => {
       const updated = await transaction.jobWatch.updateMany({
         where: { id, updatedAt: expectedUpdatedAt },
-        data: watchUpdateData(input),
+        data: watchUpdateData(input, inheritedIntervalMinutes),
       });
       if (updated.count !== 1) return null;
       const row = await transaction.jobWatch.findUnique({ where: { id } });
       return row ? mapWatch(row) : null;
     });
+  }
+
+  private async inheritedIntervalForUpdate(
+    id: string,
+    input: Partial<JobWatch>,
+  ): Promise<number | undefined> {
+    if (!hasInheritedTargetIntervals(input.sourceTargets)) return undefined;
+    if (isPositiveInterval(input.intervalMinutes)) return input.intervalMinutes;
+    const current = await this.prisma.jobWatch.findUnique({
+      where: { id },
+      select: { intervalMinutes: true },
+    });
+    return current?.intervalMinutes ?? 3;
   }
 
   async deleteWatch(id: string): Promise<boolean> {
@@ -855,7 +877,10 @@ function watchCreateData(
     sources: jsonInput(input.sources ?? []),
     sourceTiers: jsonInput(input.sourceTiers ?? {}),
     sourceTargets: jsonInput(
-      sourceTargetsForStorage(input.sourceTargets ?? []),
+      sourceTargetsForStorage(
+        input.sourceTargets ?? [],
+        input.intervalMinutes ?? 3,
+      ),
     ),
     targetHealth: jsonInput(targetHealthForStorage(input.targetHealth ?? {})),
     companySlugs: jsonInput(input.companySlugs ?? []),
@@ -896,6 +921,7 @@ function watchCreateData(
 
 function watchUpdateData(
   input: Partial<JobWatch>,
+  inheritedIntervalMinutes?: number,
 ): Prisma.JobWatchUncheckedUpdateInput {
   const data: Prisma.JobWatchUncheckedUpdateInput = {};
   if (input.name !== undefined) data.name = input.name;
@@ -912,7 +938,7 @@ function watchUpdateData(
   }
   if (input.sourceTargets !== undefined) {
     data.sourceTargets = jsonInput(
-      sourceTargetsForStorage(input.sourceTargets),
+      sourceTargetsForStorage(input.sourceTargets, inheritedIntervalMinutes),
     );
   }
   if (input.targetHealth !== undefined) {
@@ -1176,7 +1202,7 @@ function mapWatch(row: PrismaJobWatch): JobWatch {
     timezone: row.timezone,
     sources: stringArray(row.sources),
     sourceTiers: numberRecord(row.sourceTiers),
-    sourceTargets: sourceTargetsFromStorage(row.sourceTargets),
+    sourceTargets: sourceTargetsFromStorage(row.sourceTargets, row.id),
     targetHealth: targetHealthFromStorage(row.targetHealth),
     companySlugs: stringArray(row.companySlugs),
     companies: stringArray(row.companies),
@@ -1319,13 +1345,17 @@ function mapRun(row: PrismaWatchRun): WatchRun {
 
 function sourceTargetsForStorage(
   targets: WatchSourceTarget[],
+  inheritedIntervalMinutes?: number,
 ): Prisma.InputJsonObject[] {
-  return targets.map((target) => ({
+  return targets.map((target, index) => ({
     site: String(target.site),
     tier: target.tier,
+    intervalMinutes:
+      target.intervalMinutes ??
+      requireInheritedInterval(inheritedIntervalMinutes, index),
     ...(target.intervalMinutes === undefined
-      ? {}
-      : { intervalMinutes: target.intervalMinutes }),
+      ? { intervalMinutesSource: INHERITED_INTERVAL_MARKER }
+      : {}),
     enabled: target.enabled,
     ...(target.resultsWanted === undefined
       ? {}
@@ -1375,25 +1405,36 @@ function sourceTargetsForStorage(
 
 function sourceTargetsFromStorage(
   value: Prisma.JsonValue,
+  watchId: string,
 ): WatchSourceTarget[] {
-  if (!Array.isArray(value)) return [];
+  if (!Array.isArray(value)) {
+    throw invalidStoredTargets(watchId, "expected an array");
+  }
   const targets: WatchSourceTarget[] = [];
-  for (const candidate of value) {
-    if (!isJsonObject(candidate)) continue;
+  for (const [index, candidate] of value.entries()) {
+    if (!isJsonObject(candidate)) {
+      throw invalidStoredTargets(watchId, `entry ${index} is not an object`);
+    }
     const tier = candidate.tier;
+    const inheritsInterval =
+      candidate.intervalMinutesSource === INHERITED_INTERVAL_MARKER;
     if (
       typeof candidate.site !== "string" ||
       (tier !== 1 && tier !== 2 && tier !== 3) ||
       (candidate.intervalMinutes !== undefined &&
-        typeof candidate.intervalMinutes !== "number") ||
+        !isPositiveInterval(candidate.intervalMinutes)) ||
+      (inheritsInterval && !isPositiveInterval(candidate.intervalMinutes)) ||
       typeof candidate.enabled !== "boolean"
     ) {
-      continue;
+      throw invalidStoredTargets(
+        watchId,
+        `entry ${index} has an invalid site, tier, intervalMinutes, or enabled value`,
+      );
     }
     targets.push({
       site: candidate.site,
       tier,
-      ...(typeof candidate.intervalMinutes === "number"
+      ...(!inheritsInterval && isPositiveInterval(candidate.intervalMinutes)
         ? { intervalMinutes: candidate.intervalMinutes }
         : {}),
       enabled: candidate.enabled,
@@ -1435,6 +1476,39 @@ function sourceTargetsFromStorage(
     });
   }
   return targets;
+}
+
+function hasInheritedTargetIntervals(
+  targets: WatchSourceTarget[] | undefined,
+): boolean {
+  return (
+    targets?.some((target) => target.intervalMinutes === undefined) ?? false
+  );
+}
+
+function isPositiveInterval(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 1 &&
+    value <= 1_440
+  );
+}
+
+function requireInheritedInterval(
+  value: number | undefined,
+  targetIndex: number,
+): number {
+  if (isPositiveInterval(value)) return value;
+  throw new Error(
+    `WATCH_SOURCE_TARGETS_INVALID: inherited interval is unavailable for target ${targetIndex}`,
+  );
+}
+
+function invalidStoredTargets(watchId: string, reason: string): Error {
+  return new Error(
+    `WATCH_SOURCE_TARGETS_INVALID: watch ${watchId} sourceTargets ${reason}`,
+  );
 }
 
 function targetHealthForStorage(

@@ -1,9 +1,9 @@
 # Plan 6005 — Watch Default Inheritance
 
-| Field | Value |
-| --- | --- |
-| Spec | `spec.md` |
-| Created | 2026-08-13 |
+| Field        | Value      |
+| ------------ | ---------- |
+| Spec         | `spec.md`  |
+| Created      | 2026-08-13 |
 | Last updated | 2026-08-13 |
 
 ## Phase 1 — Sparse Contracts and Validation
@@ -39,6 +39,19 @@ append-only log, and ambiguity ledger. Run focused unit/component/API tests,
 watcher and web builds, broader affected suites where practical, docs lint, and
 `git diff --check`.
 
+## Phase 6 — Persistence and Concurrency Hardening
+
+Keep sparse inheritance as the public contract while encoding a numeric
+interval plus an internal marker in PostgreSQL so the preceding worker release
+can still decode every target during a rolling restart. Make target-array
+decoding fail closed rather than silently filtering malformed entries.
+
+Replace execution's unconditional full-snapshot update with a bounded
+optimistic merge against the latest watch. Recompute runtime target timestamps
+and watch scheduling from the latest configuration, preserve concurrent target
+additions/edits/removals, and stop the heartbeat before attempting the merge.
+Cover both failure modes with repository and long-running pipeline regressions.
+
 ## Risks and Mitigations
 
 - **Cadence divergence:** multiple scheduling paths currently read target cadence
@@ -51,6 +64,12 @@ watcher and web builds, broader affected suites where practical, docs lint, and
   test a target that supplies only search terms/request budget.
 - **Concurrent worktree edits:** preserve the existing Spec 6002/notification
   editor changes and limit overlapping documentation edits to additive entries.
+- **Rolling-process compatibility:** an older worker requires a numeric target
+  interval. Materialize it only in physical storage and tag it so current
+  readers restore logical omission.
+- **Long-run stale writes:** a run can outlive an operator edit. Merge only
+  runtime-owned fields into the newest configuration under bounded optimistic
+  concurrency instead of saving its starting snapshot.
 - **Spec numbering:** this fork has no range entry; Q-080 records the use of the
   next collision-free local 6000-series number.
 

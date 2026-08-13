@@ -8,6 +8,7 @@ import {
   Optional,
 } from "@nestjs/common";
 import { randomUUID } from "crypto";
+import { isDeepStrictEqual } from "node:util";
 import { JobPostDto, LocationDto } from "@ever-jobs/models";
 import {
   JobWatch,
@@ -55,6 +56,7 @@ const DEFAULT_OPTIONS: WatchExecutionOptions = {
   leaseTtlMs: 180_000,
   now: () => new Date(),
 };
+const RUNTIME_STATE_MERGE_ATTEMPTS = 3;
 
 @Injectable()
 export class WatchExecutionService {
@@ -250,28 +252,15 @@ export class WatchExecutionService {
       }
 
       const completedAt = this.options.now();
-      const sourceTargets = this.advanceSourceTargets(
+      const { targetResults, coverageDegraded } = this.advanceTargetHealth(
         watch,
         sourceResult,
         completedAt,
-        mode,
       );
-      const { targetHealth, targetResults, coverageDegraded } =
-        this.advanceTargetHealth(watch, sourceResult, completedAt);
-      const initializedAt = this.watchInitializedAt(
-        watch,
-        sourceTargets,
-        sourceResult,
-        completedAt,
-        mode,
-      );
-      await this.repo.updateWatch(watch.id, {
-        initializedAt,
-        lastRunAt: completedAt,
-        nextRunAt: this.nextWatchRunAt(watch, sourceTargets, completedAt),
-        sourceTargets,
-        targetHealth,
-      });
+      // Heartbeat updates also advance updatedAt. Stop it before the
+      // optimistic runtime merge so the worker cannot conflict with itself.
+      clearInterval(heartbeat);
+      await this.persistRuntimeState(watch, sourceResult, completedAt, mode);
 
       const status =
         sourceResult.status === "failed"
@@ -516,15 +505,94 @@ export class WatchExecutionService {
         targetMode === "baseline" && summary?.status === "succeeded"
           ? (target.initializedAt ?? completedAt)
           : target.initializedAt;
+      const intervalMinutes = effectiveTargetInterval(
+        target.intervalMinutes,
+        watch.intervalMinutes,
+        planned.intervalMinutes,
+      );
       return {
         ...target,
         initializedAt,
         lastRunAt: completedAt,
-        nextRunAt: new Date(
-          completedAt.getTime() + planned.intervalMinutes * 60_000,
-        ),
+        nextRunAt: new Date(completedAt.getTime() + intervalMinutes * 60_000),
       };
     });
+  }
+
+  private async persistRuntimeState(
+    startingWatch: JobWatch,
+    result: WatchSourcesExecutionResult,
+    completedAt: Date,
+    requestedMode?: WatchInitializationMode,
+  ): Promise<JobWatch> {
+    for (
+      let attempt = 1;
+      attempt <= RUNTIME_STATE_MERGE_ATTEMPTS;
+      attempt += 1
+    ) {
+      const latest = await this.repo.getWatch(startingWatch.id);
+      if (!latest) {
+        throw new NotFoundException(`Watch not found: ${startingWatch.id}`);
+      }
+
+      const configurationChanged = !isDeepStrictEqual(
+        watchConfiguration(startingWatch),
+        watchConfiguration(latest),
+      );
+      const patch: Partial<JobWatch> = configurationChanged
+        ? { lastRunAt: completedAt }
+        : this.runtimeStatePatch(latest, result, completedAt, requestedMode);
+      const updated = await this.repo.updateWatchIfCurrent(
+        latest.id,
+        latest.updatedAt,
+        patch,
+      );
+      if (updated) {
+        if (configurationChanged) {
+          this.logger.warn(
+            `Watch configuration changed during run; preserved latest configuration watchId=${latest.id}`,
+          );
+        }
+        return updated;
+      }
+    }
+
+    throw new ConflictException(
+      `WATCH_RUNTIME_STATE_CONFLICT: watch changed during ${RUNTIME_STATE_MERGE_ATTEMPTS} completion attempts: ${startingWatch.id}`,
+    );
+  }
+
+  private runtimeStatePatch(
+    watch: JobWatch,
+    result: WatchSourcesExecutionResult,
+    completedAt: Date,
+    requestedMode?: WatchInitializationMode,
+  ): Partial<JobWatch> {
+    const sourceTargets = this.advanceSourceTargets(
+      watch,
+      result,
+      completedAt,
+      requestedMode,
+    );
+    const { targetHealth } = this.advanceTargetHealth(
+      watch,
+      result,
+      completedAt,
+    );
+    return {
+      initializedAt: this.watchInitializedAt(
+        watch,
+        sourceTargets,
+        result,
+        completedAt,
+        requestedMode,
+      ),
+      lastRunAt: completedAt,
+      nextRunAt: this.nextWatchRunAt(watch, sourceTargets, completedAt),
+      sourceTargets,
+      targetHealth,
+      intervalMinutes: watch.intervalMinutes,
+    };
   }
 
   private selectTargets(
@@ -744,6 +812,52 @@ export class WatchExecutionService {
       );
     }
   }
+}
+
+function watchConfiguration(watch: JobWatch): Record<string, unknown> {
+  const configuration: Record<string, unknown> = { ...watch };
+  for (const runtimeField of [
+    "id",
+    "createdAt",
+    "updatedAt",
+    "initializedAt",
+    "lastRunAt",
+    "nextRunAt",
+    "leaseOwnerId",
+    "leaseToken",
+    "leaseExpiresAt",
+    "targetHealth",
+  ]) {
+    delete configuration[runtimeField];
+  }
+  configuration.sourceTargets = watch.sourceTargets.map((target) => {
+    const configuredTarget: Record<string, unknown> = { ...target };
+    delete configuredTarget.initializedAt;
+    delete configuredTarget.lastRunAt;
+    delete configuredTarget.nextRunAt;
+    return configuredTarget;
+  });
+  return configuration;
+}
+
+function effectiveTargetInterval(
+  targetIntervalMinutes: number | undefined,
+  watchIntervalMinutes: number,
+  plannedIntervalMinutes: number,
+): number {
+  if (isPositiveRuntimeInterval(targetIntervalMinutes)) {
+    return targetIntervalMinutes;
+  }
+  if (isPositiveRuntimeInterval(watchIntervalMinutes)) {
+    return watchIntervalMinutes;
+  }
+  return isPositiveRuntimeInterval(plannedIntervalMinutes)
+    ? plannedIntervalMinutes
+    : 1;
+}
+
+function isPositiveRuntimeInterval(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 
 function normalizeOptional(value: unknown): string | null {

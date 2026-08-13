@@ -1,6 +1,6 @@
 # Watch Default Inheritance
 
-**Status:** Implemented
+**Status:** Implemented with persistence and concurrency hardening
 
 **Spec:** [Spec 6005](../../.specify/specs/6005-watch-default-inheritance/spec.md)
 
@@ -89,6 +89,25 @@ does not expand inherited values. The migrated 47-target example is
 [`examples/canadian-tech-adjacent-internships.watch.json`](../../examples/canadian-tech-adjacent-internships.watch.json).
 
 ## Compatibility and Rollout
+
+The public API and downloaded documents remain sparse. PostgreSQL internally
+materializes an inherited interval with an inheritance marker, allowing the
+immediately preceding worker release to read the target during a rolling or
+incomplete restart. Current readers remove that internal value before returning
+the watch, so changing the watch default remains global.
+
+Target decoding is atomic. If even one persisted target is malformed, the watch
+read fails with `WATCH_SOURCE_TARGETS_INVALID` instead of returning a shortened
+list that a later run could save over the complete configuration.
+
+Run completion also treats the latest operator configuration as authoritative.
+A run no longer writes the entire target snapshot it loaded at startup. It
+optimistically merges runtime state into the latest watch; if a backup restore,
+target edit, pause, or other configuration change occurred during the run, that
+configuration wins and remains ready for a clean baseline.
+
+Deploy the API, CLI, and watcher from the same build before restoring a watch
+that was already shortened by the earlier mixed-version failure.
 
 No database migration is required because source targets are already stored as
 JSON. Persistence now round-trips missing target interval/geography properties.
