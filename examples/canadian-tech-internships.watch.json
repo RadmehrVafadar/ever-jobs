@@ -2,7 +2,7 @@
   "name": "Canadian Tech Internships",
   "description": "Toronto and Greater Toronto Area monitoring for Summer 2027 technology internships and co-ops.",
   "enabled": false,
-  "intervalMinutes": 10,
+  "intervalMinutes": 30,
   "timezone": "America/Toronto",
   "sources": [
     "google_careers",
@@ -35,7 +35,7 @@
       "site": "google_careers",
       "companyName": "Google",
       "tier": 1,
-      "intervalMinutes": 10,
+      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -84,7 +84,7 @@
       "site": "shopify",
       "companyName": "Shopify",
       "tier": 1,
-      "intervalMinutes": 10,
+      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -112,7 +112,7 @@
       "companySlug": "wealthsimple",
       "companyName": "Wealthsimple",
       "tier": 1,
-      "intervalMinutes": 10,
+      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -140,7 +140,7 @@
       "companySlug": "plaid",
       "companyName": "Plaid",
       "tier": 1,
-      "intervalMinutes": 10,
+      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -167,7 +167,7 @@
       "site": "amazon",
       "companyName": "Amazon",
       "tier": 1,
-      "intervalMinutes": 10,
+      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -194,7 +194,7 @@
       "site": "microsoft",
       "companyName": "Microsoft",
       "tier": 1,
-      "intervalMinutes": 10,
+      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -221,7 +221,7 @@
       "site": "apple",
       "companyName": "Apple",
       "tier": 1,
-      "intervalMinutes": 10,
+      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -248,7 +248,7 @@
       "site": "nvidia",
       "companyName": "Nvidia",
       "tier": 1,
-      "intervalMinutes": 10,
+      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -275,7 +275,7 @@
       "site": "stripe",
       "companyName": "Stripe",
       "tier": 1,
-      "intervalMinutes": 10,
+      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -302,7 +302,7 @@
       "site": "openai",
       "companyName": "OpenAI",
       "tier": 1,
-      "intervalMinutes": 10,
+      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -329,7 +329,7 @@
       "site": "datadog",
       "companyName": "Datadog",
       "tier": 1,
-      "intervalMinutes": 10,
+      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -356,7 +356,7 @@
       "site": "doordash",
       "companyName": "DoorDash",
       "tier": 1,
-      "intervalMinutes": 10,
+      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -383,7 +383,7 @@
       "site": "coinbase",
       "companyName": "Coinbase",
       "tier": 1,
-      "intervalMinutes": 10,
+      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -410,7 +410,7 @@
       "site": "figma",
       "companyName": "Figma",
       "tier": 1,
-      "intervalMinutes": 10,
+      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -437,7 +437,7 @@
       "site": "vercel",
       "companyName": "Vercel",
       "tier": 1,
-      "intervalMinutes": 10,
+      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -464,7 +464,7 @@
       "site": "meta",
       "companyName": "Meta",
       "tier": 1,
-      "intervalMinutes": 10,
+      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
         "countryCodes": ["CA"],
@@ -518,7 +518,7 @@
       "site": "uber",
       "companyName": "Uber",
       "tier": 1,
-      "intervalMinutes": 10,
+      "intervalMinutes": 30,
       "resultsWanted": 500,
       "enabled": true,
       "searchScope": {
@@ -546,7 +546,7 @@
       "site": "notion",
       "companyName": "Notion",
       "tier": 1,
-      "intervalMinutes": 10,
+      "intervalMinutes": 30,
       "resultsWanted": 500,
       "enabled": true,
       "searchScope": {
@@ -574,7 +574,7 @@
       "site": "ramp",
       "companyName": "Ramp",
       "tier": 1,
-      "intervalMinutes": 10,
+      "intervalMinutes": 30,
       "resultsWanted": 500,
       "enabled": true,
       "searchScope": {
@@ -602,7 +602,7 @@
       "site": "netflix",
       "companyName": "Netflix",
       "tier": 1,
-      "intervalMinutes": 10,
+      "intervalMinutes": 30,
       "resultsWanted": 500,
       "enabled": true,
       "searchScope": {
@@ -630,7 +630,7 @@
       "site": "ibm",
       "companyName": "IBM",
       "tier": 1,
-      "intervalMinutes": 10,
+      "intervalMinutes": 30,
       "resultsWanted": 500,
       "enabled": true,
       "searchScope": {
