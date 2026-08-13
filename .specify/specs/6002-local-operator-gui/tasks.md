@@ -103,3 +103,14 @@
   - **Acceptance:** occupied ports fail before migrations or service spawning,
     Vite starts only after its proxy target is reachable, and Ctrl+C cannot leave
     a launcher-owned watcher child bound to port 3002.
+- [x] T28 — Replace free-text notification route destinations with a
+      provider-filtered selection of masked destination records.
+  - **Acceptance:** configured aliases are selectable, unconfigured aliases and
+    saved references missing from the inventory are visibly unavailable, a
+    provider change cannot retain an incompatible destination, and focused web
+    component tests plus the web build pass.
+  - **Evidence:** the complete web suite passed (6 files / 21 tests), including
+    6 focused route-editor tests, and the TypeScript plus Vite production build
+    and `git diff --check` passed on 2026-08-13. Documentation lint reaches only
+    the repository's pre-existing broken links, duplicate log entries, and
+    Spec 5024 metadata findings.

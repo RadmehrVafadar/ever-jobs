@@ -2,13 +2,22 @@ import { PrismaWatchRepository } from "../prisma-watch.repository";
 import { WatcherPrismaService } from "../watcher-prisma.service";
 
 describe("PrismaWatchRepository", () => {
-  it("serializes per-target result and strict-location settings into watch JSON", async () => {
+  it("requires the role-family migration in the repository health check", async () => {
+    const queryRaw = jest.fn().mockResolvedValue([]);
+    const repository = makeRepository({ $queryRaw: queryRaw });
+
+    await expect(repository.healthCheck()).resolves.toBe(true);
+    expect(JSON.stringify(queryRaw.mock.calls[0][0])).toContain("roleFamilies");
+  });
+
+  it("serializes role families and per-target URL/mode settings into watch JSON", async () => {
     const create = jest.fn().mockRejectedValue(new Error("stop after capture"));
     const repository = makeRepository({ jobWatch: { create } });
 
     await expect(
       repository.createWatch({
         name: "Coverage",
+        roleFamilies: ["technical-product", "technology-risk-it-audit"],
         notificationRoutes: [
           {
             id: "tier-one",
@@ -21,10 +30,13 @@ describe("PrismaWatchRepository", () => {
         ],
         sourceTargets: [
           {
-            site: "uber",
+            site: "workday",
             tier: 1,
             intervalMinutes: 10,
             resultsWanted: 500,
+            companySlug: "rbc:3:RBCEARLYTALENT1",
+            companyUrl: "https://rbc.wd3.myworkdayjobs.com/RBCEARLYTALENT1",
+            mode: "board-search",
             searchScope: {
               countryCodes: ["CA"],
               locations: ["Toronto, Ontario"],
@@ -40,13 +52,16 @@ describe("PrismaWatchRepository", () => {
       data: expect.objectContaining({
         sourceTargets: [
           expect.objectContaining({
-            site: "uber",
+            site: "workday",
             resultsWanted: 500,
+            companyUrl: "https://rbc.wd3.myworkdayjobs.com/RBCEARLYTALENT1",
+            mode: "board-search",
             searchScope: expect.objectContaining({
               strictLocations: true,
             }),
           }),
         ],
+        roleFamilies: ["technical-product", "technology-risk-it-audit"],
         notificationRoutes: [
           expect.objectContaining({
             id: "tier-one",
@@ -55,6 +70,47 @@ describe("PrismaWatchRepository", () => {
         ],
       }),
     });
+  });
+
+  it("round-trips sparse target cadence and geography without expanding defaults", async () => {
+    const updatedAt = new Date("2026-08-13T12:00:00.000Z");
+    const row = {
+      ...watchRow("Sparse defaults", updatedAt),
+      intervalMinutes: 20,
+      locations: ["Toronto", "Remote"],
+      countryCodes: ["CA", "US"],
+      sourceTargets: [
+        {
+          site: "google",
+          tier: 2,
+          enabled: true,
+          searchScope: {
+            searchTerms: ["software intern"],
+            maxRequestsPerRun: 2,
+          },
+        },
+      ],
+    };
+    const repository = makeRepository({
+      jobWatch: { findUnique: jest.fn().mockResolvedValue(row) },
+    });
+
+    await expect(repository.getWatch("watch-1")).resolves.toEqual(
+      expect.objectContaining({
+        intervalMinutes: 20,
+        sourceTargets: [
+          {
+            site: "google",
+            tier: 2,
+            enabled: true,
+            searchScope: {
+              searchTerms: ["software intern"],
+              maxRequestsPerRun: 2,
+            },
+          },
+        ],
+      }),
+    );
   });
 
   it("claims a due watch with one conditional update", async () => {
@@ -147,11 +203,10 @@ describe("PrismaWatchRepository", () => {
     });
 
     await expect(
-      repository.updateWatchIfCurrent(
-        "watch-1",
-        expectedUpdatedAt,
-        { name: "Applied", notificationRoutes },
-      ),
+      repository.updateWatchIfCurrent("watch-1", expectedUpdatedAt, {
+        name: "Applied",
+        notificationRoutes,
+      }),
     ).resolves.toEqual(
       expect.objectContaining({
         id: "watch-1",
@@ -659,6 +714,12 @@ function watchRow(
     companySlugs: [],
     companies: [],
     searchTerms: [],
+    roleFamilies: [
+      "software-engineering",
+      "data-ai",
+      "cybersecurity",
+      "cloud-platform-infrastructure",
+    ],
     requiredTerms: [],
     preferredTerms: [],
     excludedTerms: [],

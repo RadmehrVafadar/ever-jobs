@@ -7,6 +7,10 @@ import {
   CANADIAN_TECH_INTERNSHIP_LOCATIONS,
   canadianTechInternshipsWatch,
 } from "../services/canadian-tech-internships.preset";
+import {
+  CANADIAN_TECH_ADJACENT_INTERNSHIP_LOCATIONS,
+  canadianTechAdjacentInternshipsWatch,
+} from "../services/canadian-tech-adjacent-internships.preset";
 
 describe("JobScoringService internship eligibility", () => {
   const scorer = new JobScoringService();
@@ -422,6 +426,124 @@ describe("JobScoringService internship eligibility", () => {
     );
 
     expect(score.total).toBeGreaterThanOrEqual(watch.urgentScore);
+  });
+
+  describe("configured technology-adjacent role families", () => {
+    const adjacentWatch = canadianTechAdjacentInternshipsWatch() as JobWatch;
+
+    it.each([
+      ["Software Engineering Intern", "software-engineering"],
+      ["Data Analyst Intern", "data-ai"],
+      ["Cybersecurity Analyst Intern", "cybersecurity"],
+      ["Cloud Platform Intern", "cloud-platform-infrastructure"],
+      ["QA Automation Intern", "qa-automation"],
+      ["Technical Product Manager Intern", "technical-product"],
+      ["UX Product Designer Intern", "ux-product-design"],
+      ["Systems Analyst Intern", "systems-business-analysis"],
+      ["Technology Risk Co-op", "technology-risk-it-audit"],
+      ["IT Audit Intern", "technology-risk-it-audit"],
+    ])("accepts %s through %s", (title, family) => {
+      const score = scorer.score(canadianJob({ title }), adjacentWatch);
+
+      expect(score.exclusionReason).toBeUndefined();
+      expect(score.missingRequired).toEqual([]);
+      expect(score.matchedKeywords).toContain(`role family: ${family}`);
+    });
+
+    it.each([
+      ["Product Manager Intern", "Build a consumer brand campaign."],
+      ["Business Analyst Intern", "Support operating process reviews."],
+    ])("rejects generic non-technical role: %s", (title, description) => {
+      const score = scorer.score(
+        canadianJob({ title, description: `Summer 2027. ${description}` }),
+        adjacentWatch,
+      );
+
+      expect(score.exclusionReason).toBe("not-configured-role-family");
+    });
+
+    it.each([
+      [
+        "Product Manager Intern",
+        "Summer 2027. Own a software platform and API roadmap.",
+      ],
+      [
+        "Business Analyst Intern",
+        "Summer 2027. Analyze digital systems and data platform requirements.",
+      ],
+    ])(
+      "accepts technically evidenced generic role: %s",
+      (title, description) => {
+        expect(
+          scorer.score(canadianJob({ title, description }), adjacentWatch)
+            .exclusionReason,
+        ).toBeUndefined();
+      },
+    );
+
+    it.each([
+      "Audit Intern",
+      "Tax Technology Intern",
+      "Finance Systems Intern",
+      "Product Marketing Intern",
+      "Store Technology Intern",
+      "Pharmacy Systems Intern",
+      "Manufacturing Automation Intern",
+      "Merchandising Data Intern",
+    ])("rejects an excluded internship discipline: %s", (title) => {
+      expect(
+        scorer.score(canadianJob({ title }), adjacentWatch).exclusionReason,
+      ).toBe("Excluded non-technology internship discipline");
+    });
+
+    it.each([
+      "KPMG Advisory Office Tour 2026",
+      "Technology Recruiting Event Intern",
+      "Technology Talent Community",
+      "Campus Ambassador - Technology",
+    ])("rejects non-job program posting: %s", (title) => {
+      expect(
+        scorer.score(canadianJob({ title }), adjacentWatch).exclusionReason,
+      ).toBe("Excluded recruiting event or talent program");
+    });
+
+    it.each([
+      "Software Engineer Intern - May 2027 start",
+      "Software Engineer Co-op - May-August 2027",
+      "Software Engineer Intern - May to August 2027",
+      "Software Engineer Intern - May 2027 through August 2027",
+    ])("accepts equivalent Summer 2027 evidence: %s", (title) => {
+      expect(
+        scorer.score(canadianJob({ title, description: "" }), adjacentWatch)
+          .exclusionReason,
+      ).toBeUndefined();
+    });
+
+    it.each(["Waterloo", "Vancouver"])(
+      "rejects an otherwise eligible role outside the GTA: %s",
+      (city) => {
+        const score = scorer.score(
+          sourceJob(
+            canadianJob({
+              title: "Technology Risk Intern, Summer 2027",
+              location: {
+                city,
+                state: city === "Waterloo" ? "ON" : "BC",
+                country: "Canada",
+              } as any,
+            }),
+            1,
+            "workday:example",
+            ["CA"],
+            [...CANADIAN_TECH_ADJACENT_INTERNSHIP_LOCATIONS],
+            true,
+          ),
+          adjacentWatch,
+        );
+
+        expect(score.exclusionReason).toBe("outside-target-scope");
+      },
+    );
   });
 });
 

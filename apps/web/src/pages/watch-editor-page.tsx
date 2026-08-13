@@ -450,6 +450,9 @@ export function WatchEditorPage() {
           <SourceTargetsEditor
             targets={draft.sourceTargets}
             sourceHealth={sourceHealth.data?.sources ?? []}
+            defaultIntervalMinutes={draft.intervalMinutes}
+            defaultCountryCodes={draft.countryCodes}
+            defaultLocations={draft.locations}
             onChange={(targets) => update("sourceTargets", targets)}
           />
         </Panel>

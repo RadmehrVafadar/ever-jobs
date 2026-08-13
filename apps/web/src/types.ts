@@ -47,8 +47,8 @@ export interface NotificationRoute {
 }
 
 export interface WatchSearchScope {
-  countryCodes: string[];
-  locations: string[];
+  countryCodes?: string[];
+  locations?: string[];
   strictLocations?: boolean;
   searchTerms?: string[];
   maxRequestsPerRun?: number;
@@ -57,10 +57,12 @@ export interface WatchSearchScope {
 export interface WatchSourceTarget {
   site: string;
   tier: 1 | 2 | 3;
-  intervalMinutes: number;
+  intervalMinutes?: number;
   resultsWanted?: number;
   companySlug?: string;
   companyName?: string;
+  companyUrl?: string;
+  mode?: "board" | "board-search" | "query";
   searchScope?: WatchSearchScope;
   enabled: boolean;
   initializedAt?: string | null;
@@ -97,6 +99,7 @@ export interface JobWatch {
   companySlugs: string[];
   companies: string[];
   searchTerms: string[];
+  roleFamilies: InternshipRoleFamily[];
   requiredTerms: string[];
   preferredTerms: string[];
   excludedTerms: string[];
@@ -118,6 +121,17 @@ export interface JobWatch {
   createdAt: string;
   updatedAt: string;
 }
+
+export type InternshipRoleFamily =
+  | "software-engineering"
+  | "data-ai"
+  | "cybersecurity"
+  | "cloud-platform-infrastructure"
+  | "qa-automation"
+  | "technical-product"
+  | "ux-product-design"
+  | "systems-business-analysis"
+  | "technology-risk-it-audit";
 
 export interface ScoreBreakdown {
   total: number;
@@ -328,7 +342,7 @@ export interface OperatorOverview {
 
 export interface DestinationSummary {
   alias: string;
-  provider: "discord";
+  provider: NotificationDestination["type"];
   source: "environment" | "local" | "unconfigured";
   configured: boolean;
 }

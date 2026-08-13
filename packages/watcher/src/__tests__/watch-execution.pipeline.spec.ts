@@ -578,7 +578,14 @@ describe("WatchExecutionService durable pipeline", () => {
     const watch = await repository.createWatch(
       pipelineWatch({
         initializedAt,
-        sourceTargets: [sourceTarget(Site.GOOGLE_CAREERS, 1, initializedAt)],
+        sourceTargets: [
+          {
+            site: Site.GOOGLE_CAREERS,
+            tier: 1,
+            enabled: true,
+            initializedAt,
+          },
+        ],
       }),
     );
     const execution = executionService(
@@ -636,7 +643,14 @@ describe("WatchExecutionService durable pipeline", () => {
     const watch = await repository.createWatch(
       pipelineWatch({
         initializedAt,
-        sourceTargets: [sourceTarget(Site.GOOGLE_CAREERS, 1, initializedAt)],
+        sourceTargets: [
+          {
+            site: Site.GOOGLE_CAREERS,
+            tier: 1,
+            enabled: true,
+            initializedAt,
+          },
+        ],
       }),
     );
     const execution = executionService(

@@ -19,6 +19,15 @@ first-class company/ATS target, while RBC, TD, Scotiabank, BMO, and CIBC remain
 visible as deferred, uncovered companies. Generic LinkedIn, Canada Job Bank, and
 Google Jobs targets provide redundancy but never count as company coverage.
 
+Spec 6004 adds a separate disabled preset,
+`canadian-tech-adjacent-internships` (revision 1). It keeps the original preset
+unchanged while requiring branded first-party coverage for 41 employer groups:
+the existing 21 technology companies plus 20 banks, consulting firms, Canadian
+retail/consumer brands, insurers, and telecoms. It enables nine role families:
+software engineering, data/AI, cybersecurity, cloud/platform/infrastructure,
+QA/automation, technical product, UX/product design, systems/business analysis,
+and technology risk/IT audit.
+
 For copy-and-paste operating procedures, use the [local runbook](../../docs/runbooks/watcher-local.md). For the supported Google Cloud shape and its constraints, use the [Google Cloud runbook](../../docs/runbooks/watcher-google-cloud.md).
 
 ## Runtime architecture
@@ -26,7 +35,7 @@ For copy-and-paste operating procedures, use the [local runbook](../../docs/runb
 ```text
 PostgreSQL due-watch query and lease
   -> due source tiers
-  -> target-aware term x location request plan
+  -> target-aware query matrix or term-only board-search plan
   -> existing rad.ar source plugins
   -> normalized JobPostDto location arrays
   -> source observation and canonical-episode upsert
@@ -41,6 +50,16 @@ guard prevents overlap within one replica. Query targets build a bounded,
 deterministically rotating term × location matrix. Source requests use bounded
 concurrency, timeouts, retries with jitter, hard-failure classification, and
 partial-failure accounting. Redis is not required by this scheduler.
+
+Large ATS targets may instead use `board-search`. Those targets rotate a
+bounded term-only slice (at most two requests per ten-minute Spec 6004 cycle)
+and apply strict GTA filtering after normalization; they do not build a
+term-by-location matrix. New Spec 6004 employer-board searches cap normalized
+results at 25 per request so bounded detail enrichment fits the source
+deadline while all four terms rotate across successive runs. An optional
+target `companyUrl` carries an official
+vanity career listing URL to the adapter. `mode`, `companyUrl`, and search scope
+are material preset fields and trigger target reinitialization when changed.
 
 The worker listens on `0.0.0.0:${WATCHER_HEALTH_PORT}` and exposes only operational endpoints:
 
@@ -82,6 +101,13 @@ npm run cli -- watch preset apply canadian-tech-internships --watch <watch-id> -
 npm run cli -- watch coverage --id <watch-id> --json
 ```
 
+To use the separate expanded preset, substitute these dry-run/apply commands:
+
+```bash
+npm run cli -- watch preset apply canadian-tech-adjacent-internships --watch <watch-id>
+npm run cli -- watch preset apply canadian-tech-adjacent-internships --watch <watch-id> --apply
+```
+
 The apply result identifies added and materially changed targets. Baseline only
 those target keys; `--target` may be repeated. Omit it only when intentionally
 initializing every enabled target:
@@ -112,6 +138,27 @@ per-target field accepts integers from 1 through 1000, is stored in the existing
 target JSON, participates in material preset diffs, and is forwarded to the
 scraper. Legacy watch JSON that omits it keeps the executor's configured default.
 
+Before baselining the expanded preset, run its opt-in live endpoint smoke. This
+command is excluded from normal CI:
+
+```bash
+npm run smoke:canadian-employers
+npm run smoke:canadian-employers -- --company KPMG --json
+```
+
+Review every `fail` and `empty` row, official HTTPS application host, parsed
+count, GTA count, and Summer 2027 count. A positive advertised count followed
+by zero parsed jobs is an extraction failure, not an empty board.
+
+The dated 2026-08-12 full-cohort run completed all 22 endpoints with exit code
+0: 18 returned parsed jobs, four authoritatively advertised zero (Loblaw main,
+PC Financial, Shoppers Drug Mart, and Bell), none failed, and no direct URL
+failed official-host validation. KPMG produced four combined GTA + Summer 2027
++ role matches in the bounded sample. Deloitte's endpoint passed with 109
+advertised and 25 parsed GTA jobs, but none had Summer 2027 evidence. Treat the
+run as endpoint/parsing evidence, not a claim that every employer currently has
+a qualifying opening; repeat it before operational baseline.
+
 Confirm the worker and the first scheduled runs:
 
 ```bash
@@ -129,15 +176,21 @@ The complete setup, verification, pause/resume, and troubleshooting sequence is 
 
 ## Source cadence
 
-Source tiers define both cadence and target-specific eligibility geography.
+The watch default defines cadence unless a target contains an explicit interval.
+Source tiers retain priority, routing, health, and eligibility meaning.
 
 | Tier | Default cadence | Eligible geography | Intended sources |
 | ---- | --------------- | ------------------ | ---------------- |
-| Tier 1 | 10 minutes (Wellfound: 30) | Toronto/GTA, Canada | Fixture-backed direct company sources and complete ATS boards |
-| Tier 2 | 30 minutes | Toronto/GTA, Canada | Canada Job Bank and validated Google Jobs redundancy |
-| Tier 3 | 60 minutes | Toronto/GTA, Canada | Validated unauthenticated LinkedIn public guest search |
+| Tier 1 | Watch default (10 minutes in the preset) | Toronto/GTA, Canada | Fixture-backed direct company sources and complete ATS boards |
+| Tier 2 | Watch default (10 minutes in the preset) | Toronto/GTA, Canada | Canada Job Bank and validated Google Jobs redundancy |
+| Tier 3 | Watch default (10 minutes in the preset) | Toronto/GTA, Canada | Validated unauthenticated LinkedIn public guest search |
 
-The ten-minute cadence means a normal Tier 1 target becomes due every ten minutes; Wellfound uses a 30-minute override. It is not a publication-to-notification service-level guarantee: source runtime, source outages, missing publication timestamps, retries, PostgreSQL availability, and process restarts can add latency. A second run never starts while the same watch still holds its execution lease.
+The preset stores ten minutes once at watch level, so every target inherits it.
+An operator can add a source-specific override when needed. Cadence is not a
+publication-to-notification service-level guarantee: source runtime, source
+outages, missing publication timestamps, retries, PostgreSQL availability, and
+process restarts can add latency. A second run never starts while the same watch
+still holds its execution lease.
 
 The preset selects explicit targets rather than querying every registered plugin.
 Plugin metadata declares whether a source is a complete `board` or a search
@@ -147,7 +200,7 @@ rotating slice capped by `maxRequestsPerRun`, so a permanently fixed first
 country/location cannot starve the remaining matrix. The preset has 19 terms
 and 11 Toronto/GTA locations, producing 209 matrix entries for each query
 target. Their request caps are 1, 12, 12, and 8 per run respectively. Google Careers therefore makes only one
-rotating search per 10-minute run.
+rotating search per inherited watch interval.
 
 ## Default source readiness
 
@@ -203,6 +256,11 @@ first-class company coverage even when their query or score allowlist names the
 company. For the Canadian Tech Internships preset, the expected summary is 21 active and five
 uncovered before considering initialization and runtime degradation.
 
+For Canadian Tech + Adjacent Internships, require exactly 41 configured and 41
+active companies, zero uncovered companies, and successful initialization for
+every enabled first-party target before resume. Loblaw has three board targets
+but one company-coverage row.
+
 ## Score and delivery bands
 
 Eligibility is evaluated before ranking. A job requires software/engineering
@@ -215,6 +273,13 @@ regardless of numeric score. The match records whether suppression came from a
 target baseline or current eligibility. Baseline suppression is permanent for
 that episode; eligibility suppression may promote to pending if a later richer
 source observation becomes eligible and no delivery exists.
+
+The expanded preset replaces the narrow software-title gate with configured
+role families. Generic product and business-analysis titles require explicit
+software, digital, platform, data, systems, IT, or technology evidence. General
+audit, tax, accounting, finance, marketing, store, pharmacy, manufacturing,
+merchandising, office-tour, recruiting-event, talent-community, information-
+session, and campus-ambassador postings remain ineligible.
 
 The v2 preset requires explicit Summer 2027 evidence in the title or description.
 It recognizes `Summer 2027`, `Summer of 2027`, `Summer '27`, `Summer 27`, and
@@ -324,6 +389,8 @@ npm run cli -- watch deliveries <watch-id> --json
 npm run cli -- watch initialize <watch-id> --target <target-key> --json
 npm run cli -- watch preset apply canadian-tech-internships --watch <watch-id>
 npm run cli -- watch preset apply canadian-tech-internships --watch <watch-id> --apply
+npm run cli -- watch preset apply canadian-tech-adjacent-internships --watch <watch-id>
+npm run cli -- watch preset apply canadian-tech-adjacent-internships --watch <watch-id> --apply
 ```
 
 Use `watch run` for a manual post-initialization run. Use `watch initialize`
@@ -331,7 +398,8 @@ for a no-notification baseline; repeat `--target` to select several target keys,
 or omit it for all enabled targets. Preset apply is a dry-run JSON diff unless
 `--apply` is present, and mutation rejects an enabled watch.
 
-Target `resultsWanted`, search scope, site, company identity, tier, and interval
+Target `resultsWanted`, mode, company URL, search scope, site, company identity,
+role families, tier, and interval
 are material preset configuration. When upgrading an existing watch, pause it,
 preview/apply the current template, and baseline the enabled target keys
 reported in `targetKeysRequiringInitialization` before resuming. Applying to a
@@ -355,6 +423,11 @@ watch must baseline every enabled target reported by its preset diff.
 
 The current example is
 [Canadian Tech Internships](../../examples/canadian-tech-internships.watch.json).
+Its top-level interval, country codes, and locations are inherited by source
+targets unless a target explicitly supplies the corresponding property. Partial
+`searchScope` objects are supported, so target-only terms or request budgets do
+not duplicate geography. A compacted copy of the 47-target expanded preset is
+[Canadian Tech + Adjacent Internships](../../examples/canadian-tech-adjacent-internships.watch.json).
 The older Canada/USA and broad-Canada example paths remain only as deprecated
 compatibility artifacts.
 

@@ -18,10 +18,9 @@
  *
  * The test goes through `JobsAggregator` (not bare `JobsService`) so the
  * Spec 003 dedup engine is exercised end-to-end. Each plugin emits
- * `<vendor>-<id>`-prefixed ids that share no overlap on this fixture
- * corpus, so the dedup engine must keep all rows distinct (zero
- * collisions). A regression that collapsed rows across plugins would
- * fail the `≥ 1 row from each` assertion.
+ * `<vendor>-<id>`-prefixed ids, while Avature and Gem intentionally share
+ * one canonical Acme Corp remote-SRE posting. The dedup engine must collapse
+ * that content duplicate while retaining rows from all three plugins.
  *
  * The `companySlug='acme-corp'` value is load-bearing for Join.com:
  * the `JoinComService.deriveCompanyName('acme-corp')` produces
@@ -287,7 +286,7 @@ describe('Integration — Spec 006 / T09 (source-ats batch 1: avature × gem × 
   });
 
   describe('JobsAggregator — Spec 003 dedup applied to the cross-plugin fan-out', () => {
-    it('keeps every row distinct across the three plugins (zero collisions on synthetic fixtures)', async () => {
+    it('collapses the one shared canonical posting and retains all three plugins', async () => {
       const aggregator = app.get(JobsAggregator);
       const input = new ScraperInputDto({
         siteType: [Site.AVATURE, Site.GEM, Site.JOIN_COM],
@@ -306,14 +305,12 @@ describe('Integration — Spec 006 / T09 (source-ats batch 1: avature × gem × 
       // Sanity: the dedup engine ran (envelope flag is true).
       expect(result.deduped).toBe(true);
 
-      // Synthetic fixtures don't share canonical-key inputs across
-      // plugins, so the dedup pass should be a no-op (output equals
-      // input). A future fixture refactor that shares titles +
-      // companies across plugins would relax this — for now the
-      // strict equality is the load-bearing assertion that proves
-      // dedup didn't accidentally collapse rows from different
-      // plugins.
-      expect(result.outputCount).toBe(result.rawCount);
+      // Avature and Gem intentionally share the normalized Acme Corp /
+      // Remote Site Reliability Engineer / remote key. That pair must
+      // collapse exactly once; unrelated vendor-prefixed rows remain.
+      expect(result.rawCount).toBe(17);
+      expect(result.outputCount).toBe(16);
+      expect(result.rawCount - result.outputCount).toBe(1);
     });
 
     it('honours dedup=false opt-out (raw fan-out unchanged, deduped flag false)', async () => {

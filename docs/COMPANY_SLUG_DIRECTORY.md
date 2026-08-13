@@ -2,7 +2,7 @@
 
 > A curated list of verified company slugs organized by ATS platform. Use these with the `companySlug` parameter to search jobs at specific companies.
 
-**Last Updated:** 2026-06-28
+**Last Updated:** 2026-08-12
 
 ---
 
@@ -341,6 +341,25 @@ Workday slugs follow the pattern `{company}:{tenant}:{careerSite}`. The format v
 | Samsung | `samsung:3:Global` | Electronics |
 | Siemens | `siemens:3:External` | Industrial |
 | Lockheed Martin | `lmco:5:LMCareers` | Aerospace / Defense |
+| RBC Early Talent | `rbc:3:RBCEARLYTALENT1` | Banking / Canadian Campus |
+| TD Bank Careers | `td:3:TD_Bank_Careers` | Banking / Canada |
+| BMO Campus | `bmo:3:Campus` | Banking / Canadian Campus |
+| CIBC Campus | `cibc:3:campus` | Banking / Canadian Campus |
+| PwC Global Campus Careers | `pwc:3:Global_Campus_Careers` | Consulting / Campus |
+| Aritzia Calling New Graduates | `aritzia:3:Calling_New_Graduates` | Retail / Consumer Brand |
+| Loblaw Careers | `myview:3:loblaw_careers` | Grocery / Retail / Digital |
+| PC Financial | `myview:3:pc_financial` | Consumer Finance / Technology |
+| Shoppers Drug Mart Careers | `myview:3:sdm_careers` | Pharmacy / Retail / Digital |
+| Canadian Tire Enterprise | `canadiantirecorporation:3:Enterprise_External_Careers_Site` | Retail / Financial Services / Technology |
+| Canada Goose Careers | `canadagoose:3:CanadaGooseCareers` | Apparel / Consumer Brand |
+| Manulife | `manulife:3:MFCJH_Jobs` | Insurance / Financial Services |
+| Sun Life Campus | `sunlife:3:Campus` | Insurance / Canadian Campus |
+| Intact Financial | `intactfc:3:intactfc` | Insurance / Technology |
+
+The Spec 6004 entries above are official first-party boards. Loblaw is one
+employer group for coverage reporting but uses three separately addressable
+career sites. The existing Deloitte Workday entry is the U.S. site and must not
+be substituted for Deloitte Canada's vanity-domain board.
 
 ---
 
@@ -422,6 +441,11 @@ iCIMS slugs are typically company identifiers found in the career page URL.
 | Take-Two Interactive | `take2games` | Gaming |
 | Goldman Sachs | `goldmansachs` | Banking |
 | UPS | `ups` | Logistics |
+| KPMG Canada Students | `students-kpmgca` | Consulting / Canadian Campus |
+
+For KPMG Canada, the stable public entry page is
+`https://careers.kpmg.ca/students/jobs`; application links resolve to the
+`students-kpmgca.icims.com` tenant.
 
 ---
 
@@ -472,6 +496,40 @@ SuccessFactors (SAP) slugs vary by company deployment.
 | SAP | `sap:SAP` | Enterprise Software |
 | Accenture | `accenture:Accenture` | Consulting |
 | Siemens | `siemens:SiemensExternal` | Industrial |
+
+### Canadian vanity-domain boards
+
+For these boards, pass the stable identifier in `companySlug` and the complete
+official listing URL in `companyUrl`. The URL is authoritative; the compound
+`instance:companyId` form is not required. Legacy compound slugs remain valid
+for conventional `*.successfactors.com` tenants.
+
+| Company | `companySlug` | `companyUrl` |
+| ------- | ------------- | ------------ |
+| Scotiabank Students & New Graduates | `scotiabank` | `https://jobs.scotiabank.com/go/Student-%26-New-Grad-Jobs/2298417/` |
+| Deloitte Canada | `deloitte-ca` | `https://careers.deloitte.ca/search/` |
+| Bell Canada | `bell-ca` | `https://jobs.bell.ca/ca/en/search-results` |
+| Rogers | `rogers-ca` | `https://jobs.rogers.com/search/` |
+| TELUS | `telus-ca` | `https://careers.telus.com/search/` |
+
+---
+
+## Yello
+
+Yello public job boards use the opaque token in
+`https://<tenant>.yello.co/job_boards/<token>`.
+
+| Company | Slug / board token | Official tenant |
+| ------- | ------------------ | --------------- |
+| EY Canada | `c1riT--B2O-KySgYWsZO1Q` | `https://eyglobal.yello.co` |
+
+---
+
+## Localized Company Sources
+
+| Company | Site key | Official scope |
+| ------- | -------- | -------------- |
+| Accenture Canada | `accenture` | Accenture's public Canadian search and detail pages |
 
 ---
 

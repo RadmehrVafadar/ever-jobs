@@ -2,7 +2,7 @@ import { useState } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { NotificationRoute } from "../types";
+import { DestinationSummary, NotificationRoute } from "../types";
 import { NotificationRoutesEditor } from "./notification-routes-editor";
 
 describe("NotificationRoutesEditor", () => {
@@ -14,15 +14,78 @@ describe("NotificationRoutesEditor", () => {
     await user.click(screen.getByRole("button", { name: "Add route" }));
 
     expect(screen.getByLabelText("Route name")).toHaveValue("New route");
-    expect(screen.getByLabelText("Destination")).toHaveValue("default");
+    expect(screen.getByLabelText("Destination")).toBeInstanceOf(
+      HTMLSelectElement,
+    );
+    expect(screen.getByLabelText("Destination")).toHaveValue("");
+    await user.selectOptions(screen.getByLabelText("Destination"), "tier-one");
     expect(readRoutes()[0]).toEqual(
       expect.objectContaining({
         enabled: true,
         provider: "discord",
-        destinationRef: "default",
+        destinationRef: "tier-one",
         conditions: {},
       }),
     );
+  });
+
+  it("filters destinations by provider and clears incompatible selections", async () => {
+    const user = userEvent.setup();
+    render(
+      <RouteHarness
+        initialRoutes={[makeRoute()]}
+        destinations={[
+          configuredDestination("tier-one", "discord"),
+          configuredDestination("generic", "webhook"),
+        ]}
+      />,
+    );
+
+    await user.selectOptions(screen.getByLabelText("Provider"), "webhook");
+
+    expect(readRoutes()[0]).toEqual(
+      expect.objectContaining({ provider: "webhook", destinationRef: "" }),
+    );
+    expect(
+      screen.queryByRole("option", { name: "tier-one" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "generic" })).toBeEnabled();
+
+    await user.selectOptions(screen.getByLabelText("Destination"), "generic");
+    expect(readRoutes()[0].destinationRef).toBe("generic");
+  });
+
+  it("shows missing and unconfigured aliases as unavailable", () => {
+    render(
+      <RouteHarness
+        initialRoutes={[makeRoute({ destinationRef: "removed-alias" })]}
+        destinations={[
+          configuredDestination("tier-one", "discord"),
+          {
+            ...configuredDestination("default", "discord"),
+            configured: false,
+            source: "unconfigured",
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByLabelText("Destination")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(
+      screen.getByRole("option", { name: "removed-alias (unavailable)" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("option", { name: "default (not configured)" }),
+    ).toBeDisabled();
+    expect(screen.getByRole("option", { name: "tier-one" })).toBeEnabled();
+    expect(
+      screen.getByText(
+        "removed-alias is unavailable. Choose a configured destination.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("builds tier, urgency, and inclusive score conditions", async () => {
@@ -79,27 +142,34 @@ describe("NotificationRoutesEditor", () => {
 
 function RouteHarness({
   initialRoutes,
+  destinations = [configuredDestination("tier-one", "discord")],
 }: {
   initialRoutes: NotificationRoute[];
+  destinations?: DestinationSummary[];
 }) {
   const [routes, setRoutes] = useState(initialRoutes);
   return (
     <>
       <NotificationRoutesEditor
         routes={routes}
-        destinations={[
-          {
-            alias: "tier-one",
-            provider: "discord",
-            source: "local",
-            configured: true,
-          },
-        ]}
+        destinations={destinations}
         onChange={setRoutes}
       />
       <output data-testid="routes-state">{JSON.stringify(routes)}</output>
     </>
   );
+}
+
+function configuredDestination(
+  alias: string,
+  provider: DestinationSummary["provider"],
+): DestinationSummary {
+  return {
+    alias,
+    provider,
+    source: "local",
+    configured: true,
+  };
 }
 
 function readRoutes(): NotificationRoute[] {

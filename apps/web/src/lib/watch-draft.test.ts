@@ -3,6 +3,7 @@ import { JobWatch } from "../types";
 import {
   diffWatch,
   editableWatch,
+  inheritWatchDefaults,
   isTargetInitialized,
   parseImportedWatchDraft,
   validateDraft,
@@ -64,6 +65,12 @@ describe("watch draft helpers", () => {
     expect(draft.sourceTargets[0]).not.toHaveProperty("initializedAt");
     expect(draft.sourceTargets[0]).not.toHaveProperty("lastRunAt");
     expect(draft.sourceTargets[0]).not.toHaveProperty("nextRunAt");
+    expect(draft.sourceTargets[0]).toEqual(
+      expect.objectContaining({
+        companyUrl: "https://boards.example.ca/students",
+        mode: "board-search",
+      }),
+    );
     expect(draft.sourceTargets[0].searchScope?.strictLocations).toBe(true);
   });
 
@@ -103,6 +110,62 @@ describe("watch draft helpers", () => {
         current,
       ),
     ).toThrow(/notificationRoutes contains an invalid routing rule/);
+  });
+
+  it("imports sparse target defaults without expanding them", () => {
+    const current = editableWatch(makeWatch());
+    const imported = parseImportedWatchDraft(
+      {
+        ...current,
+        intervalMinutes: 20,
+        countryCodes: ["CA", "US"],
+        locations: ["Toronto", "Remote"],
+        sourceTargets: [
+          {
+            site: "google",
+            tier: 2,
+            enabled: true,
+            searchScope: { searchTerms: ["software intern"] },
+          },
+        ],
+      },
+      current,
+    );
+
+    expect(imported.sourceTargets[0]).toEqual({
+      site: "google",
+      tier: 2,
+      enabled: true,
+      searchScope: { searchTerms: ["software intern"] },
+    });
+  });
+
+  it("removes all shared overrides while preserving target-only scope settings", () => {
+    expect(
+      inheritWatchDefaults({
+        site: "google",
+        tier: 2,
+        intervalMinutes: 60,
+        enabled: true,
+        searchScope: {
+          countryCodes: ["CA"],
+          locations: ["Toronto"],
+          strictLocations: true,
+          searchTerms: ["software intern"],
+          maxRequestsPerRun: 2,
+        },
+      }),
+    ).toEqual({
+      site: "google",
+      tier: 2,
+      intervalMinutes: undefined,
+      enabled: true,
+      searchScope: {
+        strictLocations: true,
+        searchTerms: ["software intern"],
+        maxRequestsPerRun: 2,
+      },
+    });
   });
 
   it("inherits a legacy watch baseline only when the target timestamp is absent", () => {
@@ -196,6 +259,8 @@ function makeWatch(): JobWatch {
         tier: 2,
         intervalMinutes: 30,
         resultsWanted: 50,
+        companyUrl: "https://boards.example.ca/students",
+        mode: "board-search",
         searchScope: {
           countryCodes: ["CA"],
           locations: ["Toronto, Ontario"],
@@ -209,6 +274,12 @@ function makeWatch(): JobWatch {
     companySlugs: [],
     companies: [],
     searchTerms: ["software engineer intern"],
+    roleFamilies: [
+      "software-engineering",
+      "data-ai",
+      "cybersecurity",
+      "cloud-platform-infrastructure",
+    ],
     requiredTerms: [],
     preferredTerms: ["TypeScript"],
     excludedTerms: ["senior"],

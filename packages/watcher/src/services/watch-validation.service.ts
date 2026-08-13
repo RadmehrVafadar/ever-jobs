@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { Site } from "@ever-jobs/models";
 import { z } from "zod";
-import { JobWatch } from "../interfaces/watch.types";
+import { INTERNSHIP_ROLE_FAMILIES, JobWatch } from "../interfaces/watch.types";
 
 const initializationModes = ["baseline", "recent-only", "notify-all"] as const;
 const workplaceTypes = ["remote", "hybrid", "on-site"] as const;
@@ -25,8 +25,9 @@ export const watchSearchScopeSchema = z
           .transform((value) => value.toUpperCase()),
       )
       .min(1)
-      .max(25),
-    locations: z.array(z.string().trim().min(1)).min(1).max(100),
+      .max(25)
+      .optional(),
+    locations: z.array(z.string().trim().min(1)).min(1).max(100).optional(),
     strictLocations: z.boolean().optional(),
     searchTerms: z.array(z.string().trim().min(1)).min(1).max(100).optional(),
     maxRequestsPerRun: z.number().int().min(1).max(1_000).optional(),
@@ -40,10 +41,13 @@ export const watchSourceTargetSchema = z.object({
     .number()
     .int()
     .min(1)
-    .max(24 * 60),
+    .max(24 * 60)
+    .optional(),
   resultsWanted: z.number().int().min(1).max(1_000).optional(),
   companySlug: z.string().trim().min(1).max(200).optional(),
   companyName: z.string().trim().min(1).max(200).optional(),
+  companyUrl: z.string().url().max(2_000).optional(),
+  mode: z.enum(["board", "board-search", "query"]).optional(),
   searchScope: watchSearchScopeSchema.optional(),
   enabled: z.boolean().default(true),
   initializedAt: z.coerce.date().nullable().optional(),
@@ -181,6 +185,14 @@ const watchObjectSchema = z
     companySlugs: z.array(z.string().trim().min(1)).max(250).optional(),
     companies: z.array(z.string().trim().min(1)).max(500).optional(),
     searchTerms: z.array(z.string().trim().min(1)).min(1).max(100).optional(),
+    roleFamilies: z
+      .array(z.enum(INTERNSHIP_ROLE_FAMILIES))
+      .min(1)
+      .max(INTERNSHIP_ROLE_FAMILIES.length)
+      .refine((values) => new Set(values).size === values.length, {
+        message: "roleFamilies must not contain duplicates",
+      })
+      .optional(),
     requiredTerms: z.array(z.string().trim().min(1)).max(100).optional(),
     preferredTerms: z.array(z.string().trim().min(1)).max(250).optional(),
     excludedTerms: z.array(z.string().trim().min(1)).max(250).optional(),

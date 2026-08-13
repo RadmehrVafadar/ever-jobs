@@ -26,6 +26,7 @@ const EDITABLE_FIELDS: Array<keyof EditableWatch> = [
   "companySlugs",
   "companies",
   "searchTerms",
+  "roleFamilies",
   "requiredTerms",
   "preferredTerms",
   "excludedTerms",
@@ -57,6 +58,7 @@ const BEHAVIOR_FIELDS = new Set([
   "companySlugs",
   "companies",
   "searchTerms",
+  "roleFamilies",
   "requiredTerms",
   "preferredTerms",
   "excludedTerms",
@@ -123,7 +125,12 @@ export function validateDraft(draft: EditableWatch): string[] {
   }
   for (const [index, target] of draft.sourceTargets.entries()) {
     if (!target.site.trim()) errors.push(`Source ${index + 1} needs a site.`);
-    if (target.intervalMinutes < 1 || target.intervalMinutes > 1_440) {
+    if (
+      target.intervalMinutes !== undefined &&
+      (!Number.isInteger(target.intervalMinutes) ||
+        target.intervalMinutes < 1 ||
+        target.intervalMinutes > 1_440)
+    ) {
       errors.push(
         `Source ${target.site || index + 1} has an invalid interval.`,
       );
@@ -168,9 +175,31 @@ export function blankTarget(site = ""): WatchSourceTarget {
   return {
     site,
     tier: 2,
-    intervalMinutes: 30,
     resultsWanted: 50,
     enabled: true,
+  };
+}
+
+/** Remove shared cadence/geography overrides while retaining target-only scope settings. */
+export function inheritWatchDefaults(
+  target: WatchSourceTarget,
+): WatchSourceTarget {
+  const scope = target.searchScope
+    ? Object.fromEntries(
+        Object.entries({
+          ...target.searchScope,
+          countryCodes: undefined,
+          locations: undefined,
+        }).filter(([, value]) => value !== undefined),
+      )
+    : undefined;
+  return {
+    ...target,
+    intervalMinutes: undefined,
+    searchScope:
+      scope && Object.keys(scope).length > 0
+        ? (scope as NonNullable<WatchSourceTarget["searchScope"]>)
+        : undefined,
   };
 }
 
@@ -180,7 +209,7 @@ export function blankRoute(): NotificationRoute {
     name: "New route",
     enabled: true,
     provider: "discord",
-    destinationRef: "default",
+    destinationRef: "",
     conditions: {},
   };
 }
@@ -209,7 +238,9 @@ function editableSourceTarget(target: WatchSourceTarget): WatchSourceTarget {
   return {
     site: target.site,
     tier: target.tier,
-    intervalMinutes: target.intervalMinutes,
+    ...(target.intervalMinutes === undefined
+      ? {}
+      : { intervalMinutes: target.intervalMinutes }),
     ...(target.resultsWanted === undefined
       ? {}
       : { resultsWanted: target.resultsWanted }),
@@ -219,11 +250,19 @@ function editableSourceTarget(target: WatchSourceTarget): WatchSourceTarget {
     ...(target.companyName === undefined
       ? {}
       : { companyName: target.companyName }),
+    ...(target.companyUrl === undefined
+      ? {}
+      : { companyUrl: target.companyUrl }),
+    ...(target.mode === undefined ? {} : { mode: target.mode }),
     ...(target.searchScope
       ? {
           searchScope: {
-            countryCodes: [...target.searchScope.countryCodes],
-            locations: [...target.searchScope.locations],
+            ...(target.searchScope.countryCodes
+              ? { countryCodes: [...target.searchScope.countryCodes] }
+              : {}),
+            ...(target.searchScope.locations
+              ? { locations: [...target.searchScope.locations] }
+              : {}),
             ...(target.searchScope.strictLocations === undefined
               ? {}
               : { strictLocations: target.searchScope.strictLocations }),
@@ -276,6 +315,7 @@ function assertDraftStructure(
     "companySlugs",
     "companies",
     "searchTerms",
+    "roleFamilies",
     "requiredTerms",
     "preferredTerms",
     "excludedTerms",
@@ -337,6 +377,8 @@ function isSourceTarget(value: unknown): value is WatchSourceTarget {
       "resultsWanted",
       "companySlug",
       "companyName",
+      "companyUrl",
+      "mode",
       "searchScope",
       "enabled",
     ])
@@ -345,7 +387,8 @@ function isSourceTarget(value: unknown): value is WatchSourceTarget {
   if (
     typeof value.site !== "string" ||
     !isTier(value.tier) ||
-    !isFiniteNumber(value.intervalMinutes) ||
+    (value.intervalMinutes !== undefined &&
+      !isFiniteNumber(value.intervalMinutes)) ||
     typeof value.enabled !== "boolean"
   )
     return false;
@@ -354,6 +397,13 @@ function isSourceTarget(value: unknown): value is WatchSourceTarget {
   if (value.companySlug !== undefined && typeof value.companySlug !== "string")
     return false;
   if (value.companyName !== undefined && typeof value.companyName !== "string")
+    return false;
+  if (value.companyUrl !== undefined && typeof value.companyUrl !== "string")
+    return false;
+  if (
+    value.mode !== undefined &&
+    !["board", "board-search", "query"].includes(String(value.mode))
+  )
     return false;
   if (value.searchScope === undefined) return true;
   return (
@@ -365,8 +415,10 @@ function isSourceTarget(value: unknown): value is WatchSourceTarget {
       "searchTerms",
       "maxRequestsPerRun",
     ]) &&
-    isStringArray(value.searchScope.countryCodes) &&
-    isStringArray(value.searchScope.locations) &&
+    (value.searchScope.countryCodes === undefined ||
+      isStringArray(value.searchScope.countryCodes)) &&
+    (value.searchScope.locations === undefined ||
+      isStringArray(value.searchScope.locations)) &&
     (value.searchScope.strictLocations === undefined ||
       typeof value.searchScope.strictLocations === "boolean") &&
     (value.searchScope.searchTerms === undefined ||

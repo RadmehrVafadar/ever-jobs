@@ -1,0 +1,1032 @@
+{
+  "name": "Canadian Tech + Adjacent Internships",
+  "intervalMinutes": 20,
+  "timezone": "America/New_York",
+  "sources": [
+    "google_careers",
+    "shopify",
+    "ashby",
+    "amazon",
+    "microsoft",
+    "apple",
+    "nvidia",
+    "stripe",
+    "openai",
+    "datadog",
+    "doordash",
+    "coinbase",
+    "figma",
+    "vercel",
+    "meta",
+    "wellfound",
+    "uber",
+    "notion",
+    "ramp",
+    "netflix",
+    "ibm",
+    "canadajobbank",
+    "google",
+    "linkedin",
+    "workday",
+    "successfactors",
+    "icims",
+    "yello",
+    "accenture"
+  ],
+  "sourceTiers": {
+    "ibm": 1,
+    "meta": 1,
+    "ramp": 1,
+    "uber": 1,
+    "apple": 1,
+    "ashby": 1,
+    "figma": 1,
+    "icims": 1,
+    "yello": 1,
+    "amazon": 1,
+    "google": 2,
+    "notion": 1,
+    "nvidia": 1,
+    "openai": 1,
+    "stripe": 1,
+    "vercel": 1,
+    "datadog": 1,
+    "netflix": 1,
+    "shopify": 1,
+    "workday": 1,
+    "coinbase": 1,
+    "doordash": 1,
+    "linkedin": 3,
+    "accenture": 1,
+    "microsoft": 1,
+    "wellfound": 1,
+    "canadajobbank": 2,
+    "google_careers": 1,
+    "successfactors": 1
+  },
+  "sourceTargets": [
+    {
+      "site": "google_careers",
+      "tier": 1,
+      "companyName": "Google",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true,
+        "searchTerms": [
+          "summer 2027 software engineering intern",
+          "summer 2027 data AI intern",
+          "summer 2027 cybersecurity intern",
+          "summer 2027 cloud platform intern",
+          "summer 2027 QA automation intern",
+          "summer 2027 technical product intern",
+          "summer 2027 UX product design intern",
+          "summer 2027 systems business analyst intern",
+          "summer 2027 technology risk IT audit intern",
+          "May 2027 technology co-op"
+        ],
+        "maxRequestsPerRun": 1
+      }
+    },
+    {
+      "site": "shopify",
+      "tier": 1,
+      "companyName": "Shopify",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true
+      }
+    },
+    {
+      "site": "ashby",
+      "tier": 1,
+      "companySlug": "wealthsimple",
+      "companyName": "Wealthsimple",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true
+      }
+    },
+    {
+      "site": "ashby",
+      "tier": 1,
+      "companySlug": "plaid",
+      "companyName": "Plaid",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true
+      }
+    },
+    {
+      "site": "amazon",
+      "tier": 1,
+      "companyName": "Amazon",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true
+      }
+    },
+    {
+      "site": "microsoft",
+      "tier": 1,
+      "companyName": "Microsoft",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true
+      }
+    },
+    {
+      "site": "apple",
+      "tier": 1,
+      "companyName": "Apple",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true
+      }
+    },
+    {
+      "site": "nvidia",
+      "tier": 1,
+      "companyName": "Nvidia",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true
+      }
+    },
+    {
+      "site": "stripe",
+      "tier": 1,
+      "companyName": "Stripe",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true
+      }
+    },
+    {
+      "site": "openai",
+      "tier": 1,
+      "companyName": "OpenAI",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true
+      }
+    },
+    {
+      "site": "datadog",
+      "tier": 1,
+      "companyName": "Datadog",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true
+      }
+    },
+    {
+      "site": "doordash",
+      "tier": 1,
+      "companyName": "DoorDash",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true
+      }
+    },
+    {
+      "site": "coinbase",
+      "tier": 1,
+      "companyName": "Coinbase",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true
+      }
+    },
+    {
+      "site": "figma",
+      "tier": 1,
+      "companyName": "Figma",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true
+      }
+    },
+    {
+      "site": "vercel",
+      "tier": 1,
+      "companyName": "Vercel",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true
+      }
+    },
+    {
+      "site": "meta",
+      "tier": 1,
+      "companyName": "Meta",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true
+      }
+    },
+    {
+      "site": "wellfound",
+      "tier": 1,
+      "companyName": "Wellfound",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true
+      }
+    },
+    {
+      "site": "uber",
+      "tier": 1,
+      "resultsWanted": 500,
+      "companyName": "Uber",
+      "enabled": false,
+      "searchScope": {
+        "strictLocations": true
+      }
+    },
+    {
+      "site": "notion",
+      "tier": 1,
+      "resultsWanted": 500,
+      "companyName": "Notion",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true
+      }
+    },
+    {
+      "site": "ramp",
+      "tier": 1,
+      "resultsWanted": 500,
+      "companyName": "Ramp",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true
+      }
+    },
+    {
+      "site": "netflix",
+      "tier": 1,
+      "resultsWanted": 500,
+      "companyName": "Netflix",
+      "enabled": false,
+      "searchScope": {
+        "strictLocations": true
+      }
+    },
+    {
+      "site": "ibm",
+      "tier": 1,
+      "resultsWanted": 500,
+      "companyName": "IBM",
+      "enabled": false,
+      "searchScope": {
+        "strictLocations": true
+      }
+    },
+    {
+      "site": "canadajobbank",
+      "tier": 2,
+      "companyName": "Canada Job Bank",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true,
+        "searchTerms": [
+          "summer 2027 software engineering intern",
+          "summer 2027 data AI intern",
+          "summer 2027 cybersecurity intern",
+          "summer 2027 cloud platform intern",
+          "summer 2027 QA automation intern",
+          "summer 2027 technical product intern",
+          "summer 2027 UX product design intern",
+          "summer 2027 systems business analyst intern",
+          "summer 2027 technology risk IT audit intern",
+          "May 2027 technology co-op"
+        ],
+        "maxRequestsPerRun": 12
+      }
+    },
+    {
+      "site": "google",
+      "tier": 2,
+      "companyName": "Google Jobs",
+      "enabled": false,
+      "searchScope": {
+        "strictLocations": true,
+        "searchTerms": [
+          "summer 2027 software engineering intern",
+          "summer 2027 data AI intern",
+          "summer 2027 cybersecurity intern",
+          "summer 2027 cloud platform intern",
+          "summer 2027 QA automation intern",
+          "summer 2027 technical product intern",
+          "summer 2027 UX product design intern",
+          "summer 2027 systems business analyst intern",
+          "summer 2027 technology risk IT audit intern",
+          "May 2027 technology co-op"
+        ],
+        "maxRequestsPerRun": 12
+      }
+    },
+    {
+      "site": "linkedin",
+      "tier": 3,
+      "companyName": "LinkedIn public guest search",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true,
+        "searchTerms": [
+          "summer 2027 software engineering intern",
+          "summer 2027 data AI intern",
+          "summer 2027 cybersecurity intern",
+          "summer 2027 cloud platform intern",
+          "summer 2027 QA automation intern",
+          "summer 2027 technical product intern",
+          "summer 2027 UX product design intern",
+          "summer 2027 systems business analyst intern",
+          "summer 2027 technology risk IT audit intern",
+          "May 2027 technology co-op"
+        ],
+        "maxRequestsPerRun": 8
+      }
+    },
+    {
+      "site": "workday",
+      "tier": 1,
+      "resultsWanted": 25,
+      "companySlug": "rbc:3:RBCEARLYTALENT1",
+      "companyName": "RBC",
+      "companyUrl": "https://rbc.wd3.myworkdayjobs.com/RBCEARLYTALENT1",
+      "mode": "board-search",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true,
+        "searchTerms": [
+          "Summer 2027",
+          "May 2027",
+          "intern",
+          "co-op"
+        ],
+        "maxRequestsPerRun": 2
+      }
+    },
+    {
+      "site": "workday",
+      "tier": 1,
+      "resultsWanted": 25,
+      "companySlug": "td:3:TD_Bank_Careers",
+      "companyName": "TD",
+      "companyUrl": "https://td.wd3.myworkdayjobs.com/TD_Bank_Careers",
+      "mode": "board-search",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true,
+        "searchTerms": [
+          "Summer 2027",
+          "May 2027",
+          "intern",
+          "co-op"
+        ],
+        "maxRequestsPerRun": 2
+      }
+    },
+    {
+      "site": "workday",
+      "tier": 1,
+      "resultsWanted": 25,
+      "companySlug": "bmo:3:Campus",
+      "companyName": "BMO",
+      "companyUrl": "https://bmo.wd3.myworkdayjobs.com/Campus",
+      "mode": "board-search",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true,
+        "searchTerms": [
+          "Summer 2027",
+          "May 2027",
+          "intern",
+          "co-op"
+        ],
+        "maxRequestsPerRun": 2
+      }
+    },
+    {
+      "site": "workday",
+      "tier": 1,
+      "resultsWanted": 25,
+      "companySlug": "cibc:3:campus",
+      "companyName": "CIBC",
+      "companyUrl": "https://cibc.wd3.myworkdayjobs.com/campus",
+      "mode": "board-search",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true,
+        "searchTerms": [
+          "Summer 2027",
+          "May 2027",
+          "intern",
+          "co-op"
+        ],
+        "maxRequestsPerRun": 2
+      }
+    },
+    {
+      "site": "successfactors",
+      "tier": 1,
+      "resultsWanted": 25,
+      "companySlug": "scotiabank",
+      "companyName": "Scotiabank",
+      "companyUrl": "https://jobs.scotiabank.com/go/Student-%26-New-Grad-Jobs/2298417/",
+      "mode": "board-search",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true,
+        "searchTerms": [
+          "Summer 2027",
+          "May 2027",
+          "intern",
+          "co-op"
+        ],
+        "maxRequestsPerRun": 2
+      }
+    },
+    {
+      "site": "icims",
+      "tier": 1,
+      "resultsWanted": 25,
+      "companySlug": "students-kpmgca",
+      "companyName": "KPMG",
+      "companyUrl": "https://careers.kpmg.ca/students/jobs",
+      "mode": "board-search",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true,
+        "searchTerms": [
+          "Summer 2027",
+          "May 2027",
+          "intern",
+          "co-op"
+        ],
+        "maxRequestsPerRun": 2
+      }
+    },
+    {
+      "site": "workday",
+      "tier": 1,
+      "resultsWanted": 25,
+      "companySlug": "pwc:3:Global_Campus_Careers",
+      "companyName": "PwC",
+      "companyUrl": "https://pwc.wd3.myworkdayjobs.com/Global_Campus_Careers",
+      "mode": "board-search",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true,
+        "searchTerms": [
+          "Summer 2027",
+          "May 2027",
+          "intern",
+          "co-op"
+        ],
+        "maxRequestsPerRun": 2
+      }
+    },
+    {
+      "site": "successfactors",
+      "tier": 1,
+      "resultsWanted": 25,
+      "companySlug": "deloitte-ca",
+      "companyName": "Deloitte Canada",
+      "companyUrl": "https://careers.deloitte.ca/search/",
+      "mode": "board-search",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true,
+        "searchTerms": [
+          "Summer 2027",
+          "May 2027",
+          "intern",
+          "co-op"
+        ],
+        "maxRequestsPerRun": 2
+      }
+    },
+    {
+      "site": "yello",
+      "tier": 1,
+      "resultsWanted": 25,
+      "companySlug": "c1riT--B2O-KySgYWsZO1Q",
+      "companyName": "EY Canada",
+      "companyUrl": "https://eyglobal.yello.co",
+      "mode": "board-search",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true,
+        "searchTerms": [
+          "Summer 2027",
+          "May 2027",
+          "intern",
+          "co-op"
+        ],
+        "maxRequestsPerRun": 2
+      }
+    },
+    {
+      "site": "accenture",
+      "tier": 1,
+      "resultsWanted": 25,
+      "companyName": "Accenture Canada",
+      "mode": "board-search",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true,
+        "searchTerms": [
+          "Summer 2027",
+          "May 2027",
+          "intern",
+          "co-op"
+        ],
+        "maxRequestsPerRun": 2
+      }
+    },
+    {
+      "site": "workday",
+      "tier": 1,
+      "resultsWanted": 25,
+      "companySlug": "aritzia:3:Calling_New_Graduates",
+      "companyName": "Aritzia",
+      "companyUrl": "https://aritzia.wd3.myworkdayjobs.com/Calling_New_Graduates",
+      "mode": "board-search",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true,
+        "searchTerms": [
+          "Summer 2027",
+          "May 2027",
+          "intern",
+          "co-op"
+        ],
+        "maxRequestsPerRun": 2
+      }
+    },
+    {
+      "site": "workday",
+      "tier": 1,
+      "resultsWanted": 25,
+      "companySlug": "myview:3:loblaw_careers",
+      "companyName": "Loblaw",
+      "companyUrl": "https://myview.wd3.myworkdayjobs.com/loblaw_careers",
+      "mode": "board-search",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true,
+        "searchTerms": [
+          "Summer 2027",
+          "May 2027",
+          "intern",
+          "co-op"
+        ],
+        "maxRequestsPerRun": 2
+      }
+    },
+    {
+      "site": "workday",
+      "tier": 1,
+      "resultsWanted": 25,
+      "companySlug": "myview:3:pc_financial",
+      "companyName": "Loblaw",
+      "companyUrl": "https://myview.wd3.myworkdayjobs.com/pc_financial",
+      "mode": "board-search",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true,
+        "searchTerms": [
+          "Summer 2027",
+          "May 2027",
+          "intern",
+          "co-op"
+        ],
+        "maxRequestsPerRun": 2
+      }
+    },
+    {
+      "site": "workday",
+      "tier": 1,
+      "resultsWanted": 25,
+      "companySlug": "myview:3:sdm_careers",
+      "companyName": "Loblaw",
+      "companyUrl": "https://myview.wd3.myworkdayjobs.com/sdm_careers",
+      "mode": "board-search",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true,
+        "searchTerms": [
+          "Summer 2027",
+          "May 2027",
+          "intern",
+          "co-op"
+        ],
+        "maxRequestsPerRun": 2
+      }
+    },
+    {
+      "site": "workday",
+      "tier": 1,
+      "resultsWanted": 25,
+      "companySlug": "canadiantirecorporation:3:Enterprise_External_Careers_Site",
+      "companyName": "Canadian Tire",
+      "companyUrl": "https://canadiantirecorporation.wd3.myworkdayjobs.com/Enterprise_External_Careers_Site",
+      "mode": "board-search",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true,
+        "searchTerms": [
+          "Summer 2027",
+          "May 2027",
+          "intern",
+          "co-op"
+        ],
+        "maxRequestsPerRun": 2
+      }
+    },
+    {
+      "site": "workday",
+      "tier": 1,
+      "resultsWanted": 25,
+      "companySlug": "canadagoose:3:CanadaGooseCareers",
+      "companyName": "Canada Goose",
+      "companyUrl": "https://canadagoose.wd3.myworkdayjobs.com/CanadaGooseCareers",
+      "mode": "board-search",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true,
+        "searchTerms": [
+          "Summer 2027",
+          "May 2027",
+          "intern",
+          "co-op"
+        ],
+        "maxRequestsPerRun": 2
+      }
+    },
+    {
+      "site": "workday",
+      "tier": 1,
+      "resultsWanted": 25,
+      "companySlug": "manulife:3:MFCJH_Jobs",
+      "companyName": "Manulife",
+      "companyUrl": "https://manulife.wd3.myworkdayjobs.com/MFCJH_Jobs",
+      "mode": "board-search",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true,
+        "searchTerms": [
+          "Summer 2027",
+          "May 2027",
+          "intern",
+          "co-op"
+        ],
+        "maxRequestsPerRun": 2
+      }
+    },
+    {
+      "site": "workday",
+      "tier": 1,
+      "resultsWanted": 25,
+      "companySlug": "sunlife:3:Campus",
+      "companyName": "Sun Life",
+      "companyUrl": "https://sunlife.wd3.myworkdayjobs.com/Campus",
+      "mode": "board-search",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true,
+        "searchTerms": [
+          "Summer 2027",
+          "May 2027",
+          "intern",
+          "co-op"
+        ],
+        "maxRequestsPerRun": 2
+      }
+    },
+    {
+      "site": "workday",
+      "tier": 1,
+      "resultsWanted": 25,
+      "companySlug": "intactfc:3:intactfc",
+      "companyName": "Intact",
+      "companyUrl": "https://intactfc.wd3.myworkdayjobs.com/intactfc",
+      "mode": "board-search",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true,
+        "searchTerms": [
+          "Summer 2027",
+          "May 2027",
+          "intern",
+          "co-op"
+        ],
+        "maxRequestsPerRun": 2
+      }
+    },
+    {
+      "site": "successfactors",
+      "tier": 1,
+      "resultsWanted": 25,
+      "companySlug": "bell-ca",
+      "companyName": "Bell",
+      "companyUrl": "https://jobs.bell.ca/ca/en/search-results",
+      "mode": "board-search",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true,
+        "searchTerms": [
+          "Summer 2027",
+          "May 2027",
+          "intern",
+          "co-op"
+        ],
+        "maxRequestsPerRun": 2
+      }
+    },
+    {
+      "site": "successfactors",
+      "tier": 1,
+      "resultsWanted": 25,
+      "companySlug": "rogers-ca",
+      "companyName": "Rogers",
+      "companyUrl": "https://jobs.rogers.com/search/",
+      "mode": "board-search",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true,
+        "searchTerms": [
+          "Summer 2027",
+          "May 2027",
+          "intern",
+          "co-op"
+        ],
+        "maxRequestsPerRun": 2
+      }
+    },
+    {
+      "site": "successfactors",
+      "tier": 1,
+      "resultsWanted": 25,
+      "companySlug": "telus-ca",
+      "companyName": "TELUS",
+      "companyUrl": "https://careers.telus.com/search/",
+      "mode": "board-search",
+      "enabled": true,
+      "searchScope": {
+        "strictLocations": true,
+        "searchTerms": [
+          "Summer 2027",
+          "May 2027",
+          "intern",
+          "co-op"
+        ],
+        "maxRequestsPerRun": 2
+      }
+    }
+  ],
+  "companySlugs": [
+    "ashby:wealthsimple",
+    "ashby:plaid",
+    "workday:rbc:3:RBCEARLYTALENT1",
+    "workday:td:3:TD_Bank_Careers",
+    "workday:bmo:3:Campus",
+    "workday:cibc:3:campus",
+    "successfactors:scotiabank",
+    "icims:students-kpmgca",
+    "workday:pwc:3:Global_Campus_Careers",
+    "successfactors:deloitte-ca",
+    "yello:c1riT--B2O-KySgYWsZO1Q",
+    "workday:aritzia:3:Calling_New_Graduates",
+    "workday:myview:3:loblaw_careers",
+    "workday:myview:3:pc_financial",
+    "workday:myview:3:sdm_careers",
+    "workday:canadiantirecorporation:3:Enterprise_External_Careers_Site",
+    "workday:canadagoose:3:CanadaGooseCareers",
+    "workday:manulife:3:MFCJH_Jobs",
+    "workday:sunlife:3:Campus",
+    "workday:intactfc:3:intactfc",
+    "successfactors:bell-ca",
+    "successfactors:rogers-ca",
+    "successfactors:telus-ca"
+  ],
+  "companies": [
+    "Google",
+    "Amazon",
+    "Meta",
+    "Shopify",
+    "Wealthsimple",
+    "Microsoft",
+    "Apple",
+    "Nvidia",
+    "Uber",
+    "Stripe",
+    "OpenAI",
+    "Datadog",
+    "DoorDash",
+    "Coinbase",
+    "Notion",
+    "Figma",
+    "Ramp",
+    "Plaid",
+    "Vercel",
+    "Netflix",
+    "IBM",
+    "RBC",
+    "TD",
+    "Scotiabank",
+    "BMO",
+    "CIBC",
+    "KPMG",
+    "PwC",
+    "Deloitte Canada",
+    "EY Canada",
+    "Accenture Canada",
+    "Aritzia",
+    "Loblaw",
+    "Canadian Tire",
+    "Canada Goose",
+    "Manulife",
+    "Sun Life",
+    "Intact",
+    "Bell",
+    "Rogers",
+    "TELUS"
+  ],
+  "searchTerms": [
+    "summer 2027 software engineering intern",
+    "summer 2027 data AI intern",
+    "summer 2027 cybersecurity intern",
+    "summer 2027 cloud platform intern",
+    "summer 2027 QA automation intern",
+    "summer 2027 technical product intern",
+    "summer 2027 UX product design intern",
+    "summer 2027 systems business analyst intern",
+    "summer 2027 technology risk IT audit intern",
+    "May 2027 technology co-op"
+  ],
+  "roleFamilies": [
+    "software-engineering",
+    "data-ai",
+    "cybersecurity",
+    "cloud-platform-infrastructure",
+    "qa-automation",
+    "technical-product",
+    "ux-product-design",
+    "systems-business-analysis",
+    "technology-risk-it-audit"
+  ],
+  "requiredTerms": [
+    "intern",
+    "internship",
+    "co-op",
+    "coop",
+    "summer 2027"
+  ],
+  "preferredTerms": [
+    "Python",
+    "Java",
+    "Go",
+    "C",
+    "C++",
+    "JavaScript",
+    "TypeScript",
+    "SQL",
+    "Bash",
+    "React",
+    "Next.js",
+    "Flask",
+    "Docker",
+    "Docker Compose",
+    "Kubernetes",
+    "Terraform",
+    "GitHub Actions",
+    "Google Cloud Platform",
+    "Apache Kafka",
+    "PostgreSQL",
+    "Linux",
+    "Auth0",
+    "Identity and Access Management",
+    "IAM",
+    "RBAC",
+    "Distributed Systems",
+    "Backend",
+    "Frontend",
+    "Full Stack",
+    "Mobile",
+    "Developer Experience",
+    "Platform",
+    "Cloud",
+    "Infrastructure",
+    "SRE",
+    "DevOps",
+    "Security",
+    "Data Engineering",
+    "Machine Learning",
+    "Artificial Intelligence",
+    "API",
+    "Authentication",
+    "Authorization"
+  ],
+  "excludedTerms": [
+    "senior",
+    "staff",
+    "principal",
+    "lead",
+    "manager",
+    "director",
+    "architect",
+    "5+ years",
+    "7+ years",
+    "10+ years",
+    "phd",
+    "ph.d",
+    "ph.d.",
+    "doctoral",
+    "doctorate",
+    "united states only",
+    "us only",
+    "usa only",
+    "must reside in the united states"
+  ],
+  "locations": [
+    "Greater Toronto Area",
+    "Toronto, Ontario",
+    "North York, Ontario",
+    "Vaughan, Ontario",
+    "Markham, Ontario",
+    "Richmond Hill, Ontario",
+    "Burlington, Ontario"
+  ],
+  "countryCodes": [
+    "CA",
+    "US"
+  ],
+  "allowedWorkplaceTypes": [
+    "remote",
+    "hybrid",
+    "on-site"
+  ],
+  "allowedEmploymentTypes": [
+    "internship",
+    "co-op"
+  ],
+  "minimumScore": 60,
+  "urgentScore": 80,
+  "digestScore": 40,
+  "notificationChannels": [
+    {
+      "type": "discord",
+      "destinationRef": "default"
+    }
+  ],
+  "notificationRoutes": [
+    {
+      "id": "e1e5b2ac-c68a-4991-a153-bf8ab17a7d92",
+      "name": "Tier - 1",
+      "enabled": true,
+      "provider": "discord",
+      "destinationRef": "tier-1",
+      "conditions": {
+        "sourceTiers": [
+          1
+        ],
+        "notificationTypes": [
+          "urgent"
+        ]
+      }
+    },
+    {
+      "id": "498b0998-75e7-4c42-aba7-717adb22dce8",
+      "name": "Tier - 2",
+      "enabled": true,
+      "provider": "discord",
+      "destinationRef": "tier-2",
+      "conditions": {
+        "sourceTiers": [
+          2
+        ],
+        "notificationTypes": [
+          "standard"
+        ]
+      }
+    },
+    {
+      "id": "20c94e4a-5700-4376-bd3f-d2e92d6ccdd5",
+      "name": "Tier - 2",
+      "enabled": true,
+      "provider": "discord",
+      "destinationRef": "tier-2",
+      "conditions": {
+        "sourceTiers": [
+          3
+        ]
+      }
+    }
+  ],
+  "initializationMode": "baseline",
+  "recentWindowMinutes": 180
+}

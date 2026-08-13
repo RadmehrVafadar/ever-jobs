@@ -453,16 +453,18 @@ export class JobsServiceWatchExecutor implements WatchSourceExecutor {
     return new ScraperInputDto({
       siteType: [request.target.site],
       companySlug: request.target.companySlug,
+      companyUrl: request.target.companyUrl,
       searchTerm: request.searchTerm,
       googleSearchTerm: request.searchTerm,
       location:
-        request.location ??
-        request.target.searchScope.locations[0] ??
-        watch.locations[0] ??
-        "Canada",
+        request.target.mode === "board-search"
+          ? undefined
+          : (request.location ??
+            request.target.searchScope.locations[0] ??
+            watch.locations[0] ??
+            "Canada"),
       country: countryForRequest(request, watch),
-      resultsWanted:
-        request.target.resultsWanted ?? this.options.resultsWanted,
+      resultsWanted: request.target.resultsWanted ?? this.options.resultsWanted,
       descriptionFormat: DescriptionFormat.MARKDOWN,
       requestTimeout: Math.max(1, Math.ceil(this.options.timeoutMs / 1_000)),
       maxConcurrentCompanies: 1,
@@ -610,8 +612,7 @@ function countryForRequest(
   const locationCountry =
     parsedCountry === "US" && (available.has("US") || available.has("USA"))
       ? "US"
-      : parsedCountry === "CA" &&
-          (available.has("CA") || available.has("CAN"))
+      : parsedCountry === "CA" && (available.has("CA") || available.has("CAN"))
         ? "CA"
         : undefined;
   const countryCode =

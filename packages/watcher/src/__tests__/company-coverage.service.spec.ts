@@ -7,6 +7,7 @@ import {
   CANADIAN_TECH_INTERNSHIP_DEFERRED_COMPANIES,
   canadianTechInternshipsWatch,
 } from "../services/canadian-tech-internships.preset";
+import { canadianTechAdjacentInternshipsWatch } from "../services/canadian-tech-adjacent-internships.preset";
 
 describe("buildCompanyCoverageReport", () => {
   it("partitions configured companies using exact normalized branded targets", () => {
@@ -206,6 +207,36 @@ describe("buildCompanyCoverageReport", () => {
         .map(({ company }) => company),
     ).toEqual(CANADIAN_TECH_INTERNSHIP_DEFERRED_COMPANIES);
   });
+
+  it("reports all 41 adjacent-preset employers active after baseline initialization", () => {
+    const initializedAt = new Date("2026-08-12T20:00:00.000Z");
+    const adjacent = canadianTechAdjacentInternshipsWatch();
+    const report = buildCompanyCoverageReport(
+      watchFixture({
+        ...adjacent,
+        initializedAt,
+        sourceTargets: (adjacent.sourceTargets ?? []).map((target) => ({
+          ...target,
+          initializedAt: target.enabled ? initializedAt : target.initializedAt,
+        })),
+      }),
+    );
+
+    expect(report.summary).toEqual({
+      configured: 41,
+      active: 41,
+      disabled: 0,
+      uncovered: 0,
+      initialized: 41,
+      degraded: 0,
+    });
+    expect(report.companies).toHaveLength(41);
+    expect(
+      report.companies.every(
+        ({ status, initialized }) => status === "active" && initialized,
+      ),
+    ).toBe(true);
+  });
 });
 
 function watchFixture(patch: Partial<JobWatch> = {}): JobWatch {
@@ -223,6 +254,12 @@ function watchFixture(patch: Partial<JobWatch> = {}): JobWatch {
     companySlugs: [],
     companies: [],
     searchTerms: [],
+    roleFamilies: [
+      "software-engineering",
+      "data-ai",
+      "cybersecurity",
+      "cloud-platform-infrastructure",
+    ],
     requiredTerms: [],
     preferredTerms: [],
     excludedTerms: [],

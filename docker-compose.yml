@@ -67,8 +67,8 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: ever_jobs
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin
+      POSTGRES_USER: ever_jobs
+      POSTGRES_PASSWORD: ever_jobs
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:

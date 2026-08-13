@@ -11,6 +11,7 @@ describe("watch DTO nested source scope", () => {
   it("accepts a bounded target scope and nullable baseline timestamp", async () => {
     const dto = plainToInstance(CreateWatchDto, {
       name: "Scoped internships",
+      roleFamilies: ["technical-product", "technology-risk-it-audit"],
       sourceTargets: [
         {
           site: Site.ASHBY,
@@ -18,6 +19,8 @@ describe("watch DTO nested source scope", () => {
           intervalMinutes: 3,
           companySlug: "wealthsimple",
           companyName: "Wealthsimple",
+          companyUrl: "https://jobs.example.ca/students",
+          mode: "board-search",
           initializedAt: null,
           searchScope: {
             countryCodes: ["CA", "US"],
@@ -31,6 +34,47 @@ describe("watch DTO nested source scope", () => {
     });
 
     await expect(validate(dto)).resolves.toEqual([]);
+  });
+
+  it("accepts sparse target defaults and a partial search scope", async () => {
+    const dto = plainToInstance(CreateWatchDto, {
+      name: "Inherited defaults",
+      intervalMinutes: 20,
+      countryCodes: ["CA", "US"],
+      locations: ["Toronto", "Remote"],
+      sourceTargets: [
+        {
+          site: Site.GOOGLE,
+          tier: 2,
+          enabled: true,
+          searchScope: {
+            searchTerms: ["software intern"],
+            maxRequestsPerRun: 2,
+          },
+        },
+      ],
+    });
+
+    await expect(validate(dto)).resolves.toEqual([]);
+  });
+
+  it("rejects invalid target URLs, modes, and duplicate role families", async () => {
+    const dto = plainToInstance(CreateWatchDto, {
+      name: "Invalid target contract",
+      roleFamilies: ["technical-product", "technical-product"],
+      sourceTargets: [
+        {
+          site: Site.ASHBY,
+          tier: 1,
+          intervalMinutes: 10,
+          companyUrl: "not-a-url",
+          mode: "term-board",
+          enabled: true,
+        },
+      ],
+    });
+
+    expect(await validate(dto)).not.toHaveLength(0);
   });
 
   it("rejects invalid nested scope bounds", async () => {

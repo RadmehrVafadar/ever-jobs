@@ -22,6 +22,7 @@ model JobWatch {
   companySlugs           Json
   companies              Json
   searchTerms            Json
+  roleFamilies           Json         @default("[\"software-engineering\",\"data-ai\",\"cybersecurity\",\"cloud-platform-infrastructure\"]")
   requiredTerms          Json
   preferredTerms         Json
   excludedTerms          Json

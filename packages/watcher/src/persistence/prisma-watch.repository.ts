@@ -13,7 +13,10 @@ import {
   AcquireWatchLeaseInput,
   ClaimNotificationDeliveryInput,
   CreateNotificationDeliveryInput,
+  INTERNSHIP_ROLE_FAMILIES,
+  InternshipRoleFamily,
   JobWatch,
+  LEGACY_INTERNSHIP_ROLE_FAMILIES,
   NotificationDelivery,
   NotificationDeliveryQuery,
   NotificationStatus,
@@ -70,7 +73,7 @@ export class PrismaWatchRepository implements WatchRepository {
       // Connectivity alone is insufficient: the scheduler cannot operate
       // until watcher migrations have created its durable tables.
       await this.prisma.$queryRaw(
-        Prisma.sql`SELECT "targetHealth", "notificationRoutes" FROM "JobWatch" LIMIT 0`,
+        Prisma.sql`SELECT "targetHealth", "notificationRoutes", "roleFamilies" FROM "JobWatch" LIMIT 0`,
       );
       await this.prisma.$queryRaw(
         Prisma.sql`SELECT "sourceTargetKey", "locations", "canonicalEpisodeKey", "canonicalEpisodeStartedAt" FROM "ObservedJob" LIMIT 0`,
@@ -858,6 +861,9 @@ function watchCreateData(
     companySlugs: jsonInput(input.companySlugs ?? []),
     companies: jsonInput(input.companies ?? []),
     searchTerms: jsonInput(input.searchTerms ?? []),
+    roleFamilies: jsonInput(
+      input.roleFamilies ?? [...LEGACY_INTERNSHIP_ROLE_FAMILIES],
+    ),
     requiredTerms: jsonInput(input.requiredTerms ?? []),
     preferredTerms: jsonInput(input.preferredTerms ?? []),
     excludedTerms: jsonInput(input.excludedTerms ?? []),
@@ -919,6 +925,9 @@ function watchUpdateData(
     data.companies = jsonInput(input.companies);
   if (input.searchTerms !== undefined) {
     data.searchTerms = jsonInput(input.searchTerms);
+  }
+  if (input.roleFamilies !== undefined) {
+    data.roleFamilies = jsonInput(input.roleFamilies);
   }
   if (input.requiredTerms !== undefined) {
     data.requiredTerms = jsonInput(input.requiredTerms);
@@ -1172,6 +1181,7 @@ function mapWatch(row: PrismaJobWatch): JobWatch {
     companySlugs: stringArray(row.companySlugs),
     companies: stringArray(row.companies),
     searchTerms: stringArray(row.searchTerms),
+    roleFamilies: roleFamiliesFromStorage(row.roleFamilies),
     requiredTerms: stringArray(row.requiredTerms),
     preferredTerms: stringArray(row.preferredTerms),
     excludedTerms: stringArray(row.excludedTerms),
@@ -1313,7 +1323,9 @@ function sourceTargetsForStorage(
   return targets.map((target) => ({
     site: String(target.site),
     tier: target.tier,
-    intervalMinutes: target.intervalMinutes,
+    ...(target.intervalMinutes === undefined
+      ? {}
+      : { intervalMinutes: target.intervalMinutes }),
     enabled: target.enabled,
     ...(target.resultsWanted === undefined
       ? {}
@@ -1324,12 +1336,20 @@ function sourceTargetsForStorage(
     ...(target.companyName === undefined
       ? {}
       : { companyName: target.companyName }),
+    ...(target.companyUrl === undefined
+      ? {}
+      : { companyUrl: target.companyUrl }),
+    ...(target.mode === undefined ? {} : { mode: target.mode }),
     ...(target.searchScope === undefined
       ? {}
       : {
           searchScope: {
-            countryCodes: target.searchScope.countryCodes,
-            locations: target.searchScope.locations,
+            ...(target.searchScope.countryCodes === undefined
+              ? {}
+              : { countryCodes: target.searchScope.countryCodes }),
+            ...(target.searchScope.locations === undefined
+              ? {}
+              : { locations: target.searchScope.locations }),
             ...(target.searchScope.strictLocations === undefined
               ? {}
               : { strictLocations: target.searchScope.strictLocations }),
@@ -1364,7 +1384,8 @@ function sourceTargetsFromStorage(
     if (
       typeof candidate.site !== "string" ||
       (tier !== 1 && tier !== 2 && tier !== 3) ||
-      typeof candidate.intervalMinutes !== "number" ||
+      (candidate.intervalMinutes !== undefined &&
+        typeof candidate.intervalMinutes !== "number") ||
       typeof candidate.enabled !== "boolean"
     ) {
       continue;
@@ -1372,7 +1393,9 @@ function sourceTargetsFromStorage(
     targets.push({
       site: candidate.site,
       tier,
-      intervalMinutes: candidate.intervalMinutes,
+      ...(typeof candidate.intervalMinutes === "number"
+        ? { intervalMinutes: candidate.intervalMinutes }
+        : {}),
       enabled: candidate.enabled,
       ...(typeof candidate.resultsWanted === "number" &&
       Number.isFinite(candidate.resultsWanted)
@@ -1388,6 +1411,14 @@ function sourceTargetsFromStorage(
         : {}),
       ...(typeof candidate.companyName === "string"
         ? { companyName: candidate.companyName }
+        : {}),
+      ...(typeof candidate.companyUrl === "string"
+        ? { companyUrl: candidate.companyUrl }
+        : {}),
+      ...(candidate.mode === "board" ||
+      candidate.mode === "board-search" ||
+      candidate.mode === "query"
+        ? { mode: candidate.mode }
         : {}),
       ...(searchScopeFromStorage(candidate.searchScope)
         ? { searchScope: searchScopeFromStorage(candidate.searchScope) }
@@ -1536,9 +1567,12 @@ function searchScopeFromStorage(
   value: Prisma.JsonValue | undefined,
 ): WatchSourceTarget["searchScope"] | undefined {
   if (!value || !isJsonObject(value)) return undefined;
-  const countryCodes = stringArray(value.countryCodes ?? []);
-  const locations = stringArray(value.locations ?? []);
-  if (countryCodes.length === 0 || locations.length === 0) return undefined;
+  const countryCodes =
+    value.countryCodes === undefined
+      ? undefined
+      : stringArray(value.countryCodes);
+  const locations =
+    value.locations === undefined ? undefined : stringArray(value.locations);
   const searchTerms =
     value.searchTerms === undefined
       ? undefined
@@ -1552,13 +1586,14 @@ function searchScopeFromStorage(
     typeof value.strictLocations === "boolean"
       ? value.strictLocations
       : undefined;
-  return {
-    countryCodes,
-    locations,
+  const result: WatchSourceTarget["searchScope"] = {
+    ...(countryCodes === undefined ? {} : { countryCodes }),
+    ...(locations === undefined ? {} : { locations }),
     ...(strictLocations === undefined ? {} : { strictLocations }),
     ...(searchTerms === undefined ? {} : { searchTerms }),
     ...(maxRequestsPerRun === undefined ? {} : { maxRequestsPerRun }),
   };
+  return Object.keys(result).length > 0 ? result : undefined;
 }
 
 function nullableDate(value: unknown): Date | null {
@@ -1575,6 +1610,18 @@ function isJsonObject(value: unknown): value is Prisma.JsonObject {
 function stringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.filter((item): item is string => typeof item === "string");
+}
+
+function roleFamiliesFromStorage(value: unknown): InternshipRoleFamily[] {
+  if (!Array.isArray(value)) return [...LEGACY_INTERNSHIP_ROLE_FAMILIES];
+  const allowed = new Set<string>(INTERNSHIP_ROLE_FAMILIES);
+  const values = value.filter(
+    (item): item is InternshipRoleFamily =>
+      typeof item === "string" && allowed.has(item),
+  );
+  return values.length > 0
+    ? [...new Set(values)]
+    : [...LEGACY_INTERNSHIP_ROLE_FAMILIES];
 }
 
 function numberRecord(value: Prisma.JsonValue): Record<string, number> {

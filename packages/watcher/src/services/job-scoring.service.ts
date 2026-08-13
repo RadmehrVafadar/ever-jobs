@@ -1,6 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import type { JobPostDto } from "@ever-jobs/models";
-import type { JobWatch, ScoreBreakdown } from "../interfaces/watch.types";
+import {
+  InternshipRoleFamily,
+  JobWatch,
+  LEGACY_INTERNSHIP_ROLE_FAMILIES,
+  ScoreBreakdown,
+} from "../interfaces/watch.types";
 import { GeographyClassificationService } from "./geography-classification.service";
 import type { WatchSourceJob } from "./jobs-service-watch.executor";
 
@@ -13,9 +18,15 @@ const SOFTWARE_ROLE =
 const SPECIALTY_ROLE =
   /\b(?:back[- ]?end|front[- ]?end|mobile|ios|android|developer experience|dx|platform|infrastructure|cloud|security|cybersecurity|devops|site reliability|sre)\b/i;
 const INTERNSHIP_INDICATOR =
-  /\b(?:intern(?:ship)?s?|co(?:[-\u2010-\u2015 ]?op)s?)\b/i;
+  /\b(?:intern(?:ship)?s?|co(?:[-\u2010-\u2015 ]?op)s?|student (?:placement|internship|co[- ]?op))\b/i;
 const SUMMER_2027_INDICATOR =
-  /\b(?:summer(?:\s+of)?\s+(?:2027|['\u2019]?\s*27)|2027\s+summer)\b/i;
+  /\b(?:summer(?:\s+of)?\s+(?:2027|['\u2019]?\s*27)|2027\s+summer|may\s+(?:2027|['\u2019]?\s*27)(?:\s+(?:start|intake|term))?|may(?:\s+(?:2027|['\u2019]?\s*27))?\s*(?:[-\u2010-\u2015]|to|through|until)\s*(?:aug(?:ust)?|sep(?:tember)?)(?:\s+(?:2027|['\u2019]?\s*27))?)\b/i;
+const STRUCTURED_STUDENT_INDICATOR =
+  /\b(?:intern(?:ship)?s?|co(?:[-\u2010-\u2015 ]?op)s?|student(?: placement)?)\b/i;
+const TECHNICAL_CONTEXT =
+  /\b(?:software|digital|technology|technical|information technology|\bit\b|systems?|platform|application|data|analytics|artificial intelligence|\bai\b|machine learning|cloud|cyber|security|automation|engineering|developer)\b/i;
+const NON_JOB_PROGRAM_TITLE =
+  /\b(?:office tour|information session|recruit(?:ing|ment) event|career fair|talent community|talent network|join our community|campus ambassador|student ambassador)\b/i;
 const PHD_DEGREE_PATTERN = "(?:ph\\.?\\s*d|doctoral|doctorate)";
 const PHD_INTERNSHIP_TITLE = new RegExp(`\\b${PHD_DEGREE_PATTERN}\\b`, "i");
 const PHD_INTERNSHIP_ELIGIBILITY = new RegExp(
@@ -28,7 +39,41 @@ const PHD_INTERNSHIP_ELIGIBILITY = new RegExp(
   "i",
 );
 const DIRECT_OR_ATS_SOURCE =
-  /^(?:google_careers|source-company-google|amazon|meta|microsoft|apple|nvidia|uber|stripe|openai|netflix|ibm|coinbase|doordash|plaid|figma|datadog|vercel|anthropic|databricks|greenhouse|lever|ashby|workday|smartrecruiters)$/i;
+  /^(?:google_careers|source-company-google|amazon|meta|microsoft|apple|nvidia|uber|stripe|openai|netflix|ibm|coinbase|doordash|plaid|figma|datadog|vercel|anthropic|databricks|greenhouse|lever|ashby|workday|smartrecruiters|icims|successfactors|yello|accenture)$/i;
+const SOFTWARE_FAMILY_TITLE =
+  /\b(?:software (?:engineer(?:ing)?|developer|development)|back[- ]?end (?:engineer(?:ing)?|developer|development)|front[- ]?end (?:engineer(?:ing)?|developer|development)|full[- ]?stack (?:engineer(?:ing)?|developer|development)|mobile (?:software )?(?:engineer(?:ing)?|developer|development)|(?:ios|android) (?:software )?(?:engineer(?:ing)?|developer|development)|developer (?:experience|productivity)|dx (?:engineer(?:ing)?|developer))\b/i;
+
+const ROLE_FAMILY_PATTERNS: Readonly<Record<InternshipRoleFamily, RegExp>> = {
+  "software-engineering": SOFTWARE_FAMILY_TITLE,
+  "data-ai":
+    /\b(?:data (?:engineer(?:ing)?|scientist|science|analyst|analytics)|machine learning (?:engineer(?:ing)?|scientist|developer)|\bml\b (?:engineer(?:ing)?|scientist|developer)|artificial intelligence (?:engineer(?:ing)?|scientist|developer|analyst)|\bai\b (?:engineer(?:ing)?|scientist|developer|analyst))\b/i,
+  cybersecurity:
+    /\b(?:cyber(?:security| security)?|information security|application security|appsec|security (?:engineer(?:ing)?|developer|analyst|specialist|operations)|soc analyst)\b/i,
+  "cloud-platform-infrastructure":
+    /\b(?:cloud|platform|infrastructure|devops|site reliability|\bsre\b)(?:\s+(?:engineer(?:ing)?|developer|analyst|specialist|operations))?\b/i,
+  "qa-automation":
+    /\b(?:quality assurance|\bqa\b|software (?:quality|test)|test (?:engineer(?:ing)?|developer|automation)|automation (?:engineer(?:ing)?|developer|analyst))\b/i,
+  "technical-product":
+    /\b(?:technical product|digital product|technology product|product (?:manager|management|owner|analyst|operations))\b/i,
+  "ux-product-design":
+    /\b(?:user experience|\bux\b|\bui\b|product design(?:er)?|interaction design(?:er)?|design systems?)\b/i,
+  "systems-business-analysis":
+    /\b(?:systems? analyst|technology analyst|technical analyst|\bit\b analyst|information technology analyst|business systems? analyst|business analyst|digital transformation)\b/i,
+  "technology-risk-it-audit":
+    /\b(?:technology risk|technological risk|\bit\b (?:risk|audit)|information technology (?:risk|audit)|digital risk|cyber risk|systems? audit)\b/i,
+};
+
+const ROLE_FAMILY_INTERNSHIP_SHORTHAND: Partial<
+  Record<InternshipRoleFamily, RegExp>
+> = {
+  "software-engineering":
+    /\b(?:software|back[- ]?end|front[- ]?end|full[- ]?stack|mobile|ios|android|developer experience|\bdx\b)\b/i,
+  "data-ai":
+    /\b(?:data|machine learning|\bml\b|artificial intelligence|\bai\b)\b/i,
+  cybersecurity: /\b(?:cybersecurity|cyber security|cyber|security|appsec)\b/i,
+  "cloud-platform-infrastructure":
+    /\b(?:cloud|platform|infrastructure|devops|site reliability|\bsre\b)\b/i,
+};
 
 interface ResolvedScoringInput {
   job: JobPostDto;
@@ -65,6 +110,11 @@ export class JobScoringService {
       asText(job.employmentType),
       Array.isArray(job.jobType) ? job.jobType.join(" ") : asText(job.jobType),
     ].join(" ");
+    const structuredRoleEvidence = [
+      asText(job.jobFunction),
+      asText(job.department),
+      asText(job.team),
+    ].join(" ");
     const searchableText = `${title} ${description} ${company} ${locationText}`;
     const reasons: string[] = [`Source target: ${target.key}`];
     const matched = new Set<string>();
@@ -73,13 +123,35 @@ export class JobScoringService {
     reasons.push(
       `Geography: ${geography.geographyDecision}; country=${geography.matchedCountry ?? "unresolved"}; confidence=${geography.locationConfidence}`,
     );
+    const configuredRoleFamilies =
+      watch.roleFamilies?.length > 0
+        ? watch.roleFamilies
+        : LEGACY_INTERNSHIP_ROLE_FAMILIES;
 
-    const hardExclusion = this.exclusionReason(
+    const explicitHardExclusion = this.exclusionReason(
       title,
       description,
       locationText,
       watch.excludedTerms,
+      configuredRoleFamilies.includes("technical-product"),
     );
+
+    const titleHasInternship = INTERNSHIP_INDICATOR.test(title);
+    const usesOnlyLegacyRoleFamilies = configuredRoleFamilies.every((family) =>
+      LEGACY_INTERNSHIP_ROLE_FAMILIES.includes(family),
+    );
+    const matchedRoleFamilies = matchRoleFamilies(
+      configuredRoleFamilies,
+      title,
+      structuredRoleEvidence,
+      description,
+      titleHasInternship,
+    );
+    const disciplineExclusion = nonTechnologyDisciplineExclusion(
+      title,
+      matchedRoleFamilies,
+    );
+    const hardExclusion = explicitHardExclusion ?? disciplineExclusion;
     if (hardExclusion) {
       return this.breakdown({
         targetKey: target.key,
@@ -88,18 +160,20 @@ export class JobScoringService {
         exclusionReason: hardExclusion,
       });
     }
-
-    const titleHasInternship = INTERNSHIP_INDICATOR.test(title);
-    const hasTargetRoleTitle =
-      EXPLICIT_ROLE_TITLE.test(title) ||
-      (titleHasInternship && INTERNSHIP_SHORTHAND_ROLE.test(title));
-    if (!hasTargetRoleTitle) missingRequired.push("target role in title");
+    const hasTargetRoleTitle = matchedRoleFamilies.length > 0;
+    if (!hasTargetRoleTitle) {
+      missingRequired.push(
+        usesOnlyLegacyRoleFamilies
+          ? "target role in title"
+          : "configured role family",
+      );
+    }
 
     // Internship eligibility intentionally ignores descriptions, departments,
     // configured search terms, and generic student/campus language.
     const hasInternshipIndicator =
       titleHasInternship ||
-      INTERNSHIP_INDICATOR.test(structuredEmploymentEvidence);
+      STRUCTURED_STUDENT_INDICATOR.test(structuredEmploymentEvidence);
     if (!hasInternshipIndicator) {
       missingRequired.push("internship or co-op indicator");
     }
@@ -123,7 +197,14 @@ export class JobScoringService {
     if (hasTargetRoleTitle && titleHasInternship) {
       role += weight(watch, "exactInternshipTitle", 30);
       reasons.push("Exact target internship title");
-      matched.add("software internship");
+      matched.add(
+        matchedRoleFamilies.includes("software-engineering")
+          ? "software internship"
+          : "target internship",
+      );
+    }
+    for (const family of matchedRoleFamilies) {
+      matched.add(`role family: ${family}`);
     }
     if (hasTargetRoleTitle && SOFTWARE_ROLE.test(title)) {
       role += weight(watch, "softwareEngineering", 20);
@@ -242,7 +323,9 @@ export class JobScoringService {
       );
     }
     const gateExclusion = !hasTargetRoleTitle
-      ? "not-software-engineering-role"
+      ? usesOnlyLegacyRoleFamilies
+        ? "not-software-engineering-role"
+        : "not-configured-role-family"
       : !hasInternshipIndicator
         ? "not-internship-or-co-op"
         : requiresSummer2027 && !hasSummer2027
@@ -412,7 +495,11 @@ export class JobScoringService {
     description: string,
     location: string,
     terms: string[],
+    allowProductManagerInternship: boolean,
   ): string | undefined {
+    if (NON_JOB_PROGRAM_TITLE.test(title)) {
+      return "Excluded recruiting event or talent program";
+    }
     const phdExclusionConfigured = terms.some((term) =>
       PHD_INTERNSHIP_TITLE.test(term),
     );
@@ -423,9 +510,12 @@ export class JobScoringService {
     ) {
       return "Excluded PhD/doctoral internship";
     }
+    const seniorityTitle = allowProductManagerInternship
+      ? title.replace(/\bproduct manager\b/gi, "product role")
+      : title;
     if (
       /\b(?:senior|staff|principal|manager|director|architect)\b|\bsr\.?(?=\s|$)/i.test(
-        title,
+        seniorityTitle,
       )
     ) {
       return "Excluded seniority in title";
@@ -459,12 +549,95 @@ export class JobScoringService {
       // "lead" is only a seniority exclusion in role-title context. It must
       // not exclude descriptions that say an intern will lead a scoped task.
       if (term.trim().toLowerCase() === "lead") continue;
+      // Product Manager is an explicit internship role family. Senior/staff
+      // qualifiers are still rejected by the title-level seniority gate.
+      if (
+        allowProductManagerInternship &&
+        term.trim().toLowerCase() === "manager" &&
+        /\bproduct manager\b/i.test(title)
+      ) {
+        continue;
+      }
       if (term && containsTerm(`${title} ${location}`, term)) {
         return `Excluded term: ${term}`;
       }
     }
     return undefined;
   }
+}
+
+function matchRoleFamilies(
+  configured: readonly InternshipRoleFamily[],
+  title: string,
+  structuredRoleEvidence: string,
+  description: string,
+  titleHasInternship: boolean,
+): InternshipRoleFamily[] {
+  const roleEvidence = `${title} ${structuredRoleEvidence}`;
+  const technicalEvidence = `${roleEvidence} ${description}`;
+  const configuredSet = new Set(configured);
+  const isLegacyOnly = [...configuredSet].every((family) =>
+    LEGACY_INTERNSHIP_ROLE_FAMILIES.includes(family),
+  );
+  if (
+    isLegacyOnly &&
+    !EXPLICIT_ROLE_TITLE.test(roleEvidence) &&
+    !(titleHasInternship && INTERNSHIP_SHORTHAND_ROLE.test(title))
+  ) {
+    return [];
+  }
+
+  const matched: InternshipRoleFamily[] = [];
+  for (const family of configuredSet) {
+    const explicit = ROLE_FAMILY_PATTERNS[family].test(roleEvidence);
+    const shorthand =
+      titleHasInternship &&
+      Boolean(ROLE_FAMILY_INTERNSHIP_SHORTHAND[family]?.test(title));
+    if (!explicit && !shorthand) continue;
+
+    if (
+      family === "technical-product" &&
+      /\bproduct (?:manager|management|owner|analyst|operations)\b/i.test(
+        roleEvidence,
+      ) &&
+      !/\b(?:technical|digital|technology) product\b/i.test(roleEvidence) &&
+      !TECHNICAL_CONTEXT.test(technicalEvidence)
+    ) {
+      continue;
+    }
+    if (
+      family === "systems-business-analysis" &&
+      /\bbusiness analyst\b/i.test(roleEvidence) &&
+      !/\b(?:business systems?|technology|technical|\bit\b|digital) analyst\b/i.test(
+        roleEvidence,
+      ) &&
+      !TECHNICAL_CONTEXT.test(technicalEvidence)
+    ) {
+      continue;
+    }
+    matched.push(family);
+  }
+  return matched;
+}
+
+function nonTechnologyDisciplineExclusion(
+  title: string,
+  matchedFamilies: readonly InternshipRoleFamily[],
+): string | undefined {
+  const allowsTechnologyAudit = matchedFamilies.includes(
+    "technology-risk-it-audit",
+  );
+  if (/\b(?:audit|tax|accounting)\b/i.test(title) && !allowsTechnologyAudit) {
+    return "Excluded non-technology internship discipline";
+  }
+  if (
+    /\b(?:finance|marketing|store|pharmacy|manufacturing|merchandising)\b/i.test(
+      title,
+    )
+  ) {
+    return "Excluded non-technology internship discipline";
+  }
+  return undefined;
 }
 
 function isWatchSourceJob(

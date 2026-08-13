@@ -20,10 +20,36 @@ export type NotificationSuppressionReason =
   | "routing";
 export type NotificationType = "urgent" | "standard" | "digest";
 export type WatchRunStatus = "running" | "completed" | "failed" | "partial";
+export type WatchSourceMode = "board" | "board-search" | "query";
+
+export const INTERNSHIP_ROLE_FAMILIES = [
+  "software-engineering",
+  "data-ai",
+  "cybersecurity",
+  "cloud-platform-infrastructure",
+  "qa-automation",
+  "technical-product",
+  "ux-product-design",
+  "systems-business-analysis",
+  "technology-risk-it-audit",
+] as const;
+
+export type InternshipRoleFamily = (typeof INTERNSHIP_ROLE_FAMILIES)[number];
+
+/** Role families used by watches created before configurable role taxonomy. */
+export const LEGACY_INTERNSHIP_ROLE_FAMILIES: readonly InternshipRoleFamily[] =
+  Object.freeze([
+    "software-engineering",
+    "data-ai",
+    "cybersecurity",
+    "cloud-platform-infrastructure",
+  ]);
 
 export interface WatchSearchScope {
-  countryCodes: string[];
-  locations: string[];
+  /** Omit to inherit the watch-level countryCodes. */
+  countryCodes?: string[];
+  /** Omit to inherit the watch-level locations. */
+  locations?: string[];
   /** Require at least one returned job location to match this location list. */
   strictLocations?: boolean;
   searchTerms?: string[];
@@ -33,11 +59,16 @@ export interface WatchSearchScope {
 export interface WatchSourceTarget {
   site: Site | string;
   tier: 1 | 2 | 3;
-  intervalMinutes: number;
+  /** Omit to inherit the watch-level intervalMinutes. */
+  intervalMinutes?: number;
   /** Per-run normalized result ceiling forwarded to the source scraper. */
   resultsWanted?: number;
   companySlug?: string;
   companyName?: string;
+  /** Official company/ATS base URL, including vanity-domain portals. */
+  companyUrl?: string;
+  /** Override the source plugin's default watch planning mode. */
+  mode?: WatchSourceMode;
   searchScope?: WatchSearchScope;
   enabled: boolean;
   initializedAt?: Date | null;
@@ -98,6 +129,7 @@ export interface JobWatch {
   companySlugs: string[];
   companies: string[];
   searchTerms: string[];
+  roleFamilies: InternshipRoleFamily[];
   requiredTerms: string[];
   preferredTerms: string[];
   excludedTerms: string[];

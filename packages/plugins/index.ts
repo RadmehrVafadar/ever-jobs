@@ -25,6 +25,7 @@ import { DeelModule } from './source-ats-deel';
 import { FountainModule } from './source-ats-fountain';
 import { FreshteamModule } from './source-ats-freshteam';
 import { GemModule } from './source-ats-gem';
+import { YelloModule } from './source-ats-yello';
 import { GreenhouseModule } from './source-ats-greenhouse';
 import { HiringThingModule } from './source-ats-hiringthing';
 import { HomerunModule } from './source-ats-homerun';
@@ -1568,6 +1569,7 @@ import { CustomizedEnergySolutionsModule } from './source-company-customizedener
 import { CVUKModule } from './source-company-cvuk';
 import { DeliveryHeroModule } from './source-company-deliveryhero';
 import { DeloitteModule } from './source-company-deloitte';
+import { AccentureModule } from './source-company-accenture';
 import { DeloitteNordicModule } from './source-company-deloittenordic';
 import { DeloitteNewZealandModule } from './source-company-deloittenewzealand';
 import { DeltaElectronicsModule } from './source-company-deltaelectronics';
@@ -1835,6 +1837,7 @@ export const ALL_SOURCE_MODULES = [
   FountainModule,
   FreshteamModule,
   GemModule,
+  YelloModule,
   GreenhouseModule,
   HiringThingModule,
   HomerunModule,
@@ -3376,6 +3379,7 @@ export const ALL_SOURCE_MODULES = [
   CVUKModule,
   DeliveryHeroModule,
   DeloitteModule,
+  AccentureModule,
   DeloitteNordicModule,
   DeloitteNewZealandModule,
   DeltaElectronicsModule,

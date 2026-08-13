@@ -107,6 +107,39 @@ describe("WatchApplyService", () => {
     });
   });
 
+  it("treats role-family changes as baseline-requiring behavior", async () => {
+    const initializedAt = new Date("2026-08-04T11:00:00.000Z");
+    const current = watchFixture({ enabled: true, initializedAt });
+    repository.getWatch.mockResolvedValue(current);
+    repository.updateWatchIfCurrent.mockImplementation(
+      async (_id, _expected, patch) => watchFixture(patch),
+    );
+
+    const result = await service.apply(current.id, {
+      expectedUpdatedAt: current.updatedAt.toISOString(),
+      patch: {
+        roleFamilies: [...current.roleFamilies, "technology-risk-it-audit"],
+      },
+    });
+
+    expect(result.diff).toEqual([
+      expect.objectContaining({
+        field: "roleFamilies",
+        classification: "behavior",
+      }),
+    ]);
+    expect(repository.updateWatchIfCurrent).toHaveBeenCalledWith(
+      current.id,
+      current.updatedAt,
+      expect.objectContaining({
+        enabled: false,
+        initializedAt: null,
+        roleFamilies: expect.arrayContaining(["technology-risk-it-audit"]),
+      }),
+    );
+    expect(result.targetKeysRequiringInitialization).toEqual(["ashby:acme"]);
+  });
+
   it("returns 409 before validation when the draft timestamp is stale", async () => {
     const current = watchFixture();
     repository.getWatch.mockResolvedValue(current);
@@ -196,9 +229,7 @@ describe("WatchApplyService", () => {
     const result = await service.apply(current.id, {
       expectedUpdatedAt: current.updatedAt.toISOString(),
       patch: {
-        notificationChannels: [
-          { type: "discord", destinationRef: "default" },
-        ],
+        notificationChannels: [{ type: "discord", destinationRef: "default" }],
       },
     });
 
@@ -235,6 +266,12 @@ function watchFixture(patch: Partial<JobWatch> = {}): JobWatch {
     companySlugs: ["acme"],
     companies: ["Acme"],
     searchTerms: ["software intern"],
+    roleFamilies: [
+      "software-engineering",
+      "data-ai",
+      "cybersecurity",
+      "cloud-platform-infrastructure",
+    ],
     requiredTerms: [],
     preferredTerms: [],
     excludedTerms: [],

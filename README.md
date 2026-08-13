@@ -160,10 +160,10 @@ Use the [watcher guide](apps/watcher/README.md) and
 [local operations runbook](docs/runbooks/watcher-local.md) for the complete safe activation
 sequence.
 
-## Canadian Tech Internships template
+## Canadian internship templates
 
-The only included starter template is `canadian-tech-internships` (revision 1).
-It searches Summer 2027 technology internships and co-ops in Toronto and the
+The original `canadian-tech-internships` template remains available at revision
+1. It searches Summer 2027 technology internships and co-ops in Toronto and the
 Greater Toronto Area: Toronto, Mississauga, Brampton, Vaughan, Richmond Hill,
 Markham, Oakville, Burlington, Pickering, and Ajax. Every preset-owned source
 scope uses the Canadian country code; the template contains no U.S. discovery
@@ -175,6 +175,27 @@ The retained inventory contains 26 target companies:
 - Uber, Notion, Ramp, Netflix, and IBM remain bounded, board-mode targets.
 - RBC, TD, Scotiabank, BMO, and CIBC are intentionally deferred and remain visible as
   `uncovered`.
+
+Spec 6004 adds a separate disabled template,
+`canadian-tech-adjacent-internships` (revision 1), displayed as **Canadian Tech
++ Adjacent Internships**. It leaves the original template unchanged while
+expanding strict-GTA, Summer 2027 matching to nine role families: software,
+data/AI, cybersecurity, cloud/platform, QA/automation, technical product,
+UX/product design, systems/business analysis, and technology risk/IT audit.
+
+The expanded template contains 41 employer groups: the 21 first-class
+technology companies above plus RBC, TD, Scotiabank, BMO, CIBC, KPMG, PwC,
+Deloitte Canada, EY Canada, Accenture Canada, Aritzia, Loblaw, Canadian Tire,
+Canada Goose, Manulife, Sun Life, Intact, Bell, Rogers, and TELUS. All 41 must
+have enabled branded first-party coverage; Loblaw's three official boards count
+as one employer group. The template ships disabled and uninitialized.
+
+Its network-enabled employer smoke completed all 22 official endpoints on
+2026-08-12: 18 returned parsed jobs, four returned authoritative upstream zero
+counts, no endpoint failed, and no parsed direct application URL failed its
+official-host check. This validates the source surfaces on that date; it does
+not mean every employer currently advertises a matching Summer 2027 role. Run
+`npm run smoke:canadian-employers` again before baselining the preset.
 
 Coverage uses normalized exact company names from company-specific targets. Generic discovery
 boards such as LinkedIn, Google Jobs, and Canada Job Bank provide redundancy but do not count as
@@ -190,6 +211,11 @@ npm run cli -- watch coverage --id <watch-id>
 The report distinguishes active, disabled, uncovered, uninitialized, and degraded coverage. The
 aligned preset example is
 [`examples/canadian-tech-internships.watch.json`](examples/canadian-tech-internships.watch.json).
+Watch-level interval and geography fields are inherited by source targets unless
+the target explicitly overrides them; the compact migrated 47-target example is
+[`examples/canadian-tech-adjacent-internships.watch.json`](examples/canadian-tech-adjacent-internships.watch.json).
+See [Spec 6004's human-readable guide](docs/specs/6004-canadian-employer-internship-coverage.md)
+for the expanded template, ATS mapping, and baseline workflow.
 
 ## Common development commands
 
@@ -206,6 +232,7 @@ aligned preset example is
 | `npm run test:api` | Run API tests |
 | `npm run test:cli` | Run CLI tests |
 | `npm run test:sources` | Run source-plugin tests |
+| `npm run smoke:canadian-employers` | Opt in to live checks of the 20-employer Spec 6004 cohort |
 | `npm run db:generate` | Generate the Prisma client |
 | `npm run db:migrate` | Apply database migrations |
 | `npm run db:seed` | Seed the default disabled watch |

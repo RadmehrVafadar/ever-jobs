@@ -18,6 +18,7 @@ export interface WatchPresetDefinition {
   applyPolicy?: {
     locations?: "merge" | "replace";
     countryCodes?: "merge" | "replace";
+    roleFamilies?: "merge" | "replace";
   };
   createWatch(): Partial<JobWatch>;
 }
@@ -222,17 +223,46 @@ function scope(
   };
 }
 
+export const createCanadianInternshipSearchScope = scope;
+
+function inheritedScope(
+  options: {
+    searchTerms?: readonly string[];
+    maxRequestsPerRun?: number;
+  } = {},
+): WatchSearchScope {
+  return {
+    strictLocations: true,
+    ...(options.searchTerms ? { searchTerms: [...options.searchTerms] } : {}),
+    ...(options.maxRequestsPerRun === undefined
+      ? {}
+      : { maxRequestsPerRun: options.maxRequestsPerRun }),
+  };
+}
+
 function target(
   input: Omit<WatchSourceTarget, "initializedAt" | "lastRunAt" | "nextRunAt">,
 ): WatchSourceTarget {
   return {
     ...input,
     searchScope: input.searchScope
-      ? scope(
-          input.searchScope.countryCodes,
-          input.searchScope.locations,
-          input.searchScope,
-        )
+      ? {
+          ...(input.searchScope.countryCodes
+            ? { countryCodes: [...input.searchScope.countryCodes] }
+            : {}),
+          ...(input.searchScope.locations
+            ? { locations: [...input.searchScope.locations] }
+            : {}),
+          ...(input.searchScope.strictLocations === undefined
+            ? {}
+            : { strictLocations: input.searchScope.strictLocations }),
+          ...(input.searchScope.searchTerms
+            ? { searchTerms: [...input.searchScope.searchTerms] }
+            : {}),
+          ...(input.searchScope.maxRequestsPerRun === undefined
+            ? {}
+            : { maxRequestsPerRun: input.searchScope.maxRequestsPerRun }),
+        }
       : undefined,
     initializedAt: null,
     lastRunAt: null,
@@ -240,16 +270,17 @@ function target(
   };
 }
 
-function sourceTargets(): WatchSourceTarget[] {
-  const gtaScope = () => scope(["CA"], CANADIAN_TECH_INTERNSHIP_LOCATIONS);
+export const createCanadianInternshipSourceTarget = target;
+
+export function canadianTechInternshipSourceTargets(): WatchSourceTarget[] {
+  const gtaScope = () => inheritedScope();
   const targets: WatchSourceTarget[] = [
     target({
       site: Site.GOOGLE_CAREERS,
       companyName: "Google",
       tier: 1,
-      intervalMinutes: 10,
       enabled: true,
-      searchScope: scope(["CA"], CANADIAN_TECH_INTERNSHIP_LOCATIONS, {
+      searchScope: inheritedScope({
         searchTerms: CANADIAN_TECH_INTERNSHIP_SEARCH_TERMS,
         maxRequestsPerRun: 1,
       }),
@@ -258,7 +289,6 @@ function sourceTargets(): WatchSourceTarget[] {
       site: Site.SHOPIFY,
       companyName: "Shopify",
       tier: 1,
-      intervalMinutes: 10,
       enabled: true,
       searchScope: gtaScope(),
     }),
@@ -267,7 +297,6 @@ function sourceTargets(): WatchSourceTarget[] {
       companySlug: "wealthsimple",
       companyName: "Wealthsimple",
       tier: 1,
-      intervalMinutes: 10,
       enabled: true,
       searchScope: gtaScope(),
     }),
@@ -276,7 +305,6 @@ function sourceTargets(): WatchSourceTarget[] {
       companySlug: "plaid",
       companyName: "Plaid",
       tier: 1,
-      intervalMinutes: 10,
       enabled: true,
       searchScope: gtaScope(),
     }),
@@ -285,7 +313,6 @@ function sourceTargets(): WatchSourceTarget[] {
         site,
         companyName,
         tier: 1,
-        intervalMinutes: site === Site.WELLFOUND ? 30 : 10,
         enabled: true,
         searchScope: gtaScope(),
       }),
@@ -295,7 +322,6 @@ function sourceTargets(): WatchSourceTarget[] {
         site,
         companyName,
         tier: 1,
-        intervalMinutes: 10,
         resultsWanted: 500,
         enabled: true,
         searchScope: gtaScope(),
@@ -305,9 +331,8 @@ function sourceTargets(): WatchSourceTarget[] {
       site: Site.CANADAJOBBANK,
       companyName: "Canada Job Bank",
       tier: 2,
-      intervalMinutes: 30,
       enabled: true,
-      searchScope: scope(["CA"], CANADIAN_TECH_INTERNSHIP_LOCATIONS, {
+      searchScope: inheritedScope({
         searchTerms: CANADIAN_TECH_INTERNSHIP_SEARCH_TERMS,
         maxRequestsPerRun: 12,
       }),
@@ -316,9 +341,8 @@ function sourceTargets(): WatchSourceTarget[] {
       site: Site.GOOGLE,
       companyName: "Google Jobs",
       tier: 2,
-      intervalMinutes: 30,
       enabled: false,
-      searchScope: scope(["CA"], CANADIAN_TECH_INTERNSHIP_LOCATIONS, {
+      searchScope: inheritedScope({
         searchTerms: CANADIAN_TECH_INTERNSHIP_SEARCH_TERMS,
         maxRequestsPerRun: 12,
       }),
@@ -327,9 +351,8 @@ function sourceTargets(): WatchSourceTarget[] {
       site: Site.LINKEDIN,
       companyName: "LinkedIn public guest search",
       tier: 3,
-      intervalMinutes: 60,
       enabled: true,
-      searchScope: scope(["CA"], CANADIAN_TECH_INTERNSHIP_LOCATIONS, {
+      searchScope: inheritedScope({
         searchTerms: CANADIAN_TECH_INTERNSHIP_SEARCH_TERMS,
         maxRequestsPerRun: 8,
       }),
@@ -339,7 +362,7 @@ function sourceTargets(): WatchSourceTarget[] {
 }
 
 export function canadianTechInternshipsWatch(): Partial<JobWatch> {
-  const targets = sourceTargets();
+  const targets = canadianTechInternshipSourceTargets();
   assertCanadianTechInternshipCompanyCoverage(targets);
   const sources = [...new Set(targets.map(({ site }) => String(site)))];
   return {

@@ -3,6 +3,79 @@
 > Append-only log of every doc/spec edit. **Newest entry at the top.** This is a
 > human-readable audit trail; for source-code history, see `git log`.
 
+## 2026-08-13 — run #6005 — Watch default inheritance
+
+- Made watch-level interval, country-code, location, and search-term fields the
+  source-target defaults; target properties are now sparse, independent
+  overrides and existing expanded watch documents remain valid.
+- Applied effective cadence consistently to planning, due checks, rotation, and
+  target/watch next-run advancement, and preserved sparse values through JSON
+  persistence, API validation, GUI import, and download.
+- Compacted Canadian internship preset output, aligned the tracked base example,
+  and added a migrated 47-target adjacent-internship example containing no
+  repeated target interval/country/location blocks.
+- Added inherited/custom source-editor states, individual reset controls, and a
+  one-step **Use defaults for all** action that retains target-only search terms,
+  request budgets, strict-location policy, result limits, and company settings.
+- Added Spec 6005, plan/tasks, human mirror, CLI/watcher/runbook guidance,
+  documentation index entries, and Q-080 for the fork-range numbering blocker.
+- Validation passed all 15 watcher suites (218 tests), all seven web test files
+  (26 tests), three affected API/persistence suites (33 tests), the final six-
+  suite focused regression (76 tests), API/web/CLI/watcher production builds,
+  Prettier, JSON/manifest parsing, compact-example invariants, and scoped diff
+  hygiene. Nx has no configured lint tasks. Documentation lint reaches only the
+  pre-existing two deprecated broken example links, four historical duplicate
+  log entries, and two Spec 5024 frontmatter findings.
+
+## 2026-08-13 — Provider-filtered notification route destinations
+
+- Replaced the routing rule's free-text destination field with a native select
+  populated from masked destination records and filtered by the selected
+  provider, preventing misspelled aliases from being introduced through the
+  operator GUI.
+- New routes now require an explicit destination choice, provider changes clear
+  incompatible selections, and saved missing or unconfigured aliases remain
+  visible as disabled unavailable options instead of being silently rewritten.
+- Updated Spec 6002, its plan/task ledger, human-readable mirror, runbook, and
+  documentation index. The complete web suite passed (6 files / 21 tests),
+  including 6 focused route-editor tests, and the TypeScript plus Vite
+  production build and `git diff --check` passed. Documentation lint remains
+  blocked only by the existing broken example links, duplicate historical log
+  entries, and Spec 5024 metadata findings.
+
+## 2026-08-12 — Spec 6004: Canadian employer internship coverage
+
+- Added the authoritative specification, plan, task ledger, research notes, and
+  human-readable mirror for the separate disabled **Canadian Tech + Adjacent
+  Internships** revision-1 preset. The original Canadian Tech Internships preset
+  remains unchanged.
+- Added branded official-source coverage for the five banks and 15 consulting,
+  retail/consumer, insurance, and telecom employer groups, bringing the expanded
+  preset to 41 covered companies with zero intentional deferrals.
+- Added bounded term-only board searching (two rotating requests with 25
+  normalized results per request), official vanity ATS URL propagation, nine
+  technology role families, broader strict-GTA aliases, and extraction-
+  failure handling for positive advertised counts that parse to zero jobs.
+- Added Yello and Accenture source coverage and strengthened Workday, iCIMS, and
+  SuccessFactors behavior for the approved employer cohort.
+- Added the TypeScript-only, opt-in `smoke:canadian-employers` command and
+  deterministic helper tests. The reviewed network-enabled run on 2026-08-12
+  completed all 22 endpoints with exit code 0: 18 parsed-job passes, four
+  authoritative upstream-zero boards (Loblaw main, PC Financial, Shoppers Drug
+  Mart, and Bell), no failures, and no invalid parsed direct URLs. KPMG's bounded
+  sample included four combined GTA + Summer 2027 + role matches; Deloitte
+  parsed successfully but had no Summer 2027 evidence. No claim is made that
+  every employer currently has a qualifying opening.
+- Updated the README, watcher and CLI guides, local runbook, machine-readable
+  tool manifest, ATS company-slug directory, and documentation index with the
+  new preset, role families, official board mappings, and paused
+  apply/baseline/review/resume workflow.
+- Marked implementation tasks T01–T13 complete after the five-project production
+  build, 15-suite/215-test watcher run, 14-suite/79-test API run, focused
+  24-suite/330-test Spec 6004 regressions, deterministic smoke tests, and live
+  smoke passed. Recorded the unrelated pre-existing docs-lint findings and the
+  Windows Prisma DLL lock without modifying the operator's running services.
+
 ## 2026-08-11 — Windows-safe Prisma GUI startup
 
 - Changed the local GUI launcher to reuse an already-current Prisma client when
