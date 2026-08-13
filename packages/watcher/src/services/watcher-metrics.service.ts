@@ -2,6 +2,22 @@ import { Injectable } from "@nestjs/common";
 import { Counter, Gauge, Histogram, Registry } from "prom-client";
 import { JobWatch } from "../interfaces/watch.types";
 
+export const COMPANY_COVERAGE_METRIC_STATUSES = [
+  "configured",
+  "active",
+  "disabled",
+  "uncovered",
+  "initialized",
+  "degraded",
+] as const;
+
+export type CompanyCoverageMetricStatus =
+  (typeof COMPANY_COVERAGE_METRIC_STATUSES)[number];
+
+export type CompanyCoverageMetricCounts = Readonly<
+  Record<CompanyCoverageMetricStatus, number>
+>;
+
 /**
  * Metrics owned by the watcher worker. A private registry prevents duplicate
  * metric registration when WatcherModule is imported by both the API and CLI.
@@ -28,6 +44,7 @@ export class WatcherMetricsService {
   readonly targetLastSuccess: Gauge;
   readonly targetLastNonEmpty: Gauge;
   readonly tier1CoverageDegraded: Gauge;
+  readonly companyCoverage: Gauge;
 
   constructor() {
     this.runsTotal = new Counter({
@@ -86,7 +103,7 @@ export class WatcherMetricsService {
     });
     this.detectionLatency = new Histogram({
       name: "ever_jobs_watcher_detection_latency_seconds",
-      help: "Source publication to first Ever Jobs detection latency.",
+      help: "Source publication to first rad.ar detection latency.",
       buckets: [30, 60, 180, 300, 900, 3600, 21600, 86400],
       registers: [this.registry],
     });
@@ -142,6 +159,12 @@ export class WatcherMetricsService {
       labelNames: ["watch"],
       registers: [this.registry],
     });
+    this.companyCoverage = new Gauge({
+      name: "ever_jobs_watcher_company_coverage",
+      help: "Configured company coverage counts by watch and coverage status.",
+      labelNames: ["watch_id", "status"],
+      registers: [this.registry],
+    });
   }
 
   observeTargetResult(
@@ -183,6 +206,36 @@ export class WatcherMetricsService {
 
   setTier1CoverageDegraded(watchId: string, degraded: boolean): void {
     this.tier1CoverageDegraded.set({ watch: watchId }, degraded ? 1 : 0);
+  }
+
+  /**
+   * Publishes an already-computed company coverage summary. Coverage policy
+   * stays with the reporting service; this metrics service only exports the
+   * supplied counts under a bounded set of status labels.
+   */
+  setCompanyCoverage(
+    watchId: string,
+    counts: CompanyCoverageMetricCounts,
+  ): void {
+    for (const status of COMPANY_COVERAGE_METRIC_STATUSES) {
+      this.companyCoverage.set(
+        { watch_id: watchId, status },
+        counts[status],
+      );
+    }
+  }
+
+  /** Replace all company coverage gauges from the current durable watch set. */
+  syncCompanyCoverage(
+    reports: ReadonlyArray<{
+      watchId: string;
+      counts: CompanyCoverageMetricCounts;
+    }>,
+  ): void {
+    this.companyCoverage.reset();
+    for (const report of reports) {
+      this.setCompanyCoverage(report.watchId, report.counts);
+    }
   }
 
   /** Rehydrates current-state gauges from durable watch state after restarts. */

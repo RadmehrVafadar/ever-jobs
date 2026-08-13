@@ -10,7 +10,7 @@ alerts.
 The source never logs in, stores or reuses personal cookies, attaches an
 authenticated browser session, solves CAPTCHAs, or bypasses a challenge/access
 control. Search uses the public guest listing endpoint and public job detail
-pages through the shared Ever Jobs HTTP client. A challenge/auth wall is a hard
+pages through the shared rad.ar HTTP client. A challenge/auth wall is a hard
 failure.
 
 ## Inputs and request bounds
@@ -27,9 +27,10 @@ Relevant `ScraperInputDto` fields are:
 | `linkedinCompanyIds` | Comma-separated public company filter |
 | `descriptionFormat` | HTML by default; optional plain or Markdown detail description |
 
-Search always sends newest-first ordering. The Spec 6000 watcher preset defaults
-LinkedIn to eight rotating matrix requests per Tier 3 run and a 72-hour window.
-Tier 3 eligibility allows Canada and the United States.
+Search always sends newest-first ordering. The Canadian Tech Internships
+watcher preset defaults LinkedIn to eight rotating matrix requests per Tier 3
+run and a 72-hour window. Its target scope is Toronto/GTA with country code
+`CA`.
 
 ## Mapping and detail budget
 
@@ -79,7 +80,7 @@ RUN_NETWORK_E2E=true npm test -- --runInBand packages/plugins/source-linkedin/__
 The current listing/detail live smoke succeeded without authentication. That
 proves current reachability from the smoke environment, not permanent coverage
 or personalized-alert parity. This source is included in the final
-six-suite/57-test deterministic pass. The v2 preset target-enables `linkedin`
+six-suite/57-test deterministic pass. The current preset target-enables `linkedin`
 only inside the globally disabled/uninitialized watch; keep it paused until the
 target baseline succeeds, inspect locations/application URLs, and complete two
 additional no-notification observation cycles before resume.

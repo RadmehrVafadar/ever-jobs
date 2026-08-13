@@ -3,6 +3,10 @@ import type { JobWatch } from "../interfaces/watch.types";
 import type { WatchSourceJob } from "../services/jobs-service-watch.executor";
 import { defaultInternshipWatch } from "../services/default-watch";
 import { JobScoringService } from "../services/job-scoring.service";
+import {
+  CANADIAN_TECH_INTERNSHIP_LOCATIONS,
+  canadianTechInternshipsWatch,
+} from "../services/canadian-tech-internships.preset";
 
 describe("JobScoringService internship eligibility", () => {
   const scorer = new JobScoringService();
@@ -96,6 +100,58 @@ describe("JobScoringService internship eligibility", () => {
     expect(tier2.geographyDecision).toBe("eligible-united-states");
     expect(tier3.exclusionReason).toBeUndefined();
     expect(tier3.geographyDecision).toBe("eligible-united-states");
+  });
+
+  it("suppresses an unexpected US result from the CA-only Canadian template", () => {
+    const canadianWatch = canadianTechInternshipsWatch() as JobWatch;
+    const score = scorer.score(
+      sourceJob(
+        new JobPostDto({
+          site: "linkedin",
+          title: "Software Engineer Intern, Summer 2027",
+          companyName: "Example",
+          employmentType: "internship",
+          description: "Summer 2027 internship opportunity.",
+          location: { city: "Seattle", state: "WA", country: "USA" } as any,
+        }),
+        3,
+        "linkedin",
+        ["CA"],
+      ),
+      canadianWatch,
+    );
+
+    expect(score.exclusionReason).toBe("outside-target-scope");
+    expect(score.geographyDecision).toBe("outside-target-scope");
+  });
+
+  it("suppresses a Canadian result outside the template's strict GTA locations", () => {
+    const canadianWatch = canadianTechInternshipsWatch() as JobWatch;
+    const score = scorer.score(
+      sourceJob(
+        new JobPostDto({
+          site: "linkedin",
+          title: "Software Engineer Intern, Summer 2027",
+          companyName: "Example",
+          employmentType: "internship",
+          description: "Summer 2027 internship opportunity.",
+          location: {
+            city: "Vancouver",
+            state: "BC",
+            country: "Canada",
+          } as any,
+        }),
+        3,
+        "linkedin",
+        ["CA"],
+        [...CANADIAN_TECH_INTERNSHIP_LOCATIONS],
+        true,
+      ),
+      canadianWatch,
+    );
+
+    expect(score.exclusionReason).toBe("outside-target-scope");
+    expect(score.geographyDecision).toBe("outside-target-scope");
   });
 
   it("suppresses unresolved geography with a deterministic explanation", () => {
@@ -278,7 +334,7 @@ describe("JobScoringService internship eligibility", () => {
         new JobPostDto({
           site: "linkedin",
           title: "Full Stack Software Engineer Intern, Summer 2027",
-          companyName: "Uber",
+          companyName: "RBC",
           employmentType: "internship",
           description:
             "Summer 2027. Python Java Go TypeScript Docker Kubernetes Terraform Kafka SQL distributed systems security React.",
@@ -323,6 +379,38 @@ describe("JobScoringService internship eligibility", () => {
     );
   });
 
+  it.each(["Uber", "Notion", "Ramp", "Netflix", "IBM"])(
+    "derives LinkedIn urgent eligibility for the new Tier 1 target %s",
+    (companyName) => {
+      const canadianWatch = canadianTechInternshipsWatch() as JobWatch;
+      const score = scorer.score(
+        sourceJob(
+          new JobPostDto({
+            site: "linkedin",
+            title: "Software Engineer Intern, Summer 2027",
+            companyName,
+            employmentType: "internship",
+            description:
+              "Summer 2027. Python Java Go Docker Kubernetes distributed systems.",
+            location: {
+              city: "Toronto",
+              state: "ON",
+              country: "Canada",
+            } as any,
+          }),
+          3,
+          "linkedin",
+        ),
+        canadianWatch,
+      );
+
+      expect(score.total).toBeGreaterThanOrEqual(canadianWatch.urgentScore);
+      expect(score.reasons).not.toEqual(
+        expect.arrayContaining([expect.stringContaining("score capped")]),
+      );
+    },
+  );
+
   it("does not apply the LinkedIn cap to direct/ATS observations", () => {
     const score = scorer.score(
       canadianJob({
@@ -355,6 +443,9 @@ function sourceJob(
   job: JobPostDto,
   tier: 1 | 2 | 3,
   key: string,
+  countryCodes: string[] = [],
+  locations: string[] = [],
+  strictLocations = false,
 ): WatchSourceJob {
   return {
     job,
@@ -366,10 +457,10 @@ function sourceJob(
       kind: "aggregate",
       mode: "search",
       intervalMinutes: 60,
-      searchScope: { countryCodes: [], locations: [] },
+      searchScope: { countryCodes, locations, strictLocations },
     } as unknown as WatchSourceJob["target"],
     requestId: `${key}:1`,
-    countryCodes: [],
+    countryCodes,
     matrixIndex: 0,
   };
 }

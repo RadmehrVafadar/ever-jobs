@@ -3,6 +3,139 @@
 > Append-only log of every doc/spec edit. **Newest entry at the top.** This is a
 > human-readable audit trail; for source-code history, see `git log`.
 
+## 2026-08-11 — Windows-safe Prisma GUI startup
+
+- Changed the local GUI launcher to reuse an already-current Prisma client when
+  its generated schema and package version match the repository, avoiding an
+  unnecessary Windows query-engine DLL replacement on every launch.
+- Added a focused launcher regression test and a clearer recovery message for
+  the case where regeneration is genuinely required while an existing rad.ar
+  API, watcher, or GUI process still holds the DLL open.
+- Added an up-front availability check for the GUI, API, and watcher ports;
+  ordered development startup by TCP readiness so Vite cannot start before the
+  API and watcher are listening; and made Windows shutdown terminate each
+  scoped Nx process tree so watcher children do not remain bound to port 3002.
+
+## 2026-08-10 — Spec 6003: Canadian Tech Internships
+
+- Replaced the selectable Canada/USA prestige preset with the sole current
+  `canadian-tech-internships` revision-1 template, displayed as **Canadian Tech
+  Internships**.
+- Retained the 26-company inventory, 19 Summer 2027 searches, required,
+  preferred, and excluded terms, scoring, cadence, notifications, and disabled
+  baseline posture while making every preset-owned source scope `CA` and
+  Toronto/GTA-only.
+- Added preset-level geography replacement so applying the template removes
+  stale U.S., broad-Canada, and Waterloo geography; preview now reports removed
+  locations and country codes. Existing database watches are never changed at
+  startup and still require paused apply, baseline, review, and explicit resume.
+- Enforced explicit target country scopes during geography classification, so
+  an unexpected U.S. result from a Tier 2/3 provider remains ineligible for the
+  Canadian-only template while unscoped legacy watches retain tier behavior.
+- Added optional `WatchSearchScope.strictLocations` persistence, validation,
+  API/GUI editing, material diffing, and eligibility enforcement. Every
+  Canadian template target enables it so non-GTA Canadian postings are also
+  suppressed.
+- Added the canonical JSON example, deprecated the old example paths without
+  deleting them, changed fresh-install seeding and GUI/API presentation, and
+  updated README quick start, CLI, runbooks, manifest, API changelog, upgrade
+  guide, documentation mirror, and index.
+- Preserved the former TypeScript exports as deprecated aliases to the new
+  implementation while removing the retired string ID from preset discovery.
+
+## 2026-08-04 — Spec 6002: local operator GUI and notification routing
+
+- Added the authoritative Spec 6002 specification, implementation plan, task
+  ledger, and human-readable mirror for a TypeScript-only React/Vite operator
+  GUI served on loopback alongside the existing API and watcher worker.
+- Implemented `apps/web` and the replaceable `ui-operator` plugin with Overview,
+  watch/profile editing, optimistic diff/Apply and activation flow, presets,
+  notifications and routing, matches/jobs/history, search, analysis, source
+  comparison, JSON/CSV downloads, responsive layouts, accessible controls, and
+  session-only admin API-key handling.
+- Added additive `JobWatch.notificationRoutes` persistence and dispatch:
+  AND-across-fields/OR-within-arrays matching, inclusive scores, source-tier
+  resolution, provider/destination deduplication, legacy fallback,
+  canonical-episode idempotency, persisted retry destinations, and terminal
+  `routing` suppression when an active route set selects no destination.
+- Added masked named Discord destination management backed by environment or an
+  ignored, atomically updated `.env.local`, with environment precedence,
+  reference-protected deletion, mtime reload, HTTPS Discord validation, and
+  webhook redaction. Added optimistic safe Apply, preset REST, bounded partial
+  source comparison, and operator-status APIs.
+- Added the forward-only default-empty notification-route Prisma migration,
+  in-memory/Prisma repository parity, API DTOs, regression coverage, root
+  `gui:dev`/`gui` launchers, loopback runtime configuration, and environment
+  examples. Existing CLI, MCP, watcher, legacy channels, package scopes,
+  environment names, metrics, Docker services, and deployment identifiers remain
+  compatible.
+- Added optional Compose profile service `ever-jobs-web`. Production local
+  startup is `docker compose --profile gui up --build`; development override
+  startup is
+  `docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile gui up --build`.
+- Added the latest stable React, Vite, and web-testing stack available during
+  implementation. A root `undici` override at `7.29.0` resolves reported high
+  advisories. `react-router-dom` is `7.18.2`; the reported React Server
+  Components advisory does not apply to this static BrowserRouter client.
+- Updated the API changelog, CLI reference, local watcher runbook, and
+  documentation index with the GUI, destination, routing, apply, preset,
+  comparison, migration, security, rollout, and rollback contracts.
+
+### Validation evidence and remaining gates
+
+- Passed 18 focused Jest suites / 103 tests, 6 web Vitest files / 19 tests, the
+  14-test CLI suite, and one route-mocked Playwright browser scenario.
+- Passed API, web, and watcher TypeScript checks/builds; Prisma schema
+  validation; desktop and mobile browser inspection; and `git diff --check`.
+- The complete PostgreSQL plus fake-source/fake-Discord Playwright scenario is
+  still outstanding. The route-mocked browser pass does not replace that gate.
+- ESLint is unavailable because the repository has no ESLint configuration.
+  Documentation lint reports only pre-existing repository failures. Neither is
+  claimed as a successful Spec 6002 gate.
+- Docker is unavailable and local PostgreSQL port 5432 is closed, so the
+  one-command real-stack smoke, persisted legacy-watch/apply/baseline/resume
+  workflow, fake Discord routing, worker interruption/restart, and duplicate
+  recovery acceptance remain blocked and unclaimed.
+
+## 2026-08-01 — Spec 6001: rad.ar product branding
+
+- Established `rad.ar` as the canonical user-facing project name in the
+  authoritative agent rules, root overview, current reference docs, application
+  guides, API/MCP presentation, watcher logs, Discord messages, and descriptive
+  package/tool metadata.
+- Preserved `@ever-jobs/*`, `EVER_JOBS_*`, `ever_jobs_*`, existing CLI/MCP
+  identifiers, API routes, Docker services, and deployment resources as explicit
+  backward-compatibility contracts.
+- Added the Spec 6001 specification, plan, task ledger, human-readable mirror,
+  documentation-index entry, and focused presentation regression assertions.
+
+### Root README current-project refresh
+
+- Replaced the stale `rad.r` identity and duplicated 160-source catalogue with
+  a concise project overview, now using the canonical `rad.ar` branding.
+- Documented the API, CLI, MCP, and persistent watcher applications; verified
+  local setup and development commands; and corrected the API documentation
+  paths to Scalar `/docs` and Swagger `/swg`.
+- Summarized the revision 3 prestige-company coverage contract (21 covered,
+  five explicitly uncovered), safe disabled-by-default watcher posture, package
+  architecture, configuration boundaries, and links to canonical documentation.
+
+## 2026-07-21 — Spec 6000 Phase 13: prestige-company coverage
+
+- Specified first-class targets for Uber, Notion, Ramp, Netflix, and IBM,
+  raising the prestige inventory from 16 to 21 covered companies.
+- Explicitly deferred RBC, TD, Scotiabank, BMO, and CIBC and required them to
+  remain visible as uncovered until a later official-source adapter phase.
+- Added the bounded `WatchSourceTarget.resultsWanted` contract, hard-failure
+  semantics, coverage REST/CLI/metrics surfaces, dynamic source totals, fixture
+  test plan, and paused targeted-baseline rollout.
+- Updated the tool manifest, watcher guide, CLI reference, local operations
+  runbook, and API changelog with revision 3 coverage semantics and rollout.
+- Validated 17 focused suites / 181 tests, watcher/API/CLI/worker TypeScript
+  compilation, manifest parsing, and a clean diff check. Production live smokes,
+  baselines, and observation cycles remain explicit operator gates; no watch was
+  resumed or mutated during implementation.
+
 ## 2026-07-20 — Mac Mini production cheat sheet refresh
 
 Added a consolidated, copy-ready Mac Mini runbook for compiled-CLI operations,
@@ -107,9 +240,10 @@ failure propagation; dry-run-first preset application; additive migration and
 rollback; deterministic fixture tests; and disabled operational smoke gates.
 Canonical fallback episodes are first-observation-anchored rolling 14-day
 windows rather than UTC buckets. Delivery identity is watch + canonical episode
-+ channel/destination and excludes notification type, preventing band-change
-resends. Success, valid-empty, and partial outcomes reset a target's consecutive
-hard-failure streak.
+
+- channel/destination and excludes notification type, preventing band-change
+  resends. Success, valid-empty, and partial outcomes reset a target's consecutive
+  hard-failure streak.
 
 **Acceptance hardening:** Preserved legacy match uniqueness through an additive
 episode-scoped observation snapshot when a stable source fingerprint begins a

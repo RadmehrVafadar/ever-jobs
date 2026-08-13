@@ -1,8 +1,8 @@
-# Ever Jobs — Plugin Architecture
+# rad.ar — Plugin Architecture
 
 ## Overview
 
-Ever Jobs uses a **decorator-based plugin architecture** for its 160+ job source scrapers. Each source is self-contained in its own package under `packages/plugins/source-*` and automatically discovered at bootstrap — no hardcoded imports or wiring required.
+rad.ar uses a **decorator-based plugin architecture** for its source scrapers. Each source is self-contained in its own package under `packages/plugins/source-*` and automatically discovered at bootstrap — no hardcoded imports or wiring required.
 
 ```
 packages/
@@ -265,4 +265,3 @@ Behaviour notes:
   endpoint (Spec 001 Phase 3).
 
 Spec reference: [`.specify/specs/001-plugin-architecture-foundation/`](../.specify/specs/001-plugin-architecture-foundation/spec.md).
-

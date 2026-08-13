@@ -51,7 +51,12 @@ function makePassthroughAggregator() {
   };
 }
 
-function createController(opts: { jobs?: JobPostDto[]; cachedValue?: any; aggregator?: any } = {}) {
+function createController(opts: {
+  jobs?: JobPostDto[];
+  cachedValue?: any;
+  aggregator?: any;
+  comparisonService?: { compare: jest.Mock };
+} = {}) {
   const jobsService = makeJobsService(opts.jobs ?? []);
   const analyticsService = makeAnalyticsService();
   const cacheService = makeCacheService(opts.cachedValue);
@@ -61,6 +66,9 @@ function createController(opts: { jobs?: JobPostDto[]; cachedValue?: any; aggreg
     aggregator as any,
     analyticsService as any,
     cacheService as any,
+    undefined,
+    undefined,
+    opts.comparisonService as any,
   );
   return { controller, jobsService, cacheService, analyticsService, aggregator };
 }
@@ -209,6 +217,8 @@ describe('JobsController', () => {
         undefined,
         undefined,
         undefined,    // dedup
+        undefined,    // liveness
+        undefined,    // legitimacy
         mockRes as any,
       );
 
@@ -363,6 +373,28 @@ describe('JobsController', () => {
       expect(analyticsService.analyze).toHaveBeenCalledWith(jobs);
       expect(result.summary).toBeDefined();
       expect(result.summary.totalJobs).toBe(1);
+    });
+  });
+
+  describe('POST /compare', () => {
+    it('delegates bounded partial comparison to JobComparisonService', async () => {
+      const expected = {
+        totalJobs: 0,
+        concurrency: 2,
+        sourcesRequested: ['linkedin'],
+        sourcesSucceeded: ['linkedin'],
+        sourcesFailed: [],
+        comparisons: [],
+        summary: { totalJobs: 0 },
+      };
+      const comparisonService = {
+        compare: jest.fn().mockResolvedValue(expected),
+      };
+      const { controller } = createController({ comparisonService });
+      const input = { siteType: ['linkedin'], concurrency: 2 } as any;
+
+      await expect(controller.compareJobs(input)).resolves.toBe(expected);
+      expect(comparisonService.compare).toHaveBeenCalledWith(input);
     });
   });
 });

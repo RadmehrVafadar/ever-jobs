@@ -1,6 +1,6 @@
-# Contributing to Ever Jobs
+# Contributing to rad.ar
 
-Thanks for your interest in contributing to Ever Jobs! This guide covers adding new source packages, testing, and code conventions.
+Thanks for your interest in contributing to rad.ar! This guide covers adding new source packages, testing, and code conventions.
 
 ## Source Package Structure
 

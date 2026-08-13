@@ -263,3 +263,41 @@ alone do not enable notifications.
   LinkedIn results remain below the urgent band.
 - Six source fixture suites (59 tests) cover the repaired sources; CI has no
   live-site dependency.
+
+## Phase 13 — prestige-company coverage (phase 1)
+
+The ranking inventory previously named 26 companies while only 16 had branded
+source targets. Phase 13 activates and hardens the existing Uber, Notion, Ramp,
+Netflix, and IBM plugins, producing 21 first-class covered companies. RBC, TD,
+Scotiabank, BMO, and CIBC remain explicitly deferred and appear as uncovered in
+the new company-coverage report; generic discovery sources do not count as
+direct company coverage.
+
+The follow-up bank phase retains the confirmed official recruiting surfaces for
+[RBC](https://jobs.rbc.com/ca/en/),
+[TD](https://td.wd3.myworkdayjobs.com/en-US/TD_Bank_Careers/job/Toronto-Ontario/Software-Engineer-Intern-Co-op--Fall-2026-_R_1481069),
+[Scotiabank](https://jobs.scotiabank.com/job/Calgary-Wealth-Management-Operations-InternshipCo-op-Fall-2026-ON/601742717/),
+[BMO](https://jobs.bmo.com/ca/en/job/BOMOGLOBALR260013614EXTERNALENCA/Junior-Software-Developer-Fall-2026-Co-op-Internship-4-Months), and
+[CIBC](https://cibc.wd3.myworkdayjobs.com/en-US/campus/job/Application-Software-Developer-Co-op_2610896).
+
+Each new target is Tier 1, Canada-scoped, scheduled every 10 minutes, and capped
+at 500 normalized board results. `WatchSourceTarget.resultsWanted` is additive,
+validated from 1 through 1000, persisted in target JSON, included in material
+preset diffs, and forwarded to the scraper. The five plugins must reject
+transport, blocked, malformed, and missing-delegate failures; only a validated
+official empty jobs collection is a successful empty run.
+
+Preset revision 3 remains disabled and uninitialized. Apply it only to a paused
+watch, baseline the five added targets, inspect disabled live smokes, and run two
+no-notification cycles before resuming. The REST/CLI coverage report and
+Prometheus counts expose configured, active, disabled, uncovered, initialized,
+and degraded company coverage, while total source count comes from the runtime
+registry.
+
+Implementation validation completed with 17 focused suites / 181 tests and
+TypeScript checks for the watcher package plus watcher, API, and CLI apps. The
+manifest parses and the diff check is clean. Repository-wide docs lint remains
+blocked only by pre-existing duplicate 2026-07-20 log headings and missing
+metadata in Spec 5024. Live smokes, targeted baselines, and observation cycles
+were not performed against a production watch; they remain documented operator
+gates and the shipped watch stays disabled.

@@ -1,4 +1,4 @@
-# Ever Jobs Mac Mini Production Cheat Sheet
+# rad.ar Mac Mini Production Cheat Sheet
 
 Production installation:
 
@@ -108,21 +108,21 @@ standard production-update sequence.
 
 ```bash
 git log -1 --oneline
-sed -n '203,285p' packages/watcher/src/services/prestige-internships-v2.preset.ts
+sed -n '203,285p' packages/watcher/src/services/canadian-tech-internships.preset.ts
 ```
 
 Do not verify `maxRequestsPerRun: 1` with a loose `grep`: it also matches `12`.
 Use an end-of-line expression:
 
 ```bash
-grep -Eq "maxRequestsPerRun: 1,$" packages/watcher/src/services/prestige-internships-v2.preset.ts \
+grep -Eq "maxRequestsPerRun: 1,$" packages/watcher/src/services/canadian-tech-internships.preset.ts \
   && echo "SOURCE NEW" || echo "SOURCE NOT EXPECTED"
 ```
 
 The authoritative compiled-code check is a preset preview after rebuilding:
 
 ```bash
-node dist/apps/cli/main.js watch preset apply prestige-internships-v2 \
+node dist/apps/cli/main.js watch preset apply canadian-tech-internships \
   --watch 2067423d-b634-49a5-a8ca-8b963e00f9d4
 ```
 
@@ -138,7 +138,7 @@ node dist/apps/cli/main.js watch pause \
 Preview without changing the database:
 
 ```bash
-node dist/apps/cli/main.js watch preset apply prestige-internships-v2 \
+node dist/apps/cli/main.js watch preset apply canadian-tech-internships \
   --watch 2067423d-b634-49a5-a8ca-8b963e00f9d4
 ```
 
@@ -146,7 +146,7 @@ Review `materiallyChanged`, `disabled`, and
 `targetKeysRequiringInitialization`. Apply only after the preview is correct:
 
 ```bash
-node dist/apps/cli/main.js watch preset apply prestige-internships-v2 \
+node dist/apps/cli/main.js watch preset apply canadian-tech-internships \
   --watch 2067423d-b634-49a5-a8ca-8b963e00f9d4 --apply
 ```
 

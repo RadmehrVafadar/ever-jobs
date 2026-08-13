@@ -72,6 +72,31 @@ describe("InMemoryWatchRepository contract", () => {
     ).resolves.toBe(true);
   });
 
+  it("updates a watch only when its expected revision is current", async () => {
+    const repository = new InMemoryWatchRepository();
+    const originalUpdatedAt = new Date("2026-08-04T12:00:00.000Z");
+    const watch = await repository.createWatch({
+      id: "cas-watch",
+      name: "Original",
+      updatedAt: originalUpdatedAt,
+      notificationRoutes: [],
+    });
+
+    await expect(
+      repository.updateWatchIfCurrent(watch.id, originalUpdatedAt, {
+        name: "Applied",
+      }),
+    ).resolves.toEqual(expect.objectContaining({ name: "Applied" }));
+    await expect(
+      repository.updateWatchIfCurrent(watch.id, originalUpdatedAt, {
+        name: "Stale overwrite",
+      }),
+    ).resolves.toBeNull();
+    await expect(repository.getWatch(watch.id)).resolves.toEqual(
+      expect.objectContaining({ name: "Applied" }),
+    );
+  });
+
   it("deduplicates delivery intents and applies a claimed delivery result once", async () => {
     const repository = new InMemoryWatchRepository();
     const watch = await repository.createWatch({ id: "watch-1" });

@@ -7,6 +7,8 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import {
+  buildCompanyCoverageReport,
+  JobWatch,
   WATCH_REPOSITORY,
   WatcherMetricsService,
   WatcherSchedulerService,
@@ -28,7 +30,7 @@ export class WatcherHealthController {
   async health() {
     const database = await this.repo.healthCheck();
     const watches = database ? await this.repo.listWatches() : [];
-    this.metrics.syncTargetHealth(watches);
+    this.syncWatchMetrics(watches);
     const scheduler = this.scheduler.status();
     const schedulerHealthy =
       !scheduler.enabled ||
@@ -111,7 +113,7 @@ export class WatcherHealthController {
   async metricsText(): Promise<string> {
     try {
       if (await this.repo.healthCheck()) {
-        this.metrics.syncTargetHealth(await this.repo.listWatches());
+        this.syncWatchMetrics(await this.repo.listWatches());
       }
     } catch {
       // Process metrics remain available while durable health is unavailable.
@@ -121,5 +123,15 @@ export class WatcherHealthController {
       this.metrics.render(),
     ]);
     return `${application.trimEnd()}\n${watcher.trimStart()}`;
+  }
+
+  private syncWatchMetrics(watches: readonly JobWatch[]): void {
+    this.metrics.syncTargetHealth(watches);
+    this.metrics.syncCompanyCoverage(
+      watches.map((watch) => ({
+        watchId: watch.id,
+        counts: buildCompanyCoverageReport(watch).summary,
+      })),
+    );
   }
 }

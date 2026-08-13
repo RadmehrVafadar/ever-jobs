@@ -24,6 +24,7 @@ export default () => {
 
   return {
     port: parseInt(process.env.PORT, 3001),
+    host: process.env.API_HOST || "0.0.0.0",
 
     // API Security
     auth: {
@@ -99,6 +100,8 @@ export default () => {
 
     // Persistent watcher
     watcher: {
+      healthUrl:
+        process.env.WATCHER_HEALTH_URL || "http://127.0.0.1:3002/health",
       enabled: parseBool(process.env.WATCHER_ENABLED, false),
       defaultTimezone:
         process.env.WATCHER_DEFAULT_TIMEZONE || "America/Toronto",

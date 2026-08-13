@@ -9,6 +9,7 @@ module.exports = {
     '^@ever-jobs/common$': '<rootDir>/packages/common/src/index.ts',
     '^@ever-jobs/analytics$': '<rootDir>/packages/analytics/src/index.ts',
     '^@ever-jobs/plugin$': '<rootDir>/packages/plugin/src/index.ts',
+    '^@ever-jobs/plugin/ui-plugin$': '<rootDir>/packages/plugin/src/interfaces/ui-plugin.interface.ts',
     '^@ever-jobs/plugin-sources$': '<rootDir>/packages/plugins/index.ts',
     '^@ever-jobs/dedup-hybrid$': '<rootDir>/packages/plugins/dedup-hybrid/src/index.ts',
     '^@ever-jobs/merge-default$': '<rootDir>/packages/plugins/merge-default/src/index.ts',
@@ -1824,6 +1825,10 @@ module.exports = {
     '^@ever-jobs/source-ats-mercor$': '<rootDir>/packages/plugins/source-ats-mercor/src/index.ts',
     '^@ever-jobs/source-tesla$': '<rootDir>/packages/plugins/source-tesla/src/index.ts',
     '^@ever-jobs/source-tesla-playwright$': '<rootDir>/packages/plugins/source-tesla-playwright/src/index.ts',
+    '^@ever-jobs/ui-operator$': '<rootDir>/packages/plugins/ui-operator/src/index.ts',
+    '^@ever-jobs/ui-operator/manifest$': '<rootDir>/packages/plugins/ui-operator/src/operator-ui.manifest.ts',
+    '^@ever-jobs/notification-secret-local$': '<rootDir>/packages/plugins/notification-secret-local/src/index.ts',
+    '^@ever-jobs/watcher$': '<rootDir>/packages/watcher/src/index.ts',
   },
   transform: {
     '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.base.json' }],

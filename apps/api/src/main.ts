@@ -41,11 +41,11 @@ async function bootstrap() {
 
   if (swaggerEnabled || scalarEnabled) {
     const openApiConfig = new DocumentBuilder()
-      .setTitle('Ever Jobs API')
+      .setTitle('rad.ar API')
       .setDescription(
-        `# Ever Jobs API
+        `# rad.ar API
 
-Multi-source job scraping API. Aggregates job listings from 160+ sources including LinkedIn, Indeed, Glassdoor, ZipRecruiter, and 150+ more job boards, ATS platforms, and company career pages.\n\n## GraphQL\n\nA GraphQL API is available at \`/graphql\` alongside this REST API.
+Multi-source job scraping API. Aggregates job listings from registered job boards, ATS platforms, aggregators, and company career pages.\n\n## GraphQL\n\nA GraphQL API is available at \`/graphql\` alongside this REST API.
 
 ## Authentication
 
@@ -93,7 +93,8 @@ Results are cached (when enabled) to improve performance and reduce load on job 
 
   // ── Start ──────────────────────────────
   const port = config.get<number>('port', 3001);
-  await app.listen(port);
+  const host = config.get<string>('host', '0.0.0.0');
+  await app.listen(port, host);
 
   const authEnabled = config.get<boolean>('auth.enabled', false);
   const rateLimitEnabled = config.get<boolean>('rateLimit.enabled', false);
@@ -102,7 +103,8 @@ Results are cached (when enabled) to improve performance and reduce load on job 
   const graphqlEnabled = config.get<boolean>('graphql.enabled', true);
   const graphqlPath = config.get<string>('graphql.path', 'graphql');
 
-  logger.log(`🚀 Ever Jobs API is running on: http://localhost:${port}`);
+  const displayHost = host === '0.0.0.0' ? 'localhost' : host;
+  logger.log(`🚀 rad.ar API is running on: http://${displayHost}:${port}`);
   logger.log(`🔑 API key auth: ${authEnabled ? 'ENABLED' : 'disabled'}`);
   logger.log(`⏱️  Rate limiting: ${rateLimitEnabled ? 'ENABLED' : 'disabled'}`);
   logger.log(`📦 Caching: ${cacheEnabled ? `ENABLED (${redisUrl ? 'Redis' : 'in-memory'})` : 'disabled'}`);

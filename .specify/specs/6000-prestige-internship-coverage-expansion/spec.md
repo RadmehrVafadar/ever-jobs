@@ -516,7 +516,79 @@ Recorded integration evidence on 2026-07-19:
   baseline every target-enabled source and complete two observation cycles
   without notifications before resuming the watch.
 
-## 12. Decisions
+## 12. Phase 13 amendment — complete prestige-company coverage (phase 1)
+
+### 12.1 Problem and scope
+
+The v2 preset names 26 prestige companies for ranking, but only 16 have a
+company-branded source target. A configured company name is therefore not proof
+that the watcher actively queries that employer. Phase 13 closes the immediately
+actionable part of this gap by activating and hardening the already registered
+Uber, Notion, Ramp, Netflix, and IBM plugins. The resulting inventory has 21
+first-class covered companies and five explicitly deferred banks: RBC, TD,
+Scotiabank, BMO, and CIBC.
+
+The bank adapters, company-qualified generic-search expansion, and a full audit
+of the wider source catalog are non-goals. Generic LinkedIn, Canada Job Bank,
+and Google observations remain redundancy and do not count as first-class
+company coverage.
+
+The follow-up bank phase starts from the confirmed official recruiting
+surfaces: [RBC](https://jobs.rbc.com/ca/en/),
+[TD](https://td.wd3.myworkdayjobs.com/en-US/TD_Bank_Careers/job/Toronto-Ontario/Software-Engineer-Intern-Co-op--Fall-2026-_R_1481069),
+[Scotiabank](https://jobs.scotiabank.com/job/Calgary-Wealth-Management-Operations-InternshipCo-op-Fall-2026-ON/601742717/),
+[BMO](https://jobs.bmo.com/ca/en/job/BOMOGLOBALR260013614EXTERNALENCA/Junior-Software-Developer-Fall-2026-Co-op-Internship-4-Months), and
+[CIBC](https://cibc.wd3.myworkdayjobs.com/en-US/campus/job/Application-Software-Developer-Co-op_2610896).
+
+### 12.2 Contracts
+
+- `WatchSourceTarget` gains optional `resultsWanted: number`, validated as an
+  integer from 1 through 1000. It round-trips in target JSON, participates in
+  preset material-change detection, and overrides the executor default for that
+  target only.
+- Uber, Notion, Ramp, Netflix, and IBM declare `watchMode: "board"`, run as
+  enabled Tier 1 Canada targets every 10 minutes, and use
+  `resultsWanted: 500` so post-fetch geography filtering does not inspect an
+  arbitrarily small first page.
+- A source may report an empty success only after validating the official jobs
+  collection or empty-board marker. Transport, HTTP, blocked-shell, malformed
+  payload, and missing delegated-ATS conditions must reject and reach watcher
+  health as hard failures.
+- `CompanyCoverageReport` projects every configured company to
+  `active | disabled | uncovered`, target keys, initialization, last
+  attempt/success/non-empty timestamps, and degradation state. Exact normalized
+  `sourceTargets[].companyName` matching is authoritative; generic boards do
+  not satisfy coverage.
+- `GET /api/watches/:id/coverage` and `watch coverage --id <watch-id>` expose
+  the same report. Prometheus exposes per-watch coverage counts, and
+  `ever_jobs_sources_total` is set from the discovered plugin registry.
+
+### 12.3 Source and inventory invariants
+
+The prestige inventory is defined once and must be exhaustively partitioned
+between target-covered and explicitly deferred names. Tests fail when a new
+prestige company has neither a branded target nor a deferred declaration. The
+five deferred banks remain visible as uncovered until a later spec supplies
+official-source adapters and evidence gates.
+
+### 12.4 Test and failure plan
+
+Deterministic plugin fixtures cover successful pagination, result bounds,
+stable prefixed IDs, multi-location mapping, valid empty payloads, malformed
+and blocked payloads, transport failures, and missing Ashby delegation. Planner,
+validation, persistence, preset-diff, API, CLI, and metrics suites cover the new
+target field and coverage projection. CI performs no third-party network I/O.
+
+### 12.5 Rollout and rollback
+
+The preset revision advances to 3 but remains globally disabled and
+uninitialized. Operators preview/apply it only to a paused watch, baseline only
+Uber, Notion, Ramp, Netflix, and IBM, inspect a disabled live smoke, and run two
+no-notification observation cycles before resuming. A failing target is disabled
+individually and remains visible as disabled coverage; observations and delivery
+history are never deleted.
+
+## 13. Decisions
 
 | Date | Decision | Rationale |
 | ---- | -------- | --------- |
@@ -532,7 +604,7 @@ Recorded integration evidence on 2026-07-19:
 | 2026-07-20 | Require Summer 2027 evidence and contextually suppress PhD/doctoral internships. | Focuses the operator's current internship cycle without rejecting incidental research-team degree mentions. |
 | 2026-07-20 | Derive the LinkedIn urgent-score allowlist from configured Tier 1 target company names and cap all other LinkedIn totals below `urgentScore`. | Source tiers are authoritative; unrelated aggregator discoveries remain visible without appearing as maximum-priority alerts. |
 
-## 13. References
+## 14. References
 
 - [Spec 016 — Real-time Job Watcher](../016-realtime-job-watcher/spec.md)
 - [Human-readable mirror](../../../docs/specs/6000-prestige-internship-coverage-expansion.md)

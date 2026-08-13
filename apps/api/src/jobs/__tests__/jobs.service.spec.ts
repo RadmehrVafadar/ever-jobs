@@ -301,6 +301,7 @@ function createService(scraperEntries: [Site, IScraper][]): JobsService {
   service.metrics = {
     scraperDuration: { startTimer: jest.fn(() => jest.fn()) },
     scraperRequestsTotal: { inc: jest.fn() },
+    setTotalSources: jest.fn(),
   };
   service.circuitBreaker = undefined;
   return service;
@@ -311,6 +312,27 @@ function createService(scraperEntries: [Site, IScraper][]): JobsService {
 // ---------------------------------------------------------------------------
 
 describe("JobsService", () => {
+  describe("initialization", () => {
+    it("publishes the discovered plugin registry size", () => {
+      const service = createService([
+        [Site.LINKEDIN, makeScraper()],
+        [Site.INDEED, makeScraper()],
+      ]);
+
+      service.onModuleInit();
+
+      expect((service as any).metrics.setTotalSources).toHaveBeenCalledWith(2);
+    });
+
+    it("refreshes the source total after a runtime plugin registration", () => {
+      const service = createService([[Site.LINKEDIN, makeScraper()]]);
+
+      service.registerScraper("community-source", makeScraper());
+
+      expect((service as any).metrics.setTotalSources).toHaveBeenCalledWith(2);
+    });
+  });
+
   describe("searchJobs — site routing", () => {
     it("should use explicit siteType when provided", async () => {
       const linkedin = makeScraper([{ title: "LI job" }]);

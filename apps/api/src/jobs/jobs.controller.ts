@@ -30,6 +30,11 @@ import { JobsService } from './jobs.service';
 import { JobsAggregator } from './jobs.aggregator';
 import { AnalyticsService } from '@ever-jobs/analytics';
 import { CacheService } from '../cache/cache.service';
+import { CompareJobsDto } from './job-comparison.dto';
+import {
+  JobComparisonResult,
+  JobComparisonService,
+} from './job-comparison.service';
 
 @ApiTags('Jobs')
 @Controller('api/jobs')
@@ -49,6 +54,8 @@ export class JobsController {
     @Optional()
     @Inject(LEGITIMACY_CHECKER_TOKEN)
     private readonly legitimacyChecker?: ILegitimacyChecker,
+    @Optional()
+    private readonly comparisonService?: JobComparisonService,
   ) {}
 
   /**
@@ -211,6 +218,30 @@ export class JobsController {
     const analysis = this.analyticsService.analyze(jobs);
     this.logger.log(`Analysis complete: ${analysis.summary.totalJobs} jobs, ${analysis.companies.length} companies`);
     return analysis;
+  }
+
+  /**
+   * Compare selected sources independently with bounded concurrency. A broken
+   * source is returned as a sanitized failure while successful comparisons are
+   * preserved.
+   */
+  @Post('compare')
+  @ApiOperation({
+    summary: 'Compare job sources side-by-side',
+    description:
+      'Runs each selected source independently with bounded concurrency and returns successful comparisons plus sanitized per-source failures.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Partial or complete source comparison results.',
+  })
+  async compareJobs(@Body() input: CompareJobsDto): Promise<JobComparisonResult> {
+    if (!this.comparisonService) {
+      // Only hand-constructed legacy unit controllers omit this optional
+      // provider. Production wiring always registers it in JobsModule.
+      throw new Error('Job comparison service is unavailable');
+    }
+    return this.comparisonService.compare(input);
   }
 
   // ── Corpus-signal enrichment (Spec 740) ──

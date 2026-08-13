@@ -180,6 +180,7 @@ export class InMemoryWatchRepository implements WatchRepository {
       urgentScore: input.urgentScore ?? 80,
       digestScore: input.digestScore ?? 40,
       notificationChannels: input.notificationChannels ?? [],
+      notificationRoutes: input.notificationRoutes ?? [],
       initializationMode: input.initializationMode ?? "baseline",
       recentWindowMinutes: input.recentWindowMinutes ?? 180,
       weights: input.weights,
@@ -208,6 +209,21 @@ export class InMemoryWatchRepository implements WatchRepository {
     };
     this.watches.set(id, next);
     return next;
+  }
+
+  async updateWatchIfCurrent(
+    id: string,
+    expectedUpdatedAt: Date,
+    input: Partial<JobWatch>,
+  ): Promise<JobWatch | null> {
+    const current = this.watches.get(id);
+    if (
+      !current ||
+      current.updatedAt.getTime() !== expectedUpdatedAt.getTime()
+    ) {
+      return null;
+    }
+    return this.updateWatch(id, input);
   }
 
   async deleteWatch(id: string): Promise<boolean> {

@@ -30,6 +30,9 @@
       "@ever-jobs/plugin": [
         "packages/plugin/src/index.ts"
       ],
+      "@ever-jobs/plugin/ui-plugin": [
+        "packages/plugin/src/interfaces/ui-plugin.interface.ts"
+      ],
       "@ever-jobs/plugin-sources": [
         "packages/plugins/index.ts"
       ],
@@ -5483,6 +5486,15 @@
       ],
       "@ever-jobs/source-tesla-playwright": [
         "packages/plugins/source-tesla-playwright/src/index.ts"
+      ],
+      "@ever-jobs/ui-operator": [
+        "packages/plugins/ui-operator/src/index.ts"
+      ],
+      "@ever-jobs/ui-operator/manifest": [
+        "packages/plugins/ui-operator/src/operator-ui.manifest.ts"
+      ],
+      "@ever-jobs/notification-secret-local": [
+        "packages/plugins/notification-secret-local/src/index.ts"
       ],
       "@ever-jobs/watcher": [
         "packages/watcher/src/index.ts"

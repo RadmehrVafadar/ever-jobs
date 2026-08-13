@@ -1,20 +1,26 @@
-# AGENTS.md — Ever Jobs (Authoritative Rules for AI Agents)
+# AGENTS.md — rad.ar (Authoritative Rules for AI Agents)
 
 > This file is the single source of truth for agents (Claude Code, OpenAI Codex, Cursor, etc.)
-> working on the **Ever Jobs** monorepo. Cross-check every spec, doc, and code file you create
+> working on the **rad.ar** monorepo. Cross-check every spec, doc, and code file you create
 > or edit against the rules in this document.
 
 ---
 
 ## 0. North Star
 
-Ever Jobs is a **modular, plugin-driven, TypeScript-only NestJS monorepo** for multi-source
+rad.ar is a **modular, plugin-driven, TypeScript-only NestJS monorepo** for multi-source
 job scraping & analysis. It must be:
 
 1. **Modular** — plugins/adaptors for almost every feature (sources, ATS, AI, exports, UI).
 2. **Replaceable** — every plugin can be enabled / disabled / swapped at runtime.
 3. **Performant** — extreme runtime performance: streaming, pooling, caching, parallelism.
 4. **Documented for AI** — `docs/` and `.specify/` answer every reasonable agent question.
+
+The canonical user-facing product name is **rad.ar**. Existing machine
+identifiers—including `@ever-jobs/*` package scopes, `EVER_JOBS_*` environment
+variables, `ever_jobs_*` metrics, CLI/MCP identifiers, Docker services, and
+deployment resources—remain compatibility contracts until a dedicated migration
+explicitly replaces them. Do not present the former project name as current.
 
 ---
 
@@ -63,7 +69,7 @@ job scraping & analysis. It must be:
 ## 3. Repository Layout (canonical)
 
 ```
-ever-jobs/
+rad.ar/
 ├── AGENTS.md                # this file
 ├── CLAUDE.md                # Claude operating notes
 ├── README.md
@@ -238,4 +244,4 @@ Before opening a commit, verify:
 
 ---
 
-_Last revised: 2026-04-26 (scheduled run #6)_
+_Last revised: 2026-08-01 (Spec 6001 product branding)_

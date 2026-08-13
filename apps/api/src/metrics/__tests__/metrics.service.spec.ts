@@ -37,6 +37,20 @@ describe('MetricsService — source_circuit_state Gauge (Spec 005 / T06)', () =>
     service = new MetricsService();
   });
 
+  describe('total source count', () => {
+    it('publishes the source count supplied by the plugin registry owner', async () => {
+      service.setTotalSources(203);
+
+      const text = await service.getMetrics();
+      expect(text).toMatch(/ever_jobs_sources_total 203\b/);
+
+      service.setTotalSources(204);
+      const updated = await service.getMetrics();
+      expect(updated).toMatch(/ever_jobs_sources_total 204\b/);
+      expect(updated).not.toMatch(/ever_jobs_sources_total 203\b/);
+    });
+  });
+
   describe('encoding', () => {
     it('uses closed=0, half-open=1, open=2', () => {
       expect(CIRCUIT_STATE_GAUGE_VALUE.closed).toBe(0);

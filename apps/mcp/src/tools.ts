@@ -1,8 +1,8 @@
 /**
- * Ever Jobs MCP Server — Tool implementations
+ * rad.ar MCP Server — Tool implementations
  *
- * These functions connect to the Ever Jobs REST API (or can be used standalone)
- * to search for jobs across 166+ sources.
+ * These functions connect to the rad.ar REST API (or can be used standalone)
+ * to search for jobs across registered sources.
  */
 
 import axios, { AxiosInstance } from 'axios';
@@ -276,7 +276,7 @@ const SOURCES: SourceInfo[] = [
 // ── Tool Implementations ───────────────────────────────────────────────
 
 /**
- * Search for jobs via the Ever Jobs API.
+ * Search for jobs via the rad.ar API.
  */
 export async function searchJobs(params: JobSearchParams): Promise<SearchResponse> {
   const client = getClient();

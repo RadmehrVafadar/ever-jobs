@@ -1,7 +1,11 @@
 import { plainToInstance } from "class-transformer";
 import { validate } from "class-validator";
 import { Site } from "@ever-jobs/models";
-import { CreateWatchDto, InitializeWatchDto } from "../watch.dto";
+import {
+  ApplyWatchDto,
+  CreateWatchDto,
+  InitializeWatchDto,
+} from "../watch.dto";
 
 describe("watch DTO nested source scope", () => {
   it("accepts a bounded target scope and nullable baseline timestamp", async () => {
@@ -76,5 +80,55 @@ describe("InitializeWatchDto", () => {
 
     expect(await validate(duplicate)).not.toHaveLength(0);
     expect(await validate(blank)).not.toHaveLength(0);
+  });
+});
+
+describe("operator watch DTOs", () => {
+  it("accepts nested notification routing and an optimistic apply envelope", async () => {
+    const dto = plainToInstance(ApplyWatchDto, {
+      expectedUpdatedAt: "2026-08-04T12:00:00.000Z",
+      patch: {
+        notificationRoutes: [
+          {
+            id: "tier-one",
+            name: "Tier one urgent",
+            enabled: true,
+            provider: "discord",
+            destinationRef: "tier-one",
+            conditions: {
+              sourceTiers: [1],
+              notificationTypes: ["urgent"],
+              minimumScore: 80,
+              maximumScore: 100,
+            },
+          },
+        ],
+      },
+    });
+
+    await expect(validate(dto)).resolves.toEqual([]);
+  });
+
+  it("rejects malformed optimistic timestamps and route conditions", async () => {
+    const dto = plainToInstance(ApplyWatchDto, {
+      expectedUpdatedAt: "yesterday",
+      patch: {
+        notificationRoutes: [
+          {
+            id: "tier-one",
+            name: "Tier one urgent",
+            enabled: true,
+            provider: "discord",
+            destinationRef: "tier-one",
+            conditions: {
+              sourceTiers: [4],
+              notificationTypes: ["immediate"],
+            },
+          },
+        ],
+      },
+    });
+
+    expect(await validate(dto)).not.toHaveLength(0);
   });
 });

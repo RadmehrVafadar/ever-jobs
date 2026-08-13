@@ -13,12 +13,13 @@ import {
   WatchSourceTarget,
 } from "../interfaces/watch.types";
 import {
-  PRESTIGE_INTERNSHIPS_V2_PRESET,
+  CANADIAN_TECH_INTERNSHIPS_PRESET,
+  WatchPresetApplyPolicy,
   WatchPresetDefinition,
-} from "./prestige-internships-v2.preset";
+} from "./canadian-tech-internships.preset";
 
 const PRESETS = new Map<string, WatchPresetDefinition>([
-  [PRESTIGE_INTERNSHIPS_V2_PRESET.id, PRESTIGE_INTERNSHIPS_V2_PRESET],
+  [CANADIAN_TECH_INTERNSHIPS_PRESET.id, CANADIAN_TECH_INTERNSHIPS_PRESET],
 ]);
 
 const LEGACY_BROAD_REQUIRED_TERMS = new Set([
@@ -26,13 +27,6 @@ const LEGACY_BROAD_REQUIRED_TERMS = new Set([
   "university",
   "campus",
   "early career",
-]);
-
-const LEGACY_CANADA_ONLY_EXCLUSIONS = new Set([
-  "united states only",
-  "us only",
-  "usa only",
-  "must reside in the united states",
 ]);
 
 export interface WatchPresetTargetDiff {
@@ -48,7 +42,9 @@ export interface WatchPresetFieldDiff {
   sourcesAdded: string[];
   searchTermsAdded: string[];
   locationsAdded: string[];
+  locationsRemoved: string[];
   countryCodesAdded: string[];
+  countryCodesRemoved: string[];
   removedLegacyRequiredTerms: string[];
   removedLegacyExcludedTerms: string[];
 }
@@ -160,7 +156,12 @@ export class WatchPresetService {
     const desired = preset.createWatch();
     const desiredTargets = desired.sourceTargets ?? [];
     const targetMerge = mergeTargets(current, desiredTargets);
-    const patch = buildPresetPatch(current, desired, targetMerge.targets);
+    const patch = buildPresetPatch(
+      current,
+      desired,
+      targetMerge.targets,
+      preset.applyPolicy,
+    );
     const result: WatchPresetApplyResult = {
       preset: { id: preset.id, version: preset.version, name: preset.name },
       watchId,
@@ -240,15 +241,13 @@ function buildPresetPatch(
   current: JobWatch,
   desired: Partial<JobWatch>,
   targets: WatchSourceTarget[],
+  applyPolicy: WatchPresetApplyPolicy | undefined,
 ): Partial<JobWatch> {
   const desiredSources = desired.sources ?? [];
   const desiredRequired = desired.requiredTerms ?? [];
   const desiredExcluded = desired.excludedTerms ?? [];
   const retainedRequired = current.requiredTerms.filter(
     (term) => !LEGACY_BROAD_REQUIRED_TERMS.has(normalizeValue(term)),
-  );
-  const retainedExcluded = current.excludedTerms.filter(
-    (term) => !LEGACY_CANADA_ONLY_EXCLUSIONS.has(normalizeValue(term)),
   );
   const sourceTiers = { ...current.sourceTiers };
   for (const target of desired.sourceTargets ?? []) {
@@ -275,12 +274,20 @@ function buildPresetPatch(
       current.preferredTerms,
       desired.preferredTerms ?? [],
     ),
-    excludedTerms: mergeValues(retainedExcluded, desiredExcluded),
-    locations: mergeValues(current.locations, desired.locations ?? []),
-    countryCodes: mergeValues(
-      current.countryCodes.map((code) => code.toUpperCase()),
-      (desired.countryCodes ?? []).map((code) => code.toUpperCase()),
-    ),
+    excludedTerms: mergeValues(current.excludedTerms, desiredExcluded),
+    locations:
+      applyPolicy?.locations === "replace"
+        ? uniqueValues(desired.locations ?? [])
+        : mergeValues(current.locations, desired.locations ?? []),
+    countryCodes:
+      applyPolicy?.countryCodes === "replace"
+        ? uniqueValues(
+            (desired.countryCodes ?? []).map((code) => code.toUpperCase()),
+          )
+        : mergeValues(
+            current.countryCodes.map((code) => code.toUpperCase()),
+            (desired.countryCodes ?? []).map((code) => code.toUpperCase()),
+          ),
     allowedWorkplaceTypes: mergeValues(
       current.allowedWorkplaceTypes,
       desired.allowedWorkplaceTypes ?? [],
@@ -322,16 +329,19 @@ function fieldDiff(
     sourcesAdded: addedValues(current.sources, patch.sources ?? []),
     searchTermsAdded: addedValues(current.searchTerms, patch.searchTerms ?? []),
     locationsAdded: addedValues(current.locations, patch.locations ?? []),
+    locationsRemoved: addedValues(patch.locations ?? [], current.locations),
     countryCodesAdded: addedValues(
       current.countryCodes,
       patch.countryCodes ?? [],
     ),
+    countryCodesRemoved: addedValues(
+      patch.countryCodes ?? [],
+      current.countryCodes,
+    ),
     removedLegacyRequiredTerms: current.requiredTerms.filter((term) =>
       LEGACY_BROAD_REQUIRED_TERMS.has(normalizeValue(term)),
     ),
-    removedLegacyExcludedTerms: current.excludedTerms.filter((term) =>
-      LEGACY_CANADA_ONLY_EXCLUSIONS.has(normalizeValue(term)),
-    ),
+    removedLegacyExcludedTerms: [],
   };
 }
 
@@ -352,6 +362,7 @@ function materialTarget(target: WatchSourceTarget): Record<string, unknown> {
     companyName: target.companyName?.trim() ?? null,
     tier: target.tier,
     intervalMinutes: target.intervalMinutes,
+    resultsWanted: target.resultsWanted ?? null,
     searchScope: normalizedScope(target.searchScope),
   };
 }
@@ -363,6 +374,7 @@ function normalizedScope(
   return {
     countryCodes: value.countryCodes.map((code) => code.trim().toUpperCase()),
     locations: value.locations.map((location) => location.trim()),
+    strictLocations: value.strictLocations ?? false,
     searchTerms: value.searchTerms?.map((term) => term.trim()) ?? null,
     maxRequestsPerRun: value.maxRequestsPerRun ?? null,
   };

@@ -1,6 +1,6 @@
 # Source Adoption Backlog
 
-> Inbound queue of job-source platforms identified for adoption as Ever Jobs source
+> Inbound queue of job-source platforms identified for adoption as rad.ar source
 > plugins. Each entry becomes a `.specify/specs/<NNN>-source-<id>/` spec when we
 > commit to building it.
 >

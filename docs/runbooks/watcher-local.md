@@ -1,69 +1,93 @@
 # Local Watcher Operations Runbook
 
-This runbook takes a clean Ever Jobs checkout to a continuously running local
-watcher for software internships and co-ops. It covers the dry-run-first v2
-preset, per-target baseline, 3/15/60 cadence, Canada/US geography, Discord,
-Docker, target-health alerts, rollback, and failure recovery.
+This runbook takes a clean rad.ar checkout to a continuously running local
+watcher for software internships and co-ops. It covers the dry-run-first
+Canadian Tech Internships preset, per-target baseline, 10/30/60 cadence,
+Toronto/GTA geography, Discord,
+Docker, the Spec 6002 localhost operator GUI, named Discord routing,
+target-health alerts, rollback, and failure recovery.
 
 The detailed component reference is in the
 [watcher application guide](../../apps/watcher/README.md). The base functional
 contract is [Spec 016](../../.specify/specs/016-realtime-job-watcher/spec.md);
 [Spec 6000](../../.specify/specs/6000-prestige-internship-coverage-expansion/spec.md)
 defines the target-aware coverage expansion and takes precedence only for its
-listed amendments.
+listed amendments. [Spec 6002](../../.specify/specs/6002-local-operator-gui/spec.md)
+defines the additive GUI, safe-apply, named-destination, and notification-routing
+contracts.
+[Spec 6003](../../.specify/specs/6003-canadian-tech-internships/spec.md)
+replaces the selectable preset and geography with the Toronto/GTA-only profile.
 
 ## 1. Operating model
 
-The watcher is a long-running NestJS HTTP process with an in-process scheduler. PostgreSQL provides persistence, due-watch discovery, and distributed execution leases. The worker invokes the existing Ever Jobs source plugins; it does not call the Ever Jobs REST API to search.
+The watcher is a long-running NestJS HTTP process with an in-process scheduler. PostgreSQL provides persistence, due-watch discovery, and distributed execution leases. The worker invokes the existing rad.ar source plugins; it does not call the rad.ar REST API to search.
 
 There are three independently due source tiers:
 
 | Tier | Default interval | Eligibility geography | Purpose |
 | ---- | ---------------- | --------------------- | ------- |
-| Tier 1 | 10 minutes (Wellfound: 30) | Canada only | Fixture-backed direct company and complete ATS targets |
-| Tier 2 | 30 minutes | Canada and United States | Canada Job Bank and validated Google Jobs redundancy |
-| Tier 3 | 60 minutes | Canada and United States | Validated unauthenticated LinkedIn public guest redundancy |
+| Tier 1 | 10 minutes (Wellfound: 30) | Toronto/GTA, Canada | Fixture-backed direct company and complete ATS targets |
+| Tier 2 | 30 minutes | Toronto/GTA, Canada | Canada Job Bank and validated Google Jobs redundancy |
+| Tier 3 | 60 minutes | Toronto/GTA, Canada | Validated unauthenticated LinkedIn public guest redundancy |
 
 The scheduler polls PostgreSQL every 15 seconds by default. Therefore, the normal start delay after a tier becomes due is up to one scheduler poll, subject to another run holding the lease, database availability, process load, and jitter. The interval is a target cadence rather than an end-to-end notification guarantee.
 
 ### Default source readiness
 
-`prestige-internships-v2` carries the intended target inventory, but its preview
+`canadian-tech-internships` carries the intended target inventory, but its preview
 and source-audit record are authoritative for enablement. A plugin being
 registered is not an unattended-readiness claim.
 
 | Target | Tier | Intended path | Shipped preset state and remaining gate |
 | ------ | ---- | ------------- | --------------------------------------- |
-| Google Careers | 1 | Official Careers results/details, Canada query scope | **target-enabled inside the disabled/uninitialized watch**; deterministic validation passed and live smoke returned two Canadian roles; baseline and two observation cycles remain |
+| Google Careers | 1 | Official Careers results/details, Toronto/GTA query scope | **target-enabled inside the disabled/uninitialized watch**; deterministic validation passed and live smoke returned two Canadian roles; baseline and two observation cycles remain |
 | Shopify | 1 | Official server-rendered careers pages | **target-enabled inside the disabled/uninitialized watch**; deterministic validation passed and live board was marker-validated empty; baseline and two observation cycles remain |
 | Wealthsimple | 1 | `ashby:wealthsimple`, branded through the maintained Ashby plugin | **enabled target** inside the disabled preset watch; baseline before resume |
 | Plaid | 1 | `ashby:plaid` through the maintained Ashby plugin | **enabled target** inside the disabled preset watch; baseline before resume |
-| Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel, Meta, Wellfound | 1 | legacy direct-company inventory with Canada post-filter scope | **enabled by operator request**; baseline each before resume; Microsoft's earlier live smoke timed out |
-| Canada Job Bank | 2 | Structured Canadian query source | **enabled target** inside the disabled preset watch; 12 of 76 matrix requests every 30 minutes |
-| Google Jobs | 2 | Canada/US query redundancy | **disabled**; fixtures/failure handling pass, but live smoke returned an enable-JavaScript shell |
-| LinkedIn public guest | 3 | Canada/US newest-first 72-hour query | **target-enabled inside the disabled/uninitialized watch**; listing/detail fixtures and unauthenticated live smoke pass; baseline and operator review remain |
+| Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel, Meta, Wellfound | 1 | retained direct-company inventory with Toronto/GTA post-filter scope | **enabled by operator request**; baseline each before resume; Microsoft's earlier live smoke timed out |
+| Uber, Notion, Ramp, Netflix, IBM | 1 | complete official boards; Notion/Ramp delegate to registered Ashby by fixed slug | **enabled targets inside the disabled/uninitialized watch**; 10-minute Toronto/GTA scope, `resultsWanted: 500`, disabled live smoke, baseline, and two observation cycles remain |
+| Canada Job Bank | 2 | Structured Canadian query source | **enabled target** inside the disabled preset watch; 12 of 209 matrix requests every 30 minutes |
+| Google Jobs | 2 | Toronto/GTA query redundancy | **disabled**; fixtures/failure handling pass, but live smoke returned an enable-JavaScript shell |
+| LinkedIn public guest | 3 | Toronto/GTA newest-first 72-hour query | **target-enabled inside the disabled/uninitialized watch**; listing/detail fixtures and unauthenticated live smoke pass; baseline and operator review remain |
+| RBC, TD, Scotiabank, BMO, CIBC | — | deferred official bank adapters | **uncovered by design for Phase 13** and visible in the coverage report |
 
 The target-enabled set is `google_careers`, `shopify`, `ashby:wealthsimple`,
-`ashby:plaid`, all 13 legacy direct-company targets, `canadajobbank`, and
-`linkedin`. Target-enabled does not start polling or notifications while the
-watch is paused. Only Google Jobs remains target-disabled.
+`ashby:plaid`, all 13 legacy direct-company targets, `uber`, `notion`, `ramp`,
+`netflix`, `ibm`, `canadajobbank`, and `linkedin`. Target-enabled does not start
+polling or notifications while the watch is paused. Only Google Jobs remains
+target-disabled.
 
-Recorded source evidence is six deterministic suites/59 tests; Google Careers
+The target-company inventory has one auditable classification per company: 21 names
+have an exact branded company/ATS target and five banks are explicitly deferred.
+Generic LinkedIn, Canada Job Bank, and Google Jobs results are redundancy and do
+not turn an uncovered company into covered status.
+
+Pre-Phase-13 source evidence was six deterministic suites/59 tests; Google Careers
 two live Canadian roles; Shopify valid empty; Wealthsimple 37 live Ashby roles
 with a capped mapped sample; LinkedIn public listing/detail pass; Microsoft
 timeout; and Google Jobs classified blocked by the enable-JavaScript shell.
 
-The preset has 19 search terms. Google Careers and Canada Job Bank each have 76
-term/location entries across four Canadian locations. Google Jobs and LinkedIn
-each have 95 entries across five Canada/US locations. The rotating per-run caps
+The preset has 19 search terms and 11 Toronto/GTA locations, producing 209
+term/location entries for each generic query target. The rotating per-run caps
 are 1, 12, 12, and 8 respectively. Google Careers therefore makes one rotating
 request every 10 minutes.
+
+Every preset target sets `strictLocations: true`. At least one advertised job
+location must match the configured GTA list, and its explicit `CA` country scope
+is enforced during scoring even for Tier 2/3 results.
 
 Do not enable a target to make the matrix look complete. Perform the source live
 smoke before target enablement, then keep the global watch paused. Inspect all
 normalized locations and employer application URLs, apply the preset, targeted-
 baseline added/materially changed targets, and run two additional
 no-notification observation cycles before resume.
+
+For Uber, Notion, Ramp, Netflix, and IBM, the operator-authorized disabled smoke
+must inspect source-prefixed stable IDs, official job and application URLs, every
+advertised location, posting dates, employment types, and the source's validated
+jobs-collection or empty-board marker. A transport error, non-success response,
+malformed payload, missing delegated Ashby plugin, or blocked HTML shell is a
+hard failure and cannot establish an empty baseline.
 
 Every scheduled run follows this order:
 
@@ -119,6 +143,12 @@ DIGEST_DEFAULT_MINUTE=0
 
 Treat `DISCORD_WEBHOOK_URL` as a password. Put it only in an untracked local environment file or a secret manager. Do not put it in watch JSON, a CLI argument, source code, documentation examples with real values, screenshots, issue reports, or commits. The database stores `destinationRef: "default"`, not the full webhook URL.
 
+Spec 6002 also supports GUI-managed custom Discord aliases in the ignored
+repository-root `.env.local`. Do not add `.env.local` to Git. A custom reference
+such as `tier-one` maps to `DISCORD_WEBHOOK_TIER_ONE`; watches and routes still
+store only `destinationRef: "tier-one"`. Non-empty process-environment values
+take precedence over the local file and appear read-only in the GUI.
+
 The application accepts only an HTTPS Discord webhook on an approved Discord host and webhook path. It strips query parameters before adding its own `wait=true`, disables Discord mentions, and applies bounded payload and timeout handling.
 
 ## 4. Start PostgreSQL and prepare the schema
@@ -146,8 +176,8 @@ Seed the default watch:
 npm run db:seed
 ```
 
-On a database with no watches, the seed creates `Prestige Software Internships —
-Canada and USA` from `prestige-internships-v2`. It is globally disabled,
+On a database with no watches, the seed creates `Canadian Tech Internships`
+from `canadian-tech-internships`. It is globally disabled,
 uninitialized, has no `nextRunAt`, uses `baseline` initialization, and points its
 Discord channel at the environment reference `default`. If any watch already
 exists, the seed returns the first existing watch without creating, upgrading,
@@ -210,7 +240,7 @@ Preview the versioned preset. This command emits a JSON diff and changes no
 state:
 
 ```bash
-npm run cli -- watch preset apply prestige-internships-v2 --watch <watch-id>
+npm run cli -- watch preset apply canadian-tech-internships --watch <watch-id>
 ```
 
 Confirm the watch is paused and inspect targets classified as unchanged, added,
@@ -218,32 +248,41 @@ materially changed, disabled, or operator-only. Applying requires an explicit
 flag:
 
 ```bash
-npm run cli -- watch preset apply prestige-internships-v2 \
+npm run cli -- watch preset apply canadian-tech-internships \
   --watch <watch-id> \
   --apply
 ```
 
-Preset merge preserves notification destinations, score thresholds, history,
-and unrelated operator edits. It rejects an enabled watch. Material target
-changes include site, company slug/name, tier, interval, or search scope.
+Preset apply preserves notification destinations, score thresholds, history,
+terms, companies, and unrelated operator edits, while replacing top-level
+locations and country codes so stale U.S. geography cannot survive. It rejects
+an enabled watch. Material target
+changes include site, company slug/name, tier, interval, `resultsWanted`, or
+search scope. `resultsWanted` accepts only integers from 1 through 1000, is
+stored in the existing target JSON, and is forwarded to the scraper. Omitting it
+from legacy watch JSON retains the executor default.
 
 Run initialization only for target keys reported as added or materially changed:
 
 ```bash
 npm run cli -- watch initialize <watch-id> \
-  --target google_careers \
-  --target shopify \
-  --target ashby:wealthsimple \
-  --target ashby:plaid \
-  --target canadajobbank \
-  --target linkedin \
+  --target uber \
+  --target notion \
+  --target ramp \
+  --target netflix \
+  --target ibm \
   --json
 ```
 
 `--target` is repeatable. Omit it to force every enabled target now rather than
-waiting for its 3/15/60-minute cadence. Unknown, disabled, or duplicate keys are
+waiting for its configured cadence. Unknown, disabled, or duplicate keys are
 validated errors. Depending on target count, query-matrix budgets, and timeouts,
 initialize-all can take longer than a normal Tier 1 run.
+
+For an upgrade from revision 2, the preview should report exactly `uber`,
+`notion`, `ramp`, `netflix`, and `ibm` as added and requiring initialization.
+For a fresh watch, initialize every key that the preview reports; do not assume
+only those five need a baseline.
 
 Review the returned and persisted run summary, especially:
 
@@ -264,6 +303,7 @@ Inspect run history when needed:
 
 ```bash
 npm run cli -- watch runs <watch-id> --json
+npm run cli -- watch coverage --id <watch-id> --json
 ```
 
 If a required target hard-failed, leave it disabled or correct the source and run
@@ -272,9 +312,38 @@ targets keep their baseline. A hard-failed target never receives
 `initializedAt`, and a blocked/malformed response must not be accepted as an
 empty success.
 
+If one of the five new sources fails its disabled live smoke or baseline,
+disable that target individually and rerun the coverage report. Its company must
+remain visible as `disabled`; the failure must not block healthy sibling targets
+or be reclassified as a valid empty board.
+
 Baseline mode prevents an initial flood; it cannot infer jobs from a target that
 never completed. A valid parsed empty board may initialize successfully, but its
 empty-run count and last non-empty time remain visible for collapse monitoring.
+
+### Inspect company coverage
+
+The CLI and authenticated API expose the same company-level projection:
+
+```bash
+npm run cli -- watch coverage --id <watch-id> --json
+curl -H "x-api-key: $EVER_JOBS_API_KEY" \
+  http://localhost:3001/api/watches/<watch-id>/coverage
+```
+
+`CompanyCoverageReport.summary` contains `configured`, `active`, `disabled`,
+`uncovered`, `initialized`, and `degraded` counts. Its `companies[]` rows contain
+the configured company name, coverage status, matching target keys,
+initialization state, last attempt/success/non-empty timestamps, consecutive hard
+failures, and degradation flag.
+
+Matching normalizes case, Unicode, punctuation, and common legal suffixes, then
+requires an exact company name match against `sourceTargets[].companyName`. An enabled matching
+target yields `active`, only disabled matching targets yield `disabled`, and no
+matching branded target yields `uncovered`. Generic job boards do not count.
+Before baselines or runtime failures affect the health counts, the Canadian
+Tech Internships preset should show 21 active companies and the five deferred
+banks as uncovered.
 
 ## 7. Test Discord without creating a fake match
 
@@ -296,7 +365,7 @@ If it fails:
 
 Do not print the environment variable or include the URL in diagnostic output.
 
-## 8. Enable the reviewed 3/15/60 pipeline
+## 8. Enable the reviewed 10/30/60 pipeline
 
 After a satisfactory baseline and Discord test, resume the watch:
 
@@ -386,6 +455,9 @@ Important series include:
 - `ever_jobs_watcher_target_last_success_timestamp_seconds{watch,target,tier}`
 - `ever_jobs_watcher_target_last_non_empty_timestamp_seconds{watch,target,tier}`
 - `ever_jobs_watcher_tier1_coverage_degraded{watch}`
+- `ever_jobs_watcher_company_coverage{watch_id,status}` with bounded `status`
+  values `configured`, `active`, `disabled`, `uncovered`, `initialized`, and
+  `degraded`
 
 Retain the target key/tier labels in alerts. Alert operationally when:
 
@@ -404,6 +476,11 @@ failure. Investigate it against `lastNonEmptyAt` and the target's historical
 baseline rather than paging on every naturally empty board. One target failure
 does not erase successful siblings or make the whole worker unavailable, but a
 degraded Tier 1 signal is an explicit coverage incident.
+
+The API's `ever_jobs_sources_total` gauge is set from the plugin registry's
+actual discovered size during application initialization. Do not compare it to
+the old hard-coded value of 160; alert on unexpected changes relative to the
+deployment's enabled plugin configuration.
 
 Prometheus in-process counters reset on restart. PostgreSQL run and delivery history is durable and remains the audit source.
 
@@ -431,8 +508,8 @@ npm run db:generate
 Run CLI management commands from the host against the same local database:
 
 ```bash
-npm run cli -- watch preset apply prestige-internships-v2 --watch <watch-id>
-npm run cli -- watch preset apply prestige-internships-v2 --watch <watch-id> --apply
+npm run cli -- watch preset apply canadian-tech-internships --watch <watch-id>
+npm run cli -- watch preset apply canadian-tech-internships --watch <watch-id> --apply
 npm run cli -- watch initialize <watch-id> --target <target-key> --json
 # Repeat targeted initialization for the full enabled set for two additional
 # no-notification observation cycles; inspect both before continuing.
@@ -454,7 +531,7 @@ The watcher HTTP process exposes only `/health` and `/metrics`. To manage watche
 npm run start:dev
 ```
 
-Use the repository's API-key authentication convention for watcher management endpoints. The API provides watch CRUD, default creation, manual run, initialization, pause/resume, run history, matches, metrics, observed-job queries, delivery history, and notification tests.
+Use the repository's API-key authentication convention for watcher management endpoints. The API provides watch CRUD, default creation, manual run, initialization, pause/resume, run history, matches, metrics, company coverage (`GET /api/watches/:id/coverage`), observed-job queries, delivery history, and notification tests.
 
 For a single local operator, the CLI is the simplest path and does not require the API process. The CLI loads the watcher module with scheduling disabled, so commands cannot create a second scheduler.
 
@@ -506,9 +583,11 @@ hard failure.
 Do not shorten intervals, add credentials, reuse cookies, bypass access controls,
 or enable a target merely to remove a warning. Disable the individual target,
 repair its public path, rerun fixtures and failure cases, perform the disabled
-smoke, and baseline that target before enabling it again. Meta and Wellfound
-direct remain disabled. Wealthsimple and Plaid use Ashby slugs `wealthsimple`
-and `plaid`; no private or guessed board endpoint is allowed.
+smoke, and baseline that target before enabling it again. Keep the company
+visible as disabled coverage while its target is off. Wealthsimple and Plaid use
+Ashby slugs `wealthsimple` and `plaid`; Notion and Ramp delegate through the
+plugin registry using their fixed official Ashby slugs. No private or guessed
+board endpoint is allowed.
 
 ### A duplicate Discord message appears
 
@@ -531,31 +610,325 @@ evidence that every target was baselined.
 
 ### The ten-minute target is missed
 
-Check scheduler poll freshness, previous run duration, source timeouts/retries, lease state, PostgreSQL health, and process uptime. The scheduler does not overlap a slow run of the same watch. A source publication timestamp can also be delayed or absent; Ever Jobs does not fabricate it.
+Check scheduler poll freshness, previous run duration, source timeouts/retries, lease state, PostgreSQL health, and process uptime. The scheduler does not overlap a slow run of the same watch. A source publication timestamp can also be delayed or absent; rad.ar does not fabricate it.
 
 ## 14. Readiness checklist
 
 - [ ] `.env` exists locally and is not committed.
+- [ ] `.env.local`, when used for GUI-managed destination aliases, is ignored and
+      contains no committed or copied secret material.
 - [ ] PostgreSQL is healthy.
 - [ ] Prisma client generation and migrations completed.
 - [ ] The seed printed the newly created or already-existing intended watch.
 - [ ] `/health` reports healthy database and started scheduler.
 - [ ] Discord configuration is reported as present.
-- [ ] `watch preset apply prestige-internships-v2 --watch <id>` was reviewed as a dry run before `--apply`.
+- [ ] `watch preset apply canadian-tech-internships --watch <id>` was reviewed as a dry run before `--apply`.
 - [ ] The preset was applied only while the watch was paused.
+- [ ] Preview confirms `US`, `United States`, broad Canada, and Waterloo are absent from the applied watch and target scopes.
+- [ ] `watch coverage --id <id>` reports all 26 target companies, with 21 active and RBC, TD, Scotiabank, BMO, and CIBC uncovered before health-state changes.
 - [ ] Every added/materially changed enabled target has its own successful `initializedAt` and baseline sent zero notifications.
 - [ ] Hard-failed targets were repaired and re-baselined or explicitly left disabled.
-- [ ] Every enabled Tier 1 target has fixture-backed Canada-wide query/post-filter evidence.
+- [ ] Every enabled Tier 1 target has fixture-backed Toronto/GTA query/post-filter evidence.
 - [ ] New/repaired targets completed an operator-authorized live smoke while disabled; normalized locations and employer application URLs were inspected.
 - [ ] The Discord configuration test reached the correct channel.
 - [ ] The watch was resumed only after baseline and provider testing.
 - [ ] Two additional no-notification observation runs appear in history for the
       target-enabled set, including both Tier 1 cycles.
 - [ ] `ever_jobs_watcher_tier1_coverage_degraded{watch}` is zero and no enabled Tier 1 target is degraded.
+- [ ] `ever_jobs_watcher_company_coverage{watch_id,status}` reflects the coverage report counts.
 - [ ] Delivery and match queries work.
 - [ ] The webhook URL exists only in local environment/secret storage.
 
-## 15. Limitations and safety boundaries
+## 15. Local operator GUI workflow (Spec 6002)
+
+The GUI is an additive operator surface over the same PostgreSQL records and
+services used above. Use it when you want validated forms, visible diffs,
+health/history dashboards, and notification routing instead of issuing every
+CLI command manually. The CLI remains available for automation and recovery.
+
+### Start the localhost stack
+
+Install dependencies and ensure PostgreSQL is reachable through `DATABASE_URL`.
+Then start the development stack from the repository root:
+
+```bash
+npm run gui:dev
+```
+
+For the built local stack, use:
+
+```bash
+npm run gui
+```
+
+The launcher deploys checked-in Prisma migrations, starts the API on
+`127.0.0.1:3001`, starts the watcher health service on `127.0.0.1:3002`, starts
+the web application on `127.0.0.1:3000`, and prints the canonical URL:
+
+```text
+http://127.0.0.1:3000
+```
+
+All three listeners bind to loopback in this local mode. The web development
+proxy forwards relative API and watcher-health requests; browser code does not
+embed a second deployment URL. If a child process fails during startup, the
+launcher terminates its siblings rather than leaving a partial stack. `Ctrl+C`
+forwards shutdown to all three processes.
+
+The launcher does not seed a production watch implicitly. On an empty database,
+use New watch and choose the safe default preset, or run `npm run db:seed`
+explicitly. The default remains paused and baseline-required.
+
+### Authenticate the browser session
+
+Open Settings and enter the existing `EVER_JOBS_API_KEY` value. The GUI keeps it
+only in browser `sessionStorage`. It is cleared when the tab session ends. It is
+never copied into a watch, route, PostgreSQL row, `.env.local`, local storage,
+IndexedDB, cookie, query string, screenshot, or download.
+
+An absent or invalid key leaves protected calls unauthorized. Do not weaken or
+disable the API guard to make the GUI work. Health and connection errors remain
+visible separately from authentication errors.
+
+### Read Overview correctly
+
+Overview separates:
+
+- API reachability and database health;
+- watcher process reachability;
+- scheduler enabled/started state;
+- Discord configured state;
+- source and Tier 1 coverage health;
+- each watch's enabled/paused state, initialization, next run, recent matches,
+  recent failures, and recent delivery status.
+
+The browser never starts or restarts the worker. A button labeled Start watcher
+or Resume calls the existing persisted-watch Resume behavior. If the worker is
+unavailable, resuming a watch makes it eligible for later scheduling but cannot
+make an absent process run. Conversely, pausing one watch does not stop the
+worker or other watches.
+
+### Create or edit a watch
+
+Use Watches to create a blank watch, create the safe default, clone an existing
+watch, or open a saved watch. The profile builder edits the public watch
+configuration:
+
+- name and description;
+- schedule, interval, and timezone;
+- source, company slug/name, source tier, target interval, result limit, enabled
+  state, and search scope;
+- countries, locations, search terms, required/preferred/excluded terms;
+- workplace and employment types;
+- minimum, urgent, and digest score thresholds plus weights;
+- legacy destinations and conditional notification routes.
+
+Advanced JSON accepts and exports the same API-compatible configuration used by
+CLI watch JSON. Preview and validate pasted/selected JSON before replacing the
+draft. Exports omit IDs and other runtime-only state, target health and
+initialization timestamps, leases, histories, API keys, and webhook values.
+
+The browser draft is not durable until Apply. Navigation away from an unsaved
+draft requires confirmation.
+
+### Review and apply changes safely
+
+Apply sends the `updatedAt` value that was loaded with the draft. It validates
+the patch and shows a field-level diff before mutation.
+
+- Name, description, schedule, interval, timezone, legacy-destination, and
+  routing-only changes preserve the current watch enabled state.
+- Source/target, company, query-scope, location/country, term/filter,
+  workplace/employment eligibility, score-threshold, and weight changes
+  atomically set `enabled=false` and return all enabled target keys as requiring
+  a no-notification baseline.
+- A no-op does not pause, initialize, or rewrite the watch.
+- HTTP 409 means another API, CLI, MCP, or GUI caller changed the watch since the
+  draft was loaded. No part of the stale patch was applied. Reload the current
+  record, compare the new diff, and deliberately reapply the intended edits.
+
+After a behavior-changing Apply, do not bypass the activation panel:
+
+1. Confirm the watch is paused.
+2. Initialize the returned target keys without notifications.
+3. Inspect baseline target outcomes, normalized jobs, company/application URLs,
+   coverage, and any hard failures.
+4. Repair, re-baseline, or disable failed targets.
+5. For the Canadian Tech Internships rollout, retain the two additional no-notification
+   observation cycles required earlier in this runbook.
+6. Select Resume explicitly.
+
+Apply never resumes a behavior-changed watch. Editing routes never replays a
+historical match that was already sent or suppressed.
+
+### Configure named Discord destinations
+
+Open Notifications / Destinations. The `default` row represents
+`DISCORD_WEBHOOK_URL`. Add a custom lowercase alias such as `tier-one`; the
+server maps it deterministically to `DISCORD_WEBHOOK_TIER_ONE` and writes a
+GUI-managed value only to ignored `.env.local`.
+
+For each alias:
+
+1. Paste the HTTPS Discord webhook URL into the create/rotate form.
+2. Save it. The response shows only alias, provider, configuration source, and
+   configured status. A source of `environment` is rendered read-only by the
+   GUI.
+3. Run the non-persistent destination test against the intended watch.
+4. Confirm the test arrived in the correct Discord channel.
+5. Discard any clipboard history or screenshot containing the original URL.
+
+The server accepts approved Discord webhook hosts and webhook paths only. It
+writes a same-directory temporary file and atomically renames it, then API and
+worker reload the change through an mtime cache without a process restart.
+
+A process-environment destination overrides `.env.local` and is read-only. To
+rotate it, update the process environment or external secret manager and restart
+the owning process through normal operations. A GUI-managed alias cannot be
+deleted while any watch's legacy channel or notification route references it;
+remove or replace those references first.
+
+Never inspect a destination by printing `.env.local` into logs or a shared
+terminal. Destination APIs, provider results, delivery history, exports, and
+errors must remain masked. If a webhook was ever exposed, rotate it in Discord
+and replace the local value.
+
+### Route tiers, notification types, and scores
+
+Build rules under Notifications / Routing. A route has a name, enabled flag,
+Discord destination alias, and optional source tier, notification type, minimum
+score, and maximum score conditions.
+
+Conditions across fields use AND semantics. Values within `sourceTiers` or
+`notificationTypes` use OR semantics. Minimum and maximum score are inclusive.
+An enabled rule without conditions is a catch-all. A tier restriction uses the
+match's `sourceTargetKey`; it does not match if that target/tier cannot be
+resolved.
+
+For example:
+
+| Route | Destination | Conditions | Result |
+| --- | --- | --- | --- |
+| Tier 1 urgent | `tier-one` | Tier 1 AND urgent | Only urgent matches produced by a Tier 1 target. |
+| Tier 2 standard | `tier-two` | Tier 2 AND standard AND score 60 through 79 | Standard Tier 2 matches inside the inclusive band. |
+| Daily digest | `digest` | digest | Digest messages from any tier. |
+
+Every distinct matching destination receives a message. If two rules match the
+same provider/destination, the dispatcher enqueues one outbox row. Delivery
+identity remains watch + canonical episode + provider/destination; route ID and
+notification type are deliberately excluded.
+
+When the route array is non-empty, routes replace legacy broadcast selection
+for that watch. They do not send in addition to `notificationChannels`. Only a
+missing or empty route array retains the prior legacy behavior. If configured
+routes are disabled or none match, the match is persisted as suppressed with reason
+`routing`; a later rule edit does not replay it. Pending retries use the
+destination saved on the delivery row, not the latest route set.
+
+Before Resume, use the route preview where available, test every destination,
+and inspect the displayed diff. A routing-only Apply does not force baseline,
+but keeping a production watch paused while first establishing routes is the
+safer operational rollout.
+
+### Search, analysis, matches, and downloads
+
+Search exposes the normal CLI search fields and renders paginated normalized
+jobs. Analysis shows the existing summary, company intelligence, and source
+statistics. Compare runs selected or all registered sources with bounded
+concurrency. One source error appears as a sanitized failure row while
+successful comparisons remain usable.
+
+Matches exposes score and eligibility explanations plus the existing workflow
+statuses: `new`, `reviewed`, `applied`, `dismissed`, `interview`, `rejected`, and
+`offer`. Jobs and Notifications expose durable observations and delivery
+history using the API's existing filters.
+
+Use explicit JSON or CSV Download actions in place of CLI stdout or
+`--output <path>`. The browser does not write an arbitrary server-side path.
+Verbose process diagnostics remain in the API/watcher terminals and are not a
+GUI feature.
+
+### GUI troubleshooting
+
+#### The GUI does not open
+
+Read the launcher terminal and identify which child failed. Confirm ports 3000,
+3001, and 3002 are available, PostgreSQL is reachable, migrations succeeded,
+and dependencies are installed. Do not start a second `gui:dev` stack on the
+same ports.
+
+#### Overview shows API unavailable
+
+Confirm `http://127.0.0.1:3001/health` responds and inspect the API terminal.
+Because the browser uses the web proxy, do not solve this by placing an API key
+or arbitrary remote origin in the URL.
+
+#### Overview shows worker unavailable
+
+Confirm `http://127.0.0.1:3002/health` responds and inspect the worker terminal.
+Resume controls only persisted watch state; clicking Resume cannot launch a
+missing worker.
+
+#### Apply reports a conflict
+
+Another client changed the watch. Reload it, preserve any needed draft outside
+secret fields, review the new diff, and reapply. Do not use a blind PATCH to
+overwrite the newer version.
+
+#### A destination is read-only
+
+Its resolved environment key is present in the process environment and takes
+precedence. Rotate it through that environment/secret manager. The GUI must not
+overwrite it in `.env.local`.
+
+#### A destination cannot be deleted
+
+Remove it from every legacy channel and route, then Apply those watch edits.
+The API rechecks references during deletion and returns a conflict until none
+remain.
+
+#### A routed match sent nowhere
+
+Inspect the match's notification type, total score, `sourceTargetKey`, resolved
+tier, route enabled flags, inclusive score bounds, and destination configured
+state. A route-configured no-match is intentionally terminal `routing`
+suppression and is not replayed after the rule is changed.
+
+#### A webhook value appears in output
+
+Treat this as a security incident. Stop sharing the output, rotate the webhook
+in Discord, replace the local/environment value, preserve only a redacted
+reproduction, and report the redaction defect. Do not add the leaked value to an
+issue, test fixture, screenshot, or log sample.
+
+### GUI readiness additions
+
+Before treating the GUI path as ready, verify all of the following in addition
+to the watcher checklist above:
+
+- [ ] One command starts the three loopback services and prints
+      `http://127.0.0.1:3000`.
+- [ ] Overview distinguishes API, database, worker, scheduler, Discord, coverage,
+      and watch state.
+- [ ] The admin API key disappears with the browser session and is absent from
+      exports and persisted storage.
+- [ ] A legacy watch with no routes continues using its legacy destination.
+- [ ] Each named destination test reaches only its intended channel.
+- [ ] Tier 1 and Tier 2 route simulations select only their intended aliases,
+      and overlapping routes do not duplicate a delivery.
+- [ ] A behavior-changing edit pauses, returns baseline targets, completes a
+      no-notification baseline, and requires explicit Resume.
+- [ ] Worker interruption is shown as unavailable without changing watch state.
+- [ ] Restart recovers PostgreSQL state and pending delivery work without a
+      duplicate.
+- [ ] API responses, database rows, logs, errors, screenshots, JSON, and CSV
+      contain no webhook value.
+
+Do not mark this GUI checklist complete until the implementation's automated
+and operational validation has actually run. Spec 6002 validation remains
+separate from this documentation update.
+
+## 16. Limitations and safety boundaries
 
 - The system improves early discovery but cannot promise a job will be detected within exactly three minutes or that the user will be the first applicant.
 - External career sites can change schemas, throttle requests, block an IP, omit publication dates, or stop responding.

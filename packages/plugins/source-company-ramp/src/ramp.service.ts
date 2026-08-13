@@ -33,6 +33,7 @@ const COMPANY_NAME = 'Ramp';
   site: Site.RAMP,
   name: COMPANY_NAME,
   category: 'company',
+  watchMode: 'board',
 })
 @Injectable()
 export class RampService implements IScraper {
@@ -43,12 +44,19 @@ export class RampService implements IScraper {
   ) {}
 
   async scrape(input: ScraperInputDto): Promise<JobResponseDto> {
-    const ashby = this.registry?.getScraper(Site.ASHBY);
+    if (!this.registry) {
+      const message =
+        'Ramp source requires PluginRegistry injection to resolve Ashby';
+      this.logger.error(message);
+      throw new Error(message);
+    }
+
+    const ashby = this.registry.getScraper(Site.ASHBY);
     if (!ashby) {
-      this.logger.error(
-        'Ashby source plugin is not registered; cannot scrape Ramp',
-      );
-      return new JobResponseDto([]);
+      const message =
+        'Ramp source requires the Ashby source plugin to be registered';
+      this.logger.error(message);
+      throw new Error(message);
     }
 
     this.logger.log(
@@ -63,9 +71,11 @@ export class RampService implements IScraper {
     for (const job of result.jobs) {
       job.site = Site.RAMP;
       job.companyName = COMPANY_NAME;
-      if (job.id) {
-        job.id = job.id.replace(/^ashby-/, 'ramp-');
+      const delegatedId = job.id?.trim();
+      if (!delegatedId) {
+        throw new Error('Ramp received an Ashby job without a stable ID');
       }
+      job.id = `ramp-${delegatedId.replace(/^(?:ashby|ramp)-/, '')}`;
     }
 
     this.logger.log(`Ramp: scraped ${result.jobs.length} jobs`);

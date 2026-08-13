@@ -1,0 +1,49 @@
+{
+  "pages": [
+    {
+      "records": {
+        "total": 3,
+        "total_pages": 2,
+        "postings": [
+          {
+            "external_id": "201",
+            "text": "Software Engineering Intern",
+            "url": "https://jobs.netflix.com/jobs/201",
+            "apply_url": "https://jobs.netflix.com/jobs/201/apply",
+            "description": "<p>Build streaming systems.</p>",
+            "locations": ["Toronto, Ontario, Canada", "Remote - Canada"],
+            "team": "Platform Engineering",
+            "employment_type": "Intern",
+            "created_at": "2026-07-05"
+          },
+          {
+            "external_id": "202",
+            "title": "Machine Learning Co-op",
+            "url": "/jobs/202",
+            "location": { "city": "Vancouver", "state": "British Columbia", "country": "Canada" },
+            "organization": "Machine Learning",
+            "type": "Co-op",
+            "date_posted": "2026-07-06"
+          }
+        ]
+      }
+    },
+    {
+      "records": {
+        "total": 3,
+        "total_pages": 2,
+        "postings": [
+          {
+            "id": "203",
+            "title": "Data Engineering Intern",
+            "url": "https://jobs.netflix.com/jobs/203",
+            "location_string": "Montreal, Quebec, Canada",
+            "department": "Data Platform",
+            "employmentType": "Internship",
+            "posted_at": "2026-07-07"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -52,7 +52,7 @@ Private Cloud Run service (min 1, max 1, instance CPU)
        -> public direct-company, ATS, and validated query endpoints
        -> Discord webhook
 
-Trusted admin workstation or separately deployed Ever Jobs API
+Trusted admin workstation or separately deployed rad.ar API
   -> migrations and seed
   -> preset dry-run/apply while paused
   -> selected target baseline initialize
@@ -68,7 +68,7 @@ Provision these resources in the chosen project and region:
 
 - An Artifact Registry Docker repository.
 - A Cloud SQL for PostgreSQL instance and database.
-- A dedicated database user for Ever Jobs.
+- A dedicated database user for rad.ar.
 - A dedicated Cloud Run runtime service account.
 - Secret Manager secrets for `DATABASE_URL` and `DISCORD_WEBHOOK_URL`.
 - A private Cloud Run service named, for example, `ever-jobs-watcher`.
@@ -133,7 +133,7 @@ and target health/baseline state. Existing watch JSON without `companyName`,
 `searchScope`, or target `initializedAt` inherits watch-level settings. Do not
 roll back these columns after a target rollback; disable the target instead.
 
-The seed creates `prestige-internships-v2` disabled and uninitialized for a new
+The seed creates `canadian-tech-internships` disabled and uninitialized for a new
 installation. Re-running seed preserves the operational state of an existing
 watch and legacy seed compatibility. This invariant allows the Cloud Run
 scheduler to start safely before baseline. The deployment command below sets
@@ -208,23 +208,16 @@ Inspect startup logs for configuration-validation failures without printing secr
 
 The Cloud Run service itself does not expose watcher-management endpoints. Use one of these trusted administration paths:
 
-- Run the Ever Jobs CLI from a controlled workstation/runner connected to Cloud SQL.
-- Deploy the existing authenticated Ever Jobs API separately and restrict its management surface.
+- Run the rad.ar CLI from a controlled workstation/runner connected to Cloud SQL.
+- Deploy the existing authenticated rad.ar API separately and restrict its management surface.
 
 From the trusted CLI environment using the production database and Discord secret:
 
 ```bash
 npm run cli -- watch list --json
-npm run cli -- watch preset apply prestige-internships-v2 --watch <watch-id>
-npm run cli -- watch preset apply prestige-internships-v2 --watch <watch-id> --apply
-npm run cli -- watch initialize <watch-id> \
-  --target google_careers \
-  --target shopify \
-  --target ashby:wealthsimple \
-  --target ashby:plaid \
-  --target canadajobbank \
-  --target linkedin \
-  --json
+npm run cli -- watch preset apply canadian-tech-internships --watch <watch-id>
+npm run cli -- watch preset apply canadian-tech-internships --watch <watch-id> --apply
+npm run cli -- watch initialize <watch-id> --json
 # Repeat the same targeted initialize command for two additional
 # no-notification observation cycles while the watch remains paused.
 npm run cli -- watch notifications-test <watch-id> --json
@@ -384,7 +377,7 @@ The present watcher still starts an HTTP server, so a worker pool would run that
 - Tier 1's ten-minute interval (30 minutes for Wellfound) is a scheduling target, not a guarantee. The 15-second scheduler poll, jitter, a previous long run, source latency, retries, Cloud Run restarts, database events, and Discord outages can add time.
 - Cloud Run does not guarantee a particular minimum instance will live forever; durable state makes restarts safe but cannot eliminate the pause.
 - Source publication times may be delayed or missing. The watcher records first observation rather than fabricating a publication timestamp.
-- Live source schemas, availability, IP policies, and rate limits are outside Ever Jobs' control.
+- Live source schemas, availability, IP policies, and rate limits are outside rad.ar's control.
 - Registration or fixture coverage alone never permits unattended polling.
   Target-enabled sources remain inert in the paused watch until their targeted
   baselines and two no-notification observation cycles pass.

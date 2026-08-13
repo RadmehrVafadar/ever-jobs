@@ -37,6 +37,7 @@ import { WatcherMetricsService } from "./services/watcher-metrics.service";
 import { WatcherSchedulerService } from "./services/watcher-scheduler.service";
 import { DefaultWatchSeederService } from "./services/default-watch-seeder.service";
 import { WatchPresetService } from "./services/watch-preset.service";
+import { CompanyCoverageService } from "./services/company-coverage.service";
 
 export interface WatcherModuleOptions {
   imports?: DynamicModule["imports"];
@@ -77,6 +78,7 @@ export class WatcherModule {
         WatchSourcePlanner,
         WatchValidationService,
         WatchPresetService,
+        CompanyCoverageService,
         WatcherMetricsService,
         WebhookNotificationProvider,
         DiscordNotificationProvider,
@@ -154,8 +156,10 @@ export class WatcherModule {
         WatchSourcePlanner,
         WatchValidationService,
         WatchPresetService,
+        CompanyCoverageService,
         WatcherMetricsService,
         JobsServiceWatchExecutor,
+        DiscordNotificationProvider,
         NotificationDispatcher,
         WatchExecutionService,
         DailyDigestService,

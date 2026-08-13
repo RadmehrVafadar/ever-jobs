@@ -9,7 +9,7 @@ location request matrix.
 
 The service sends ordinary HTML requests to `https://www.google.com/search`
 with `ibp=htl;jobs`, an English locale, a country hint, and a bounded page
-offset. All HTTP I/O uses the shared Ever Jobs client.
+offset. All HTTP I/O uses the shared rad.ar client.
 
 Relevant `ScraperInputDto` fields are:
 
@@ -22,8 +22,8 @@ Relevant `ScraperInputDto` fields are:
 | `resultsWanted` | Clamped to 0–100; list pagination is capped at five 10-result pages |
 | `descriptionFormat` | Preserves HTML by default or renders plain/Markdown descriptions when embedded data provides one |
 
-The Spec 6000 watcher preset defaults this target to 12 matrix requests per run
-across Canada and the United States. The target remains disabled until the live
+The Canadian Tech Internships watcher preset defaults this target to 12 matrix
+requests per run across Toronto and the GTA with country code `CA`. The target remains disabled until the live
 surface gate described below succeeds.
 
 ## Accepted response shapes

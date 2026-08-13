@@ -1,17 +1,23 @@
-# Ever Jobs Watcher
+# rad.ar Watcher
 
-The watcher is the long-running Ever Jobs worker for persistent, low-latency job
+The watcher is the long-running rad.ar worker for persistent, low-latency job
 monitoring. It stores watches, target state, observations, canonical episodes,
 matches, and notification deliveries in PostgreSQL. It invokes source plugins
 directly and sends durable notifications only after database persistence
 succeeds.
 
-The versioned `prestige-internships-v2` preset targets software internships and
-co-op roles. Tier 1 is Canada-only; Tier 2 and Tier 3 cover Canada and the United
-States. Its first activation is deliberately safe: a new seeded watch is
+The `canadian-tech-internships` preset (revision 1) targets Summer 2027
+technology internships and co-op roles in Toronto and the Greater Toronto Area.
+Every source tier uses `CA` and the same GTA location list. Its first activation
+is deliberately safe: a new seeded watch is
 globally disabled/uninitialized and every target baseline is unset. Target-level
 enabled flags describe validated inventory only; they cannot poll or notify
 while the watch is paused.
+
+The retained inventory classifies every target company explicitly: 21 have at least one
+first-class company/ATS target, while RBC, TD, Scotiabank, BMO, and CIBC remain
+visible as deferred, uncovered companies. Generic LinkedIn, Canada Job Bank, and
+Google Jobs targets provide redundancy but never count as company coverage.
 
 For copy-and-paste operating procedures, use the [local runbook](../../docs/runbooks/watcher-local.md). For the supported Google Cloud shape and its constraints, use the [Google Cloud runbook](../../docs/runbooks/watcher-google-cloud.md).
 
@@ -21,7 +27,7 @@ For copy-and-paste operating procedures, use the [local runbook](../../docs/runb
 PostgreSQL due-watch query and lease
   -> due source tiers
   -> target-aware term x location request plan
-  -> existing Ever Jobs source plugins
+  -> existing rad.ar source plugins
   -> normalized JobPostDto location arrays
   -> source observation and canonical-episode upsert
   -> target-aware geography eligibility and explainable ranking
@@ -65,14 +71,15 @@ npm run start:watcher:dev
 
 Set `DISCORD_WEBHOOK_URL` in `.env` before testing notifications. Keep it out of watch JSON, logs, screenshots, commits, and command history. Watch records store the destination reference `default`; the provider resolves the complete secret from the environment at send time.
 
-In a second terminal, get the seeded watch ID and preview the v2 preset. Preview
+In a second terminal, get the seeded watch ID and preview the preset. Preview
 is side-effect free; applying requires the explicit `--apply` flag and the watch
 must remain paused:
 
 ```bash
 npm run cli -- watch list --json
-npm run cli -- watch preset apply prestige-internships-v2 --watch <watch-id>
-npm run cli -- watch preset apply prestige-internships-v2 --watch <watch-id> --apply
+npm run cli -- watch preset apply canadian-tech-internships --watch <watch-id>
+npm run cli -- watch preset apply canadian-tech-internships --watch <watch-id> --apply
+npm run cli -- watch coverage --id <watch-id> --json
 ```
 
 The apply result identifies added and materially changed targets. Baseline only
@@ -81,12 +88,11 @@ initializing every enabled target:
 
 ```bash
 npm run cli -- watch initialize <watch-id> \
-  --target google_careers \
-  --target shopify \
-  --target ashby:wealthsimple \
-  --target ashby:plaid \
-  --target canadajobbank \
-  --target linkedin \
+  --target uber \
+  --target notion \
+  --target ramp \
+  --target netflix \
+  --target ibm \
   --json
 # Repeat the same targeted initialize command for two additional
 # no-notification observation cycles while the watch remains paused.
@@ -100,6 +106,11 @@ uninitialized even when sibling targets succeed. Keep the watch paused, resolve
 the failure, and initialize that target again. A valid parsed empty board is a
 success with an empty-run counter; an adapter failure must never be reported as
 a successful zero-result baseline.
+
+The five bounded board targets set `resultsWanted: 500`. This optional
+per-target field accepts integers from 1 through 1000, is stored in the existing
+target JSON, participates in material preset diffs, and is forwarded to the
+scraper. Legacy watch JSON that omits it keeps the executor's configured default.
 
 Confirm the worker and the first scheduled runs:
 
@@ -122,9 +133,9 @@ Source tiers define both cadence and target-specific eligibility geography.
 
 | Tier | Default cadence | Eligible geography | Intended sources |
 | ---- | --------------- | ------------------ | ---------------- |
-| Tier 1 | 10 minutes (Wellfound: 30) | Canada only | Fixture-backed direct company sources and complete ATS boards |
-| Tier 2 | 30 minutes | Canada and United States | Canada Job Bank and validated Google Jobs redundancy |
-| Tier 3 | 60 minutes | Canada and United States | Validated unauthenticated LinkedIn public guest search |
+| Tier 1 | 10 minutes (Wellfound: 30) | Toronto/GTA, Canada | Fixture-backed direct company sources and complete ATS boards |
+| Tier 2 | 30 minutes | Toronto/GTA, Canada | Canada Job Bank and validated Google Jobs redundancy |
+| Tier 3 | 60 minutes | Toronto/GTA, Canada | Validated unauthenticated LinkedIn public guest search |
 
 The ten-minute cadence means a normal Tier 1 target becomes due every ten minutes; Wellfound uses a 30-minute override. It is not a publication-to-notification service-level guarantee: source runtime, source outages, missing publication timestamps, retries, PostgreSQL availability, and process restarts can add latency. A second run never starts while the same watch still holds its execution lease.
 
@@ -133,10 +144,9 @@ Plugin metadata declares whether a source is a complete `board` or a search
 `query`; Google Careers and Microsoft declare their actual behavior explicitly.
 Query targets build the complete configured Summer 2027 term × location matrix and process a
 rotating slice capped by `maxRequestsPerRun`, so a permanently fixed first
-country/location cannot starve the remaining matrix. The preset has 19 terms:
-Google Careers and Canada Job Bank each have 76 Canadian matrix entries, while
-Google Jobs and LinkedIn each have 95 Canada/US entries. Their request caps are
-1, 12, 12, and 8 per run respectively. Google Careers therefore makes only one
+country/location cannot starve the remaining matrix. The preset has 19 terms
+and 11 Toronto/GTA locations, producing 209 matrix entries for each query
+target. Their request caps are 1, 12, 12, and 8 per run respectively. Google Careers therefore makes only one
 rotating search per 10-minute run.
 
 ## Default source readiness
@@ -146,27 +156,52 @@ it unattended:
 
 | Target | Tier | Production path | Shipped preset state and gate |
 | ------ | ---- | --------------- | ----------------------------- |
-| Google Careers | 1 | Official Careers results and public detail pages; Canada scope | **Target-enabled inside the disabled/uninitialized watch.** Six-suite deterministic validation includes this source; live smoke returned two Canadian roles with stable IDs, public URLs, and Waterloo/Montréal/Toronto locations. Baseline and two observation cycles remain. |
+| Google Careers | 1 | Official Careers results and public detail pages; Toronto/GTA scope | **Target-enabled inside the disabled/uninitialized watch.** Six-suite deterministic validation includes this source; baseline and two observation cycles remain. |
 | Shopify | 1 | Official server-rendered careers listing/detail pages; no guessed Ashby slug | **Target-enabled inside the disabled/uninitialized watch.** Deterministic validation passed and the live board was marker-validated as a legitimate empty result. Baseline and two observation cycles remain. |
 | Wealthsimple | 1 | Generic Ashby target `ashby:wealthsimple`, branded with `companyName` | **Enabled target** inside the disabled preset watch; baseline before resuming. |
 | Plaid | 1 | Generic Ashby target `ashby:plaid` | **Enabled target** inside the disabled preset watch; baseline before resuming. |
-| Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel, Meta, Wellfound | 1 | Legacy direct-company inventory with Canada post-filter scope | **Enabled by operator request.** Baseline every target before resuming; Microsoft's earlier live smoke timed out. |
-| Canada Job Bank | 2 | Structured Canadian query source | **Enabled target** inside the disabled preset watch; 12 of 76 matrix requests every 30 minutes. |
-| Google Jobs | 2 | Canada/US query source with employer application URL extraction | **Disabled.** Fixture/failure gates pass, but the live smoke returned an enable-JavaScript shell; require a successful smoke and baseline. |
-| LinkedIn public guest | 3 | Canada/US newest-first 72-hour public search | **Target-enabled inside the disabled/uninitialized watch.** Listing/detail fixtures and unauthenticated live smoke pass; baseline and operator review remain required. |
+| Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel, Meta, Wellfound | 1 | Retained direct-company inventory with Toronto/GTA post-filter scope | **Enabled by operator request.** Baseline every target before resuming; Microsoft's earlier live smoke timed out. |
+| Uber, Notion, Ramp, Netflix, IBM | 1 | Complete official company boards; Notion/Ramp delegate to registered Ashby by fixed slug | **Enabled targets inside the disabled/uninitialized watch.** Each is Toronto/GTA-scoped at 10 minutes with `resultsWanted: 500`; disabled live smoke, targeted baseline, and two observation cycles remain operator gates. |
+| Canada Job Bank | 2 | Structured Canadian query source | **Enabled target** inside the disabled preset watch; 12 of 209 matrix requests every 30 minutes. |
+| Google Jobs | 2 | Toronto/GTA query source with employer application URL extraction | **Disabled.** Fixture/failure gates pass, but the live smoke returned an enable-JavaScript shell; require a successful smoke and baseline. |
+| LinkedIn public guest | 3 | Toronto/GTA newest-first 72-hour public search | **Target-enabled inside the disabled/uninitialized watch.** Listing/detail fixtures and unauthenticated live smoke pass; baseline and operator review remain required. |
+| RBC, TD, Scotiabank, BMO, CIBC | — | Deferred official bank adapters | **Uncovered by design in this phase.** They remain in the configured company inventory and appear as `uncovered` in coverage reports. |
 
 The target-enabled set is `google_careers`, `shopify`, `ashby:wealthsimple`,
 `ashby:plaid`, all 13 legacy direct-company targets listed above,
-`canadajobbank`, and `linkedin`. Only Google Jobs remains target-disabled. The final source
-validation record is six deterministic suites/59 tests, Google Careers two live
-Canadian roles, Shopify valid empty, Wealthsimple 37 live roles with a capped
-mapped sample, LinkedIn public pass, Microsoft timeout, and Google Jobs blocked.
+`uber`, `notion`, `ramp`, `netflix`, `ibm`, `canadajobbank`, and `linkedin`.
+Only Google Jobs remains target-disabled. The inventory invariant requires every
+target company to have an exact branded target or an explicit deferral; adding an
+unclassified name fails validation.
 
 The preset preview is the authoritative report of which targets are enabled in
 the installed revision. Do not change a gate to enabled merely because the
 package is registered. A successful source fixture proves deterministic parsing;
 the separate operator-authorized smoke proves the current public surface is
 reachable from the deployment environment.
+
+## Company coverage report
+
+Use the authenticated API endpoint `GET /api/watches/:id/coverage` or the CLI:
+
+```bash
+npm run cli -- watch coverage --id <watch-id>
+npm run cli -- watch coverage --id <watch-id> --json
+```
+
+`CompanyCoverageReport` returns summary counts for `configured`, `active`,
+`disabled`, `uncovered`, `initialized`, and `degraded`, followed by one row per
+configured company. Each row includes its `active | disabled | uncovered`
+status, matching target keys, initialization state, latest attempt/success/
+non-empty timestamps, consecutive hard failures, and degradation flag.
+
+Coverage uses normalized exact matching between `watch.companies[]` and
+`sourceTargets[].companyName`. A company with an enabled branded target is
+active; a company with only disabled branded targets is disabled; a company
+with no branded target is uncovered. Generic discovery boards do not satisfy
+first-class company coverage even when their query or score allowlist names the
+company. For the Canadian Tech Internships preset, the expected summary is 21 active and five
+uncovered before considering initialization and runtime degradation.
 
 ## Score and delivery bands
 
@@ -203,11 +238,10 @@ it with the rotating search term, location, locale, and page. After deploying a
 canonical-identity change, pause the watch and baseline `google_careers` before
 resuming so the corrected identity cannot generate a migration-time alert.
 
-Toronto, the GTA, and Waterloo add preference points only. Vancouver, Calgary,
-Montréal, Ottawa, remote Canada, and every other confidently Canadian location
-remain eligible in Tier 1. `Remote US` is Tier 2/3 only; `North America` and
-`Remote Americas` are Tier 2/3 eligible unless the posting explicitly excludes
-Canada and the United States.
+Eligibility is limited to Toronto and the GTA municipality scopes configured by
+the preset. Every target sets `strictLocations: true`, and explicit `CA` source
+scope is enforced again when results are scored. U.S. results and Canadian
+postings outside the configured GTA list are ineligible.
 
 | Default score | Behavior                                             |
 | ------------- | ---------------------------------------------------- |
@@ -285,10 +319,11 @@ npm run cli -- watch resume <watch-id> --json
 npm run cli -- watch runs <watch-id> --json
 npm run cli -- watch matches <watch-id> --json
 npm run cli -- watch metrics <watch-id> --json
+npm run cli -- watch coverage --id <watch-id> --json
 npm run cli -- watch deliveries <watch-id> --json
 npm run cli -- watch initialize <watch-id> --target <target-key> --json
-npm run cli -- watch preset apply prestige-internships-v2 --watch <watch-id>
-npm run cli -- watch preset apply prestige-internships-v2 --watch <watch-id> --apply
+npm run cli -- watch preset apply canadian-tech-internships --watch <watch-id>
+npm run cli -- watch preset apply canadian-tech-internships --watch <watch-id> --apply
 ```
 
 Use `watch run` for a manual post-initialization run. Use `watch initialize`
@@ -296,33 +331,34 @@ for a no-notification baseline; repeat `--target` to select several target keys,
 or omit it for all enabled targets. Preset apply is a dry-run JSON diff unless
 `--apply` is present, and mutation rejects an enabled watch.
 
-The Summer 2027 query-term change is material target configuration. When
-upgrading an existing watch, pause it, preview/apply the preset, and baseline the
-enabled target keys reported in `targetKeysRequiringInitialization` before
-resuming. The current preset reports the changed enabled query targets rather
-than silently reusing their old baseline.
+Target `resultsWanted`, search scope, site, company identity, tier, and interval
+are material preset configuration. When upgrading an existing watch, pause it,
+preview/apply the current template, and baseline the enabled target keys
+reported in `targetKeysRequiringInitialization` before resuming. Applying to a
+legacy Canada/USA watch replaces its top-level geography and materially changes
+each preset-owned target scope.
 
-To roll out the complete operator-enabled direct-company inventory, keep the
-watch paused through preview, apply, and a no-notification baseline of every
-enabled target:
+To migrate an older watch, keep it paused through preview, apply, coverage
+inspection, and a no-notification baseline of every reported target:
 
 ```bash
 node dist/apps/cli/main.js watch pause <watch-id> --json
-node dist/apps/cli/main.js watch preset apply prestige-internships-v2 --watch <watch-id>
-node dist/apps/cli/main.js watch preset apply prestige-internships-v2 --watch <watch-id> --apply
+node dist/apps/cli/main.js watch preset apply canadian-tech-internships --watch <watch-id>
+node dist/apps/cli/main.js watch preset apply canadian-tech-internships --watch <watch-id> --apply
+node dist/apps/cli/main.js watch coverage --id <watch-id> --json
 node dist/apps/cli/main.js watch initialize <watch-id> --json
 ```
 
 Inspect every target result. Retry failures or disable a failing target before
-running `watch resume`; do not treat a partial baseline as complete.
+running `watch resume`; do not treat a partial baseline as complete. A fresh
+watch must baseline every enabled target reported by its preset diff.
 
 The current example is
-[Prestige Internships v2 for Canada/USA](../../examples/prestige-internships-v2-canada-usa.watch.json).
-The older
-[Toronto and Canada software internships](../../examples/toronto-canada-software-internships.watch.json)
-example remains available but is deprecated.
+[Canadian Tech Internships](../../examples/canadian-tech-internships.watch.json).
+The older Canada/USA and broad-Canada example paths remain only as deprecated
+compatibility artifacts.
 
-The authenticated API supplies the equivalent watch CRUD, initialization, run, pause/resume, run history, match, metric, observed-job, and notification-delivery endpoints. Run the API separately with `npm run start:dev`; it is not required when managing a local worker exclusively through the CLI.
+The authenticated API supplies the equivalent watch CRUD, initialization, run, pause/resume, run history, match, metric, company-coverage, observed-job, and notification-delivery endpoints. Company coverage is available at `GET /api/watches/:id/coverage`. Run the API separately with `npm run start:dev`; it is not required when managing a local worker exclusively through the CLI.
 
 ## Docker
 
@@ -340,7 +376,7 @@ Rebuilding reruns `prisma migrate deploy`, which is idempotent for already-appli
 
 ## Metrics
 
-The Prometheus endpoint includes counters and histograms for watch runs, target
+The Prometheus endpoint includes counters, gauges, and histograms for watch runs, target
 requests and duration, hard failures versus valid empty runs, fetched and newly
 detected jobs, matches, notification outcomes, canonical duplicate suppression,
 execution duration, detection/notification latency, scheduler poll time, active
@@ -369,6 +405,13 @@ Target coverage series are:
 - `ever_jobs_watcher_target_last_success_timestamp_seconds{watch,target,tier}`
 - `ever_jobs_watcher_target_last_non_empty_timestamp_seconds{watch,target,tier}`
 - `ever_jobs_watcher_tier1_coverage_degraded{watch}`
+- `ever_jobs_watcher_company_coverage{watch_id,status}` where `status` is one of
+  `configured`, `active`, `disabled`, `uncovered`, `initialized`, or `degraded`
+
+The separate API metrics registry initializes `ever_jobs_sources_total` from
+the discovered plugin registry at application startup. It is no longer a
+hard-coded catalog total, so enabling or disabling discovered plugins changes
+the gauge without a source-count code edit.
 
 Any non-hard outcome (`success`, valid `empty`, or `partial`) resets the target's
 hard-failure streak. A fully successful zero-job target increments
@@ -391,7 +434,7 @@ See the [Google Cloud runbook](../../docs/runbooks/watcher-google-cloud.md) befo
   deliberately retain separate source observations for provenance.
 - A URL/date-less fallback episode is anchored at first observation and reused
   for a rolling 14 days; UTC calendar boundaries do not split it.
-- Publication time is not fabricated. When a source omits it, latency begins at Ever Jobs' first observation instead.
+- Publication time is not fabricated. When a source omits it, latency begins at rad.ar's first observation instead.
 - Target baseline is independent. A failed target remains uninitialized; never
   resume until every required changed target has either succeeded or been
   explicitly left disabled.

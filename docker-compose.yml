@@ -12,8 +12,11 @@ services:
     environment:
       # Override or set defaults here
       NODE_ENV: production
+      API_HOST: 0.0.0.0
       PORT: 3001
       DATABASE_URL: ${COMPOSE_DATABASE_URL:-postgresql://ever_jobs:ever_jobs@postgres:5432/ever_jobs}
+      EVER_JOBS_LOCAL_ENV_FILE: /app/.local-secrets/.env.local
+      WATCHER_HEALTH_URL: http://ever-jobs-watcher:3002/health
 
       # API Security
       ENABLE_API_KEY_AUTH: ${ENABLE_API_KEY_AUTH:-false}
@@ -51,6 +54,7 @@ services:
         condition: service_completed_successfully
     volumes:
       - ./logs:/app/logs
+      - ever-jobs-local-config:/app/.local-secrets
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
@@ -63,8 +67,8 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: ever_jobs
-      POSTGRES_USER: ever_jobs
-      POSTGRES_PASSWORD: ever_jobs
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -115,11 +119,15 @@ services:
       NODE_ENV: production
       WATCHER_ENABLED: ${WATCHER_ENABLED:-true}
       WATCHER_SEED_DEFAULT: ${WATCHER_SEED_DEFAULT:-true}
+      WATCHER_HEALTH_HOST: 0.0.0.0
       WATCHER_HEALTH_PORT: 3002
       DATABASE_URL: ${COMPOSE_DATABASE_URL:-postgresql://ever_jobs:ever_jobs@postgres:5432/ever_jobs}
+      EVER_JOBS_LOCAL_ENV_FILE: /app/.local-secrets/.env.local
     depends_on:
       watcher-migrate:
         condition: service_completed_successfully
+    volumes:
+      - ever-jobs-local-config:/app/.local-secrets
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
@@ -128,5 +136,33 @@ services:
       start_period: 15s
       retries: 3
 
+  ever-jobs-web:
+    profiles: ["gui"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: web-runtime
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+        VITE_UI_OPERATOR: ${EVER_JOBS_UI_OPERATOR:-true}
+    image: ever-jobs-web:latest
+    container_name: ever-jobs-web
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      WEB_PORT: 3000
+      VITE_PROXY_TARGET: http://ever-jobs-api:3001
+    depends_on:
+      ever-jobs-api:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      start_period: 5s
+      retries: 3
+
 volumes:
   ever-jobs-postgres:
+  ever-jobs-local-config:

@@ -2,6 +2,61 @@ import { PrismaWatchRepository } from "../prisma-watch.repository";
 import { WatcherPrismaService } from "../watcher-prisma.service";
 
 describe("PrismaWatchRepository", () => {
+  it("serializes per-target result and strict-location settings into watch JSON", async () => {
+    const create = jest.fn().mockRejectedValue(new Error("stop after capture"));
+    const repository = makeRepository({ jobWatch: { create } });
+
+    await expect(
+      repository.createWatch({
+        name: "Coverage",
+        notificationRoutes: [
+          {
+            id: "tier-one",
+            name: "Tier one",
+            enabled: true,
+            provider: "discord",
+            destinationRef: "tier-one",
+            conditions: { sourceTiers: [1] },
+          },
+        ],
+        sourceTargets: [
+          {
+            site: "uber",
+            tier: 1,
+            intervalMinutes: 10,
+            resultsWanted: 500,
+            searchScope: {
+              countryCodes: ["CA"],
+              locations: ["Toronto, Ontario"],
+              strictLocations: true,
+            },
+            enabled: true,
+          },
+        ],
+      }),
+    ).rejects.toThrow("stop after capture");
+
+    expect(create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        sourceTargets: [
+          expect.objectContaining({
+            site: "uber",
+            resultsWanted: 500,
+            searchScope: expect.objectContaining({
+              strictLocations: true,
+            }),
+          }),
+        ],
+        notificationRoutes: [
+          expect.objectContaining({
+            id: "tier-one",
+            destinationRef: "tier-one",
+          }),
+        ],
+      }),
+    });
+  });
+
   it("claims a due watch with one conditional update", async () => {
     const updateMany = jest.fn().mockResolvedValue({ count: 1 });
     const repository = makeRepository({
@@ -60,6 +115,85 @@ describe("PrismaWatchRepository", () => {
         nextRunAt: new Date(now.getTime() + 180_000),
       }),
     ).resolves.toBeNull();
+  });
+
+  it("atomically applies a watch patch only at the expected revision", async () => {
+    const expectedUpdatedAt = new Date("2026-08-04T12:00:00.000Z");
+    const appliedUpdatedAt = new Date("2026-08-04T12:00:01.000Z");
+    const notificationRoutes = [
+      {
+        id: "tier-one",
+        name: "Tier one",
+        enabled: true,
+        provider: "discord" as const,
+        destinationRef: "tier-one",
+        conditions: { sourceTiers: [1 as const] },
+      },
+    ];
+    const updateMany = jest.fn().mockResolvedValue({ count: 1 });
+    const findUnique = jest
+      .fn()
+      .mockResolvedValue(
+        watchRow("Applied", appliedUpdatedAt, notificationRoutes),
+      );
+    const transaction = { jobWatch: { updateMany, findUnique } };
+    const repository = makeRepository({
+      $transaction: jest
+        .fn()
+        .mockImplementation(
+          async (work: (client: unknown) => Promise<unknown>) =>
+            work(transaction),
+        ),
+    });
+
+    await expect(
+      repository.updateWatchIfCurrent(
+        "watch-1",
+        expectedUpdatedAt,
+        { name: "Applied", notificationRoutes },
+      ),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        id: "watch-1",
+        name: "Applied",
+        notificationRoutes,
+      }),
+    );
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: "watch-1", updatedAt: expectedUpdatedAt },
+      data: expect.objectContaining({
+        name: "Applied",
+        notificationRoutes,
+      }),
+    });
+    expect(findUnique).toHaveBeenCalledWith({ where: { id: "watch-1" } });
+  });
+
+  it("returns null from a stale atomic watch patch without reading a row", async () => {
+    const findUnique = jest.fn();
+    const transaction = {
+      jobWatch: {
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        findUnique,
+      },
+    };
+    const repository = makeRepository({
+      $transaction: jest
+        .fn()
+        .mockImplementation(
+          async (work: (client: unknown) => Promise<unknown>) =>
+            work(transaction),
+        ),
+    });
+
+    await expect(
+      repository.updateWatchIfCurrent(
+        "watch-1",
+        new Date("2026-08-04T11:59:59.000Z"),
+        { name: "Stale" },
+      ),
+    ).resolves.toBeNull();
+    expect(findUnique).not.toHaveBeenCalled();
   });
 
   it("persists an observation and its watch match in one serializable transaction", async () => {
@@ -502,6 +636,53 @@ describe("PrismaWatchRepository", () => {
 
 function makeRepository(client: object): PrismaWatchRepository {
   return new PrismaWatchRepository(client as WatcherPrismaService);
+}
+
+function watchRow(
+  name: string,
+  updatedAt: Date,
+  notificationRoutes: unknown[] = [],
+) {
+  const createdAt = new Date("2026-08-04T11:00:00.000Z");
+  return {
+    id: "watch-1",
+    name,
+    enabled: true,
+    description: null,
+    schedule: null,
+    intervalMinutes: 3,
+    timezone: "America/Toronto",
+    sources: [],
+    sourceTiers: {},
+    sourceTargets: [],
+    targetHealth: {},
+    companySlugs: [],
+    companies: [],
+    searchTerms: [],
+    requiredTerms: [],
+    preferredTerms: [],
+    excludedTerms: [],
+    locations: [],
+    countryCodes: ["CA"],
+    allowedWorkplaceTypes: ["remote", "hybrid", "on-site"],
+    allowedEmploymentTypes: ["internship", "co-op"],
+    minimumScore: 60,
+    urgentScore: 80,
+    digestScore: 40,
+    notificationChannels: [],
+    notificationRoutes,
+    initializationMode: "baseline",
+    recentWindowMinutes: 180,
+    weights: null,
+    initializedAt: null,
+    lastRunAt: null,
+    nextRunAt: null,
+    leaseOwnerId: null,
+    leaseToken: null,
+    leaseExpiresAt: null,
+    createdAt,
+    updatedAt,
+  };
 }
 
 function scoreBreakdown(total: number) {

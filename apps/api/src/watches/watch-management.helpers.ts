@@ -114,13 +114,49 @@ export function publicWatch(watch: JobWatch): Record<string, unknown> {
     ...watch,
     notificationChannels: watch.notificationChannels.map((destination) => ({
       type: destination.type,
-      destinationRef: destination.destinationRef ?? "default",
+      destinationRef: publicDestinationRef(
+        destination.destinationRef ?? "default",
+      ),
+    })),
+    notificationRoutes: (watch.notificationRoutes ?? []).map((route) => ({
+      id: route.id,
+      name: route.name,
+      enabled: route.enabled,
+      provider: route.provider,
+      destinationRef: publicDestinationRef(route.destinationRef),
+      ...(route.conditions
+        ? {
+            conditions: {
+              ...(route.conditions.sourceTiers
+                ? { sourceTiers: route.conditions.sourceTiers }
+                : {}),
+              ...(route.conditions.notificationTypes
+                ? { notificationTypes: route.conditions.notificationTypes }
+                : {}),
+              ...(route.conditions.minimumScore === undefined
+                ? {}
+                : { minimumScore: route.conditions.minimumScore }),
+              ...(route.conditions.maximumScore === undefined
+                ? {}
+                : { maximumScore: route.conditions.maximumScore }),
+            },
+          }
+        : {}),
     })),
   };
   delete result.leaseOwnerId;
   delete result.leaseToken;
   delete result.leaseExpiresAt;
   return result;
+}
+
+/** Defensively mask legacy rows that may predate alias-only validation. */
+export function publicDestinationRef(value: string): string {
+  const normalized = value.trim();
+  return /^(?:https?:\/\/|https?%3a)/i.test(normalized) ||
+    /discord(?:app)?\.com\/api(?:\/v\d+)?\/webhooks\//i.test(normalized)
+    ? "[redacted-destination]"
+    : normalized || "default";
 }
 
 export function publicObservedJob(job: ObservedJob): Record<string, unknown> {
@@ -156,8 +192,8 @@ export function createDiscordTestMessage(
     id: `discord-test-job-${now.getTime()}`,
     fingerprint: `discord-test-${now.getTime()}`,
     source: "ever-jobs-watcher-test",
-    company: "Ever Jobs",
-    normalizedCompany: "ever jobs",
+    company: "rad.ar",
+    normalizedCompany: "rad ar",
     title: "Discord notification test",
     normalizedTitle: "discord notification test",
     location: "Toronto, Ontario, Canada",

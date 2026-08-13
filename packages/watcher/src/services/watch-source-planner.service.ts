@@ -34,6 +34,7 @@ export interface WatchSourceTarget {
   kind: WatchSourceKind;
   mode: WatchSourceMode;
   intervalMinutes: number;
+  resultsWanted?: number;
   companySlug?: string;
   companyName?: string;
   searchScope: WatchSearchScope;
@@ -174,6 +175,8 @@ const DIRECT_SITES = new Set<Site>([
   Site.VERCEL,
   Site.ANTHROPIC,
   Site.DATABRICKS,
+  Site.NOTION,
+  Site.RAMP,
 ]);
 
 const STRUCTURED_SITES = new Set<Site>([
@@ -362,6 +365,7 @@ export class WatchSourcePlanner {
         sourceMetadata.get(parsed.site),
         configuredTarget.companySlug?.trim(),
         configuredTarget.companyName?.trim(),
+        configuredTarget.resultsWanted,
       );
       targets.push(target);
 
@@ -632,6 +636,7 @@ export class WatchSourcePlanner {
     metadata?: WatchSourceMetadata,
     companySlug?: string,
     companyName?: string,
+    resultsWanted?: number,
   ): WatchSourceTarget {
     return {
       key: companySlug ? `${source.site}:${companySlug}` : source.site,
@@ -643,6 +648,7 @@ export class WatchSourcePlanner {
         metadata?.watchMode ??
         (source.kind === "direct" || source.kind === "ats" ? "board" : "query"),
       intervalMinutes,
+      resultsWanted,
       companySlug,
       companyName,
       searchScope,
@@ -764,6 +770,9 @@ function resolveSearchScope(
     countryCodes: countryCodes.length > 0 ? countryCodes : ["CA"],
     locations: locations.length > 0 ? locations : ["Canada"],
     searchTerms,
+    ...(configured?.strictLocations === undefined
+      ? {}
+      : { strictLocations: configured.strictLocations }),
     ...(configured?.maxRequestsPerRun === undefined
       ? {}
       : { maxRequestsPerRun: configured.maxRequestsPerRun }),

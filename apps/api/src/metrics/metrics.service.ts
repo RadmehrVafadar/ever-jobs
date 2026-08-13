@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Registry, Counter, Histogram, Gauge, collectDefaultMetrics } from 'prom-client';
 import { CircuitState, SourceHealth } from '@ever-jobs/models';
 
@@ -25,7 +25,7 @@ export const CIRCUIT_STATE_GAUGE_VALUE: Record<CircuitState, number> = {
 export type CircuitBreakerHealthSource = () => SourceHealth[];
 
 @Injectable()
-export class MetricsService implements OnModuleInit {
+export class MetricsService {
   private readonly logger = new Logger(MetricsService.name);
   private readonly registry: Registry;
 
@@ -161,9 +161,14 @@ export class MetricsService implements OnModuleInit {
     });
   }
 
-  onModuleInit() {
-    // Initial value for total sources
-    this.totalSources.set(160);
+  /**
+   * Publish the number of source plugins discovered in the live registry.
+   * JobsService calls this after plugin discovery has populated its
+   * PluginRegistry, keeping the Gauge aligned with the actual process rather
+   * than a catalog constant that can drift as plugins are added or disabled.
+   */
+  setTotalSources(count: number): void {
+    this.totalSources.set(count);
   }
 
   /**

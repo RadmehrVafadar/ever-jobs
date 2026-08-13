@@ -4,10 +4,14 @@ import { BadRequestException, ConflictException } from "@nestjs/common";
 import { Site } from "@ever-jobs/models";
 import { InMemoryWatchRepository } from "../persistence/in-memory-watch.repository";
 import {
-  prestigeInternshipsV2Watch,
-  PRESTIGE_INTERNSHIPS_V2_ID,
-  PRESTIGE_INTERNSHIPS_V2_NAME,
-} from "../services/prestige-internships-v2.preset";
+  assertCanadianTechInternshipCompanyCoverage,
+  CANADIAN_TECH_INTERNSHIP_COMPANIES,
+  CANADIAN_TECH_INTERNSHIP_DEFERRED_COMPANIES,
+  CANADIAN_TECH_INTERNSHIP_LOCATIONS,
+  canadianTechInternshipsWatch,
+  CANADIAN_TECH_INTERNSHIPS_ID,
+  CANADIAN_TECH_INTERNSHIPS_NAME,
+} from "../services/canadian-tech-internships.preset";
 import {
   validateWatchTargetKeys,
   watchSourceTargetKey,
@@ -15,9 +19,9 @@ import {
 } from "../services/watch-preset.service";
 import { WatchValidationService } from "../services/watch-validation.service";
 
-describe("prestige-internships-v2 preset", () => {
+describe("canadian-tech-internships preset", () => {
   it("defines the disabled, uninitialized and evidence-gated target matrix", () => {
-    const watch = prestigeInternshipsV2Watch();
+    const watch = canadianTechInternshipsWatch();
     const targets = watch.sourceTargets ?? [];
     const byKey = new Map(
       targets.map((target) => [watchSourceTargetKey(target), target]),
@@ -25,11 +29,12 @@ describe("prestige-internships-v2 preset", () => {
 
     expect(watch).toEqual(
       expect.objectContaining({
-        name: PRESTIGE_INTERNSHIPS_V2_NAME,
+        name: CANADIAN_TECH_INTERNSHIPS_NAME,
         enabled: false,
         intervalMinutes: 10,
         initializationMode: "baseline",
-        countryCodes: ["CA", "US"],
+        countryCodes: ["CA"],
+        locations: CANADIAN_TECH_INTERNSHIP_LOCATIONS,
         requiredTerms: ["intern", "internship", "co-op", "coop", "summer 2027"],
       }),
     );
@@ -54,6 +59,11 @@ describe("prestige-internships-v2 preset", () => {
       "vercel",
       "meta",
       "wellfound",
+      "uber",
+      "notion",
+      "ramp",
+      "netflix",
+      "ibm",
       "canadajobbank",
       "linkedin",
     ]);
@@ -82,7 +92,8 @@ describe("prestige-internships-v2 preset", () => {
     );
     expect(byKey.get("google")?.searchScope).toEqual(
       expect.objectContaining({
-        countryCodes: ["CA", "US"],
+        countryCodes: ["CA"],
+        locations: CANADIAN_TECH_INTERNSHIP_LOCATIONS,
         maxRequestsPerRun: 12,
       }),
     );
@@ -99,52 +110,274 @@ describe("prestige-internships-v2 preset", () => {
     expect(byKey.get("wellfound")).toEqual(
       expect.objectContaining({ enabled: true, intervalMinutes: 30 }),
     );
+    for (const key of ["uber", "notion", "ramp", "netflix", "ibm"]) {
+      expect(byKey.get(key)).toEqual(
+        expect.objectContaining({
+          enabled: true,
+          tier: 1,
+          intervalMinutes: 10,
+          resultsWanted: 500,
+          initializedAt: null,
+          searchScope: expect.objectContaining({ countryCodes: ["CA"] }),
+        }),
+      );
+    }
     expect(byKey.get("google")?.enabled).toBe(false);
+    expect(
+      targets.every(
+        (target) =>
+          !target.searchScope ||
+          (target.searchScope.countryCodes.length === 1 &&
+            target.searchScope.countryCodes[0] === "CA" &&
+            target.searchScope.strictLocations === true &&
+            JSON.stringify(target.searchScope.locations) ===
+              JSON.stringify(CANADIAN_TECH_INTERNSHIP_LOCATIONS)),
+      ),
+    ).toBe(true);
+
+    const activePrestige = new Set(
+      targets
+        .filter((target) => target.enabled && target.companyName)
+        .map((target) => target.companyName),
+    );
+    expect(
+      CANADIAN_TECH_INTERNSHIP_COMPANIES.filter((company) =>
+        activePrestige.has(company),
+      ),
+    ).toHaveLength(21);
+    expect(CANADIAN_TECH_INTERNSHIP_DEFERRED_COMPANIES).toEqual([
+      "RBC",
+      "TD",
+      "Scotiabank",
+      "BMO",
+      "CIBC",
+    ]);
   });
 
-  it("keeps the Canada/USA JSON example aligned with the factory", () => {
+  it("rejects an inventory entry with neither target nor deferral", () => {
+    const targets = canadianTechInternshipsWatch().sourceTargets ?? [];
+    const withoutUber = targets.filter(
+      (target) => target.companyName !== "Uber",
+    );
+    expect(() =>
+      assertCanadianTechInternshipCompanyCoverage(withoutUber),
+    ).toThrow(/Uber/);
+    expect(() =>
+      assertCanadianTechInternshipCompanyCoverage([
+        ...withoutUber,
+        {
+          site: Site.LINKEDIN,
+          companyName: "Uber",
+          tier: 3,
+          intervalMinutes: 60,
+          enabled: true,
+        },
+      ]),
+    ).toThrow(/Uber/);
+  });
+
+  it("uses the same normalized exact-name semantics as coverage reports", () => {
+    const targets = (canadianTechInternshipsWatch().sourceTargets ?? []).map(
+      (target) =>
+        target.companyName === "Google"
+          ? { ...target, companyName: "Google, Inc." }
+          : target,
+    );
+
+    expect(() =>
+      assertCanadianTechInternshipCompanyCoverage(targets),
+    ).not.toThrow();
+  });
+
+  it("keeps the Canadian Tech Internships JSON example aligned with the factory", () => {
     const example = JSON.parse(
       readFileSync(
         resolve(
           __dirname,
-          "../../../../examples/prestige-internships-v2-canada-usa.watch.json",
+          "../../../../examples/canadian-tech-internships.watch.json",
         ),
         "utf8",
       ),
     ) as Record<string, unknown>;
     const parsed = new WatchValidationService().parseCreate(example);
-    const preset = prestigeInternshipsV2Watch();
+    const preset = canadianTechInternshipsWatch();
 
     expect(parsed).toEqual(preset);
   });
 });
 
 describe("WatchPresetService", () => {
+  it("lists only the Canadian Tech Internships preset and rejects the retired ID", () => {
+    const service = new WatchPresetService(new InMemoryWatchRepository());
+
+    expect(service.list()).toEqual([
+      {
+        id: CANADIAN_TECH_INTERNSHIPS_ID,
+        version: 1,
+        name: CANADIAN_TECH_INTERNSHIPS_NAME,
+      },
+    ]);
+    expect(() => service.get("prestige-internships-v2")).toThrow(
+      BadRequestException,
+    );
+  });
+
+  it("replaces legacy Canada/USA geography and reports removals", async () => {
+    const repository = new InMemoryWatchRepository();
+    const baselineAt = new Date("2026-08-10T12:00:00.000Z");
+    const sourceTargets = (
+      canadianTechInternshipsWatch().sourceTargets ?? []
+    ).map((target) => ({
+      ...target,
+      searchScope: target.searchScope
+        ? {
+            ...target.searchScope,
+            countryCodes: ["CA", "US"],
+            locations: [
+              ...target.searchScope.locations,
+              "Waterloo, Ontario",
+              "United States",
+            ],
+          }
+        : undefined,
+      initializedAt: target.enabled ? baselineAt : target.initializedAt,
+    }));
+    const watch = await repository.createWatch({
+      ...canadianTechInternshipsWatch(),
+      locations: [
+        "Canada",
+        "Toronto, Ontario",
+        "Waterloo, Ontario",
+        "United States",
+      ],
+      countryCodes: ["CA", "US"],
+      sourceTargets,
+      excludedTerms: ["operator exclusion", "United States only"],
+    });
+
+    const result = await new WatchPresetService(repository).apply(
+      CANADIAN_TECH_INTERNSHIPS_ID,
+      watch.id,
+      { apply: true },
+    );
+
+    expect(result.fields.locationsRemoved).toEqual([
+      "Canada",
+      "Waterloo, Ontario",
+      "United States",
+    ]);
+    expect(result.fields.countryCodesRemoved).toEqual(["US"]);
+    expect(result.watch?.locations).toEqual(CANADIAN_TECH_INTERNSHIP_LOCATIONS);
+    expect(result.watch?.countryCodes).toEqual(["CA"]);
+    expect(result.watch?.excludedTerms).toEqual(
+      expect.arrayContaining(["operator exclusion", "United States only"]),
+    );
+    expect(result.targets.materiallyChanged).toHaveLength(sourceTargets.length);
+    expect(result.targetKeysRequiringInitialization).toHaveLength(
+      sourceTargets.filter((target) => target.enabled).length,
+    );
+    expect(
+      result.watch?.sourceTargets.every(
+        (target) =>
+          !target.searchScope ||
+          (target.searchScope.countryCodes.join(",") === "CA" &&
+            target.searchScope.locations.includes("Toronto, Ontario") &&
+            !target.searchScope.locations.includes("United States")),
+      ),
+    ).toBe(true);
+  });
+
   it("previews without mutation and requires a paused watch to apply", async () => {
     const repository = new InMemoryWatchRepository();
     const watch = await repository.createWatch({
-      ...prestigeInternshipsV2Watch(),
+      ...canadianTechInternshipsWatch(),
       enabled: true,
     });
     const update = jest.spyOn(repository, "updateWatch");
     const service = new WatchPresetService(repository);
 
-    const preview = await service.apply(PRESTIGE_INTERNSHIPS_V2_ID, watch.id);
+    const preview = await service.apply(CANADIAN_TECH_INTERNSHIPS_ID, watch.id);
 
     expect(preview).toEqual(
       expect.objectContaining({ dryRun: true, applied: false }),
     );
     expect(update).not.toHaveBeenCalled();
     await expect(
-      service.apply(PRESTIGE_INTERNSHIPS_V2_ID, watch.id, { apply: true }),
+      service.apply(CANADIAN_TECH_INTERNSHIPS_ID, watch.id, { apply: true }),
     ).rejects.toBeInstanceOf(ConflictException);
     expect(update).not.toHaveBeenCalled();
+  });
+
+  it("adds exactly the five phase 13 targets and requires their initialization", async () => {
+    const repository = new InMemoryWatchRepository();
+    const baselineAt = new Date("2026-07-21T12:00:00.000Z");
+    const phase13Keys = ["uber", "notion", "ramp", "netflix", "ibm"];
+    const currentTargets = (canadianTechInternshipsWatch().sourceTargets ?? [])
+      .filter((target) => !phase13Keys.includes(watchSourceTargetKey(target)))
+      .map((target) => ({
+        ...target,
+        initializedAt: target.enabled ? baselineAt : target.initializedAt,
+      }));
+    const watch = await repository.createWatch({
+      ...canadianTechInternshipsWatch(),
+      initializedAt: baselineAt,
+      sourceTargets: currentTargets,
+      sources: currentTargets.map((target) => target.site),
+      sourceTiers: Object.fromEntries(
+        currentTargets.map((target) => [String(target.site), target.tier]),
+      ),
+    });
+    const service = new WatchPresetService(repository);
+
+    const result = await service.apply(CANADIAN_TECH_INTERNSHIPS_ID, watch.id, {
+      apply: true,
+    });
+
+    expect(result.preset.version).toBe(1);
+    expect(result.targets.added).toEqual(phase13Keys);
+    expect(result.targets.materiallyChanged).toEqual([]);
+    expect(result.targetKeysRequiringInitialization).toEqual(phase13Keys);
+  });
+
+  it("treats a resultsWanted change as material target configuration", async () => {
+    const repository = new InMemoryWatchRepository();
+    const baselineAt = new Date("2026-07-21T12:00:00.000Z");
+    const currentTargets = (
+      canadianTechInternshipsWatch().sourceTargets ?? []
+    ).map((target) => ({
+      ...target,
+      ...(watchSourceTargetKey(target) === "uber"
+        ? { resultsWanted: 100 }
+        : {}),
+      initializedAt: target.enabled ? baselineAt : target.initializedAt,
+    }));
+    const watch = await repository.createWatch({
+      ...canadianTechInternshipsWatch(),
+      initializedAt: baselineAt,
+      sourceTargets: currentTargets,
+    });
+
+    const result = await new WatchPresetService(repository).apply(
+      CANADIAN_TECH_INTERNSHIPS_ID,
+      watch.id,
+      { apply: true },
+    );
+
+    expect(result.targets.materiallyChanged).toEqual(["uber"]);
+    expect(result.targetKeysRequiringInitialization).toEqual(["uber"]);
+    expect(
+      result.watch?.sourceTargets.find(
+        (target) => watchSourceTargetKey(target) === "uber",
+      ),
+    ).toEqual(
+      expect.objectContaining({ resultsWanted: 500, initializedAt: null }),
+    );
   });
 
   it("preserves operator state and resets only added/materially changed targets", async () => {
     const repository = new InMemoryWatchRepository();
     const baselineAt = new Date("2026-07-18T12:00:00.000Z");
-    const sourceTargets = (prestigeInternshipsV2Watch().sourceTargets ?? [])
+    const sourceTargets = (canadianTechInternshipsWatch().sourceTargets ?? [])
       .filter((target) => target.site !== Site.CANADAJOBBANK)
       .map((target) => {
         if (!target.enabled) return target;
@@ -165,7 +398,7 @@ describe("WatchPresetService", () => {
       initializedAt: baselineAt,
     });
     const watch = await repository.createWatch({
-      ...prestigeInternshipsV2Watch(),
+      ...canadianTechInternshipsWatch(),
       name: "My operator-owned watch",
       enabled: false,
       minimumScore: 73,
@@ -181,7 +414,7 @@ describe("WatchPresetService", () => {
     });
     const service = new WatchPresetService(repository);
 
-    const result = await service.apply(PRESTIGE_INTERNSHIPS_V2_ID, watch.id, {
+    const result = await service.apply(CANADIAN_TECH_INTERNSHIPS_ID, watch.id, {
       apply: true,
     });
     const updated = await repository.getWatch(watch.id);
@@ -236,7 +469,7 @@ describe("WatchPresetService", () => {
 
   it("validates explicit initialization keys before source execution", async () => {
     const repository = new InMemoryWatchRepository();
-    const watch = await repository.createWatch(prestigeInternshipsV2Watch());
+    const watch = await repository.createWatch(canadianTechInternshipsWatch());
 
     expect(validateWatchTargetKeys(watch, undefined)).toEqual([]);
     expect(validateWatchTargetKeys(watch, [])).toEqual([]);
