@@ -1,5 +1,33 @@
 # API Changelog
 
+## [Unreleased] — 2026-08-13 — Spec 6005
+
+### Changed
+
+- `WatchSourceTarget.intervalMinutes` is optional. Omission inherits the
+  enclosing watch's `intervalMinutes`; a present value remains an explicit
+  target override.
+- `WatchSearchScope.countryCodes` and `locations` are independently optional.
+  Omission inherits the corresponding watch-level array. A partial scope may
+  contain only target-specific search terms, strict-location behavior, or a
+  request budget.
+- Runtime planning still produces a complete concrete target. Effective values
+  are used consistently by due checks, request rotation, execution, target
+  `nextRunAt`, and watch `nextRunAt`.
+- REST DTO/OpenAPI metadata, Zod validation, PostgreSQL JSON serialization,
+  preset output, GUI import/export, and web types now preserve sparse target
+  values instead of materializing defaults.
+
+### Compatibility
+
+- Existing expanded watch JSON remains valid and every present target value
+  remains an override. Existing watch rows are not rewritten automatically.
+- No database migration is required because source targets remain stored in the
+  existing JSON column.
+- Generated Canadian internship preset JSON now stores interval and geography
+  once at watch level. Applying it to an expanded existing watch is a reviewed,
+  material target change and retains the paused baseline-before-resume policy.
+
 ## [Unreleased] — 2026-08-10 — Spec 6003
 
 ### Changed

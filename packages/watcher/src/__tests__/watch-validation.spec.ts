@@ -79,6 +79,37 @@ describe("WatchValidationService", () => {
     ]);
   });
 
+  it("preserves sparse target defaults and independent scope overrides", () => {
+    const result = service.parseCreate({
+      name: "Inherited defaults",
+      intervalMinutes: 20,
+      countryCodes: ["ca", "us"],
+      locations: ["Toronto", "Remote"],
+      sourceTargets: [
+        {
+          site: Site.GOOGLE_CAREERS,
+          tier: 1,
+          enabled: true,
+          searchScope: {
+            searchTerms: ["software intern"],
+            maxRequestsPerRun: 1,
+          },
+        },
+      ],
+    });
+
+    expect(result.sourceTargets?.[0]).toEqual({
+      site: Site.GOOGLE_CAREERS,
+      tier: 1,
+      enabled: true,
+      searchScope: {
+        searchTerms: ["software intern"],
+        maxRequestsPerRun: 1,
+      },
+    });
+    expect(result.countryCodes).toEqual(["CA", "US"]);
+  });
+
   it("rejects empty or unbounded nested target scopes", () => {
     expect(() =>
       service.parseCreate({

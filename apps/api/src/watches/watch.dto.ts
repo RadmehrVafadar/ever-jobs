@@ -50,23 +50,30 @@ const WATCH_RUN_STATUSES = [
 ] as const;
 
 export class WatchSearchScopeDto {
-  @ApiProperty({ type: [String], example: ["CA"] })
+  @ApiPropertyOptional({
+    type: [String],
+    example: ["CA"],
+    description: "Omit to inherit the watch-level countryCodes.",
+  })
+  @IsOptional()
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(25)
   @IsString({ each: true })
   @Length(2, 2, { each: true })
-  countryCodes!: string[];
+  countryCodes?: string[];
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     type: [String],
     example: ["Toronto, Ontario", "Greater Toronto Area", "Markham, Ontario"],
+    description: "Omit to inherit the watch-level locations.",
   })
+  @IsOptional()
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(100)
   @IsString({ each: true })
-  locations!: string[];
+  locations?: string[];
 
   @ApiPropertyOptional({
     description:
@@ -105,11 +112,17 @@ export class WatchSourceTargetDto {
   @Max(3)
   tier!: 1 | 2 | 3;
 
-  @ApiProperty({ example: 3, minimum: 1, maximum: 1440 })
+  @ApiPropertyOptional({
+    example: 3,
+    minimum: 1,
+    maximum: 1440,
+    description: "Omit to inherit the watch-level intervalMinutes.",
+  })
+  @IsOptional()
   @IsInt()
   @Min(1)
   @Max(1_440)
-  intervalMinutes!: number;
+  intervalMinutes?: number;
 
   @ApiPropertyOptional({ minimum: 1, maximum: 1000, example: 500 })
   @IsOptional()

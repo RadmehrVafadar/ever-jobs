@@ -100,6 +100,11 @@ idempotency, or secret-handling contracts.
 18. A route MUST contain `id`, `name`, `enabled`, `provider`, `destinationRef`,
     and optional `sourceTiers`, `notificationTypes`, `minimumScore`, and
     `maximumScore` conditions.
+    The GUI route editor MUST choose `destinationRef` from masked destination
+    records filtered to the selected provider instead of accepting arbitrary
+    text. Configured aliases are selectable; an already-saved alias that is
+    missing or unconfigured remains visible as unavailable until the operator
+    explicitly replaces it.
 19. Conditions across fields use AND semantics; entries within an array use OR
     semantics; score bounds are inclusive; an enabled route without conditions
     is a catch-all.
@@ -183,8 +188,9 @@ idempotency, or secret-handling contracts.
   redaction.
 - Apply: change classification, atomic pause, initialization keys, stale writes,
   validation errors, and no-op updates.
-- UI: profile fields, route builder, diff, tables, filters, dialogs, keyboard
-  behavior, downloads, and session-only API key storage.
+- UI: profile fields, provider-filtered route destination selection (including
+  unavailable saved aliases), route builder, diff, tables, filters, dialogs,
+  keyboard behavior, downloads, and session-only API key storage.
 
 ### Integration and end-to-end
 
@@ -202,7 +208,8 @@ idempotency, or secret-handling contracts.
   independently from watch pause/resume state.
 - A watch can be created and fully managed without manually authoring JSON.
 - Tier 1, Tier 2, urgent, standard, digest, and bounded score routes can target
-  different Discord aliases with no duplicate for overlapping rules.
+  different Discord aliases with no duplicate for overlapping rules, and the
+  GUI cannot introduce a misspelled destination alias through the route form.
 - Existing legacy watches behave unchanged.
 - No test, response, export, log, database row, or UI rendering exposes a webhook
   URL.

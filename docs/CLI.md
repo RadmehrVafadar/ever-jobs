@@ -368,6 +368,15 @@ Advanced JSON represents the same API-compatible watch configuration accepted
 by the CLI. Exports exclude runtime IDs/timestamps, initialization and health
 state, histories, leases, API keys, and notification secrets.
 
+Top-level `intervalMinutes`, `countryCodes`, `locations`, and `searchTerms` are
+defaults for `sourceTargets`. A missing target interval inherits
+`intervalMinutes`; missing `searchScope.countryCodes`, `locations`, or
+`searchTerms` inherit their top-level counterparts independently. Present values
+are explicit overrides and continue to round-trip, including in older expanded
+JSON. The GUI's **Use defaults for all** action removes interval/country/location
+overrides in bulk without removing target-specific terms, request budgets,
+strict-location policy, result limits, or company settings.
+
 ### Conditional Discord routes
 
 Watch JSON can opt into `notificationRoutes` while retaining the legacy

@@ -145,6 +145,13 @@ interface NotificationRoute {
 }
 ```
 
+The route editor obtains masked aliases from the destination-management API and
+uses a provider-filtered select for `destinationRef`; it does not accept a
+free-typed alias. Configured aliases are selectable. An unconfigured alias or
+an already-saved reference missing from the current inventory remains visible
+as unavailable so an existing route is never silently rewritten and the
+operator can choose an explicit replacement.
+
 The rules are deterministic:
 
 1. Disabled routes never match.
@@ -304,7 +311,8 @@ Implementation acceptance requires:
   atomic pause, baseline target keys, validation, and stale-version conflicts;
 - authenticated API integration coverage for existing and new watch, preset,
   destination, notification, comparison, and history endpoints;
-- React component coverage for forms, routes, validation, diffs, tables,
+- React component coverage for forms, provider-filtered destination selection,
+  unavailable saved route references, routes, validation, diffs, tables,
   filters, dialogs, keyboard behavior, downloads, and session-only credentials;
 - a Playwright flow with PostgreSQL and fake source/Discord services that
   creates and edits a watch, routes Tier 1 and Tier 2 matches to the intended

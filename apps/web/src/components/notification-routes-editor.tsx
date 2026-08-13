@@ -103,6 +103,7 @@ export function NotificationRoutesEditor({
                     update(index, {
                       provider: event.target
                         .value as NotificationRoute["provider"],
+                      destinationRef: "",
                     })
                   }
                 >
@@ -111,21 +112,11 @@ export function NotificationRoutesEditor({
                   <option value="webhook">Webhook</option>
                 </select>
               </Field>
-              <Field label="Destination">
-                <input
-                  list={`destinations-${route.id}`}
-                  value={route.destinationRef}
-                  onChange={(event) =>
-                    update(index, { destinationRef: event.target.value })
-                  }
-                  placeholder="default"
-                />
-                <datalist id={`destinations-${route.id}`}>
-                  {destinations.map((destination) => (
-                    <option value={destination.alias} key={destination.alias} />
-                  ))}
-                </datalist>
-              </Field>
+              <DestinationField
+                route={route}
+                destinations={destinations}
+                onChange={(destinationRef) => update(index, { destinationRef })}
+              />
             </div>
             <div className="route-rules">
               <RuleGroup
@@ -234,6 +225,70 @@ export function NotificationRoutesEditor({
         Add route
       </Button>
     </div>
+  );
+}
+
+function DestinationField({
+  route,
+  destinations,
+  onChange,
+}: {
+  route: NotificationRoute;
+  destinations: DestinationSummary[];
+  onChange(destinationRef: string): void;
+}) {
+  const providerDestinations = destinations.filter(
+    (destination) => destination.provider === route.provider,
+  );
+  const selectedDestination = providerDestinations.find(
+    (destination) => destination.alias === route.destinationRef,
+  );
+  const selectedDestinationUnavailable =
+    route.destinationRef.length > 0 && !selectedDestination?.configured;
+
+  return (
+    <Field
+      label="Destination"
+      hint={
+        providerDestinations.some(({ configured }) => configured)
+          ? `Choose a configured ${route.provider} destination.`
+          : `No configured ${route.provider} destinations are available.`
+      }
+      error={
+        selectedDestinationUnavailable
+          ? `${route.destinationRef} is unavailable. Choose a configured destination.`
+          : undefined
+      }
+    >
+      <select
+        aria-label="Destination"
+        value={route.destinationRef}
+        onChange={(event) => onChange(event.target.value)}
+        required
+        aria-invalid={!route.destinationRef || selectedDestinationUnavailable}
+      >
+        {!route.destinationRef ? (
+          <option value="" disabled>
+            Select a destination
+          </option>
+        ) : null}
+        {selectedDestinationUnavailable && !selectedDestination ? (
+          <option value={route.destinationRef} disabled>
+            {route.destinationRef} (unavailable)
+          </option>
+        ) : null}
+        {providerDestinations.map((destination) => (
+          <option
+            value={destination.alias}
+            key={destination.alias}
+            disabled={!destination.configured}
+          >
+            {destination.alias}
+            {destination.configured ? "" : " (not configured)"}
+          </option>
+        ))}
+      </select>
+    </Field>
   );
 }
 

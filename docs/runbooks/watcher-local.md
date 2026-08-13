@@ -2,7 +2,7 @@
 
 This runbook takes a clean rad.ar checkout to a continuously running local
 watcher for technology internships and co-ops. It covers both dry-run-first
-Canadian internship presets, per-target baseline, 10/30/60 cadence,
+Canadian internship presets, per-target baseline, inherited watch cadence,
 Toronto/GTA geography, Discord,
 Docker, the Spec 6002 localhost operator GUI, named Discord routing,
 target-health alerts, rollback, and failure recovery.
@@ -29,9 +29,9 @@ There are three independently due source tiers:
 
 | Tier | Default interval | Eligibility geography | Purpose |
 | ---- | ---------------- | --------------------- | ------- |
-| Tier 1 | 10 minutes (Wellfound: 30) | Toronto/GTA, Canada | Fixture-backed direct company and complete ATS targets |
-| Tier 2 | 30 minutes | Toronto/GTA, Canada | Canada Job Bank and validated Google Jobs redundancy |
-| Tier 3 | 60 minutes | Toronto/GTA, Canada | Validated unauthenticated LinkedIn public guest redundancy |
+| Tier 1 | Watch default (10 minutes in the presets) | Toronto/GTA, Canada | Fixture-backed direct company and complete ATS targets |
+| Tier 2 | Watch default (10 minutes in the presets) | Toronto/GTA, Canada | Canada Job Bank and validated Google Jobs redundancy |
+| Tier 3 | Watch default (10 minutes in the presets) | Toronto/GTA, Canada | Validated unauthenticated LinkedIn public guest redundancy |
 
 The scheduler polls PostgreSQL every 15 seconds by default. Therefore, the normal start delay after a tier becomes due is up to one scheduler poll, subject to another run holding the lease, database availability, process load, and jitter. The interval is a target cadence rather than an end-to-end notification guarantee.
 
@@ -48,8 +48,8 @@ registered is not an unattended-readiness claim.
 | Wealthsimple | 1 | `ashby:wealthsimple`, branded through the maintained Ashby plugin | **enabled target** inside the disabled preset watch; baseline before resume |
 | Plaid | 1 | `ashby:plaid` through the maintained Ashby plugin | **enabled target** inside the disabled preset watch; baseline before resume |
 | Amazon, Microsoft, Apple, Nvidia, Stripe, OpenAI, Datadog, DoorDash, Coinbase, Figma, Vercel, Meta, Wellfound | 1 | retained direct-company inventory with Toronto/GTA post-filter scope | **enabled by operator request**; baseline each before resume; Microsoft's earlier live smoke timed out |
-| Uber, Notion, Ramp, Netflix, IBM | 1 | complete official boards; Notion/Ramp delegate to registered Ashby by fixed slug | **enabled targets inside the disabled/uninitialized watch**; 10-minute Toronto/GTA scope, `resultsWanted: 500`, disabled live smoke, baseline, and two observation cycles remain |
-| Canada Job Bank | 2 | Structured Canadian query source | **enabled target** inside the disabled preset watch; 12 of 209 matrix requests every 30 minutes |
+| Uber, Notion, Ramp, Netflix, IBM | 1 | complete official boards; Notion/Ramp delegate to registered Ashby by fixed slug | **enabled targets inside the disabled/uninitialized watch**; inherited watch cadence, Toronto/GTA scope, `resultsWanted: 500`, disabled live smoke, baseline, and two observation cycles remain |
+| Canada Job Bank | 2 | Structured Canadian query source | **enabled target** inside the disabled preset watch; 12 of 209 matrix requests per run |
 | Google Jobs | 2 | Toronto/GTA query redundancy | **disabled**; fixtures/failure handling pass, but live smoke returned an enable-JavaScript shell |
 | LinkedIn public guest | 3 | Toronto/GTA newest-first 72-hour query | **target-enabled inside the disabled/uninitialized watch**; listing/detail fixtures and unauthenticated live smoke pass; baseline and operator review remain |
 | RBC, TD, Scotiabank, BMO, CIBC | — | deferred official bank adapters | **uncovered by design for Phase 13** and visible in the coverage report |
@@ -427,7 +427,7 @@ If it fails:
 
 Do not print the environment variable or include the URL in diagnostic output.
 
-## 8. Enable the reviewed 10/30/60 pipeline
+## 8. Enable the reviewed inherited-cadence pipeline
 
 After a satisfactory baseline and Discord test, resume the watch:
 
@@ -436,8 +436,9 @@ npm run cli -- watch resume <watch-id> --json
 ```
 
 Resume sets `enabled=true` and makes the watch schedulable. The next scheduler
-poll picks up a due watch; subsequent normal Tier 1 executions follow the ten-minute
-interval. Tier 2 and Tier 3 run only when independently due. Unproven targets
+poll picks up a due watch; subsequent executions follow the watch-level interval
+unless a target has an explicit override. Targets remain independently due.
+Unproven targets
 must still be disabled; resuming the watch does not waive a target smoke gate.
 
 Allow at least two Tier 1 intervals, then inspect operations:
@@ -670,7 +671,7 @@ remain uninitialized. Resolve or explicitly disable each failed target and rerun
 `watch initialize <id> --target <key>`. Never treat a partial overall run as
 evidence that every target was baselined.
 
-### The ten-minute target is missed
+### The configured interval target is missed
 
 Check scheduler poll freshness, previous run duration, source timeouts/retries, lease state, PostgreSQL health, and process uptime. The scheduler does not overlap a slow run of the same watch. A source publication timestamp can also be delayed or absent; rad.ar does not fabricate it.
 
@@ -778,8 +779,8 @@ configuration:
 
 - name and description;
 - schedule, interval, and timezone;
-- source, company slug/name, source tier, target interval, result limit, enabled
-  state, and search scope;
+- source, company slug/name, source tier, inherited or custom target interval,
+  result limit, enabled state, and search scope;
 - countries, locations, search terms, required/preferred/excluded terms;
 - workplace and employment types;
 - minimum, urgent, and digest score thresholds plus weights;
@@ -789,6 +790,16 @@ Advanced JSON accepts and exports the same API-compatible configuration used by
 CLI watch JSON. Preview and validate pasted/selected JSON before replacing the
 draft. Exports omit IDs and other runtime-only state, target health and
 initialization timestamps, leases, histories, API keys, and webhook values.
+
+Top-level `intervalMinutes`, `countryCodes`, `locations`, and `searchTerms` are
+source-target defaults. Omit the matching target property to inherit it; include
+it only for a deliberate source-specific override. Scope fields inherit
+independently, so a target can provide only `searchTerms` or
+`maxRequestsPerRun`. The Sources page shows effective defaults, offers individual
+reset actions, and provides **Use defaults for all** to remove every target
+interval/country/location override while retaining target-only settings. This is
+the safe one-step way to compact an older expanded JSON import before review and
+Apply.
 
 The browser draft is not durable until Apply. Navigation away from an unsaved
 draft requires confirmation.
@@ -860,6 +871,11 @@ and replace the local value.
 Build rules under Notifications / Routing. A route has a name, enabled flag,
 Discord destination alias, and optional source tier, notification type, minimum
 score, and maximum score conditions.
+
+Choose the alias from the Destination dropdown. It lists configured aliases for
+the selected provider; unconfigured or removed aliases on an existing route are
+shown as unavailable and must be explicitly replaced. Changing Provider clears
+the prior destination so an alias cannot be carried across providers.
 
 Conditions across fields use AND semantics. Values within `sourceTiers` or
 `notificationTypes` use OR semantics. Minimum and maximum score are inclusive.

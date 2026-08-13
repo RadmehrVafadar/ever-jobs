@@ -38,8 +38,13 @@ export interface WatchSourceTarget {
   companySlug?: string;
   companyName?: string;
   companyUrl?: string;
-  searchScope: WatchSearchScope;
+  searchScope: ResolvedWatchSearchScope;
   initializedAt?: Date | null;
+}
+
+export interface ResolvedWatchSearchScope extends WatchSearchScope {
+  countryCodes: string[];
+  locations: string[];
 }
 
 export interface WatchSourceRequest {
@@ -356,9 +361,12 @@ export class WatchSourcePlanner {
 
       const nextRunAt = validDate(configuredTarget.nextRunAt);
       const targetLastRunAt = validDate(configuredTarget.lastRunAt);
-      const intervalMinutes = positiveNumber(configuredTarget.intervalMinutes)
-        ? configuredTarget.intervalMinutes
-        : WATCH_SOURCE_TIER_INTERVAL_MINUTES[tier];
+      const configuredIntervalMinutes = configuredTarget.intervalMinutes;
+      const intervalMinutes = positiveNumber(configuredIntervalMinutes)
+        ? configuredIntervalMinutes
+        : positiveNumber(watch.intervalMinutes)
+          ? watch.intervalMinutes
+          : WATCH_SOURCE_TIER_INTERVAL_MINUTES[tier];
       const target = this.toTarget(
         parsed,
         tier,
@@ -636,7 +644,7 @@ export class WatchSourcePlanner {
     source: ParsedSource,
     tier: WatchSourceTier,
     intervalMinutes: number,
-    searchScope: WatchSearchScope,
+    searchScope: ResolvedWatchSearchScope,
     initializedAt: Date | null | undefined,
     metadata?: WatchSourceMetadata,
     companySlug?: string,
@@ -797,7 +805,7 @@ function metadataBySite(
 function resolveSearchScope(
   configured: WatchSearchScope | undefined,
   watch: JobWatch,
-): WatchSearchScope {
+): ResolvedWatchSearchScope {
   const countryCodes = uniqueNonEmpty(
     configured?.countryCodes ?? watch.countryCodes,
   ).map((countryCode) => countryCode.toUpperCase());
@@ -869,8 +877,8 @@ function validDate(value: Date | null | undefined): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function positiveNumber(value: number): boolean {
-  return Number.isFinite(value) && value > 0;
+function positiveNumber(value: number | undefined): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 
 function positiveInteger(value: number, fallback: number): number {

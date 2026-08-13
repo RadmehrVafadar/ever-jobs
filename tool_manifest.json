@@ -73,6 +73,14 @@
         "omitted_targets_initialize_all": true
       },
       "source_target_contract": {
+        "default_inheritance": {
+          "intervalMinutes": "Omit sourceTargets[].intervalMinutes to inherit watch.intervalMinutes.",
+          "countryCodes": "Omit sourceTargets[].searchScope.countryCodes to inherit watch.countryCodes.",
+          "locations": "Omit sourceTargets[].searchScope.locations to inherit watch.locations.",
+          "searchTerms": "Omit sourceTargets[].searchScope.searchTerms to inherit watch.searchTerms.",
+          "field_independent": true,
+          "explicit_values_are_overrides": true
+        },
         "resultsWanted": {
           "type": "integer",
           "minimum": 1,

@@ -154,6 +154,50 @@ describe("WatchSourcePlanner", () => {
     ]);
   });
 
+  it("inherits cadence and each missing scope field from the watch defaults", () => {
+    const plan = planner.plan(
+      createWatch({
+        intervalMinutes: 20,
+        countryCodes: ["CA", "US"],
+        locations: ["Toronto", "Remote"],
+        searchTerms: ["watch term"],
+        sourceTargets: [
+          {
+            site: Site.GOOGLE,
+            tier: 2,
+            enabled: true,
+            searchScope: {
+              countryCodes: ["CA"],
+              searchTerms: ["target term"],
+              maxRequestsPerRun: 1,
+            },
+          },
+        ],
+      }),
+      { force: true, rotationSeed: 0 },
+    );
+
+    expect(plan.targets[0]).toEqual(
+      expect.objectContaining({
+        intervalMinutes: 20,
+        searchScope: {
+          countryCodes: ["CA"],
+          locations: ["Toronto", "Remote"],
+          searchTerms: ["target term"],
+          maxRequestsPerRun: 1,
+        },
+      }),
+    );
+    expect(plan.requests).toHaveLength(1);
+    expect(plan.requests[0]).toEqual(
+      expect.objectContaining({
+        searchTerm: "target term",
+        location: expect.stringMatching(/^(Toronto|Remote)$/),
+        countryCodes: ["CA"],
+      }),
+    );
+  });
+
   it("builds the complete unique term by location matrix", () => {
     const plan = planner.plan(
       createWatch({

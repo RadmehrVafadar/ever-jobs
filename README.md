@@ -211,6 +211,9 @@ npm run cli -- watch coverage --id <watch-id>
 The report distinguishes active, disabled, uncovered, uninitialized, and degraded coverage. The
 aligned preset example is
 [`examples/canadian-tech-internships.watch.json`](examples/canadian-tech-internships.watch.json).
+Watch-level interval and geography fields are inherited by source targets unless
+the target explicitly overrides them; the compact migrated 47-target example is
+[`examples/canadian-tech-adjacent-internships.watch.json`](examples/canadian-tech-adjacent-internships.watch.json).
 See [Spec 6004's human-readable guide](docs/specs/6004-canadian-employer-internship-coverage.md)
 for the expanded template, ATS mapping, and baseline workflow.
 

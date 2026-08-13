@@ -3,6 +3,7 @@ import { JobWatch } from "../types";
 import {
   diffWatch,
   editableWatch,
+  inheritWatchDefaults,
   isTargetInitialized,
   parseImportedWatchDraft,
   validateDraft,
@@ -109,6 +110,62 @@ describe("watch draft helpers", () => {
         current,
       ),
     ).toThrow(/notificationRoutes contains an invalid routing rule/);
+  });
+
+  it("imports sparse target defaults without expanding them", () => {
+    const current = editableWatch(makeWatch());
+    const imported = parseImportedWatchDraft(
+      {
+        ...current,
+        intervalMinutes: 20,
+        countryCodes: ["CA", "US"],
+        locations: ["Toronto", "Remote"],
+        sourceTargets: [
+          {
+            site: "google",
+            tier: 2,
+            enabled: true,
+            searchScope: { searchTerms: ["software intern"] },
+          },
+        ],
+      },
+      current,
+    );
+
+    expect(imported.sourceTargets[0]).toEqual({
+      site: "google",
+      tier: 2,
+      enabled: true,
+      searchScope: { searchTerms: ["software intern"] },
+    });
+  });
+
+  it("removes all shared overrides while preserving target-only scope settings", () => {
+    expect(
+      inheritWatchDefaults({
+        site: "google",
+        tier: 2,
+        intervalMinutes: 60,
+        enabled: true,
+        searchScope: {
+          countryCodes: ["CA"],
+          locations: ["Toronto"],
+          strictLocations: true,
+          searchTerms: ["software intern"],
+          maxRequestsPerRun: 2,
+        },
+      }),
+    ).toEqual({
+      site: "google",
+      tier: 2,
+      intervalMinutes: undefined,
+      enabled: true,
+      searchScope: {
+        strictLocations: true,
+        searchTerms: ["software intern"],
+        maxRequestsPerRun: 2,
+      },
+    });
   });
 
   it("inherits a legacy watch baseline only when the target timestamp is absent", () => {

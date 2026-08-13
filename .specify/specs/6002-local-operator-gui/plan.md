@@ -42,6 +42,9 @@ service. Preserve the current outbox, retry, and idempotency boundaries.
    - Build the operator shell, typed client, session auth, overview, watch list
      and editor, activation flow, notifications, matches/history, search,
      analysis, comparison, settings, and downloads.
+   - Resolve route destinations from the masked destination inventory, filter
+     them by provider, and preserve unavailable saved references visibly until
+     the operator selects a configured replacement.
 5. **Local operations**
    - Add Nx and root scripts, loopback host configuration, environment examples,
      Docker Compose GUI profile, and local runbook changes.
@@ -71,6 +74,7 @@ service. Preserve the current outbox, retry, and idempotency boundaries.
 | Worker process confused with watch state     | Separate runtime health from per-watch enabled state in UI and copy.                                    |
 | All-source comparison overloads sources      | Bounded concurrency, per-source timeout/retry policy, partial results.                                  |
 | GUI diverges from CLI/API                    | Typed API client and shared DTO/domain services; no browser-only business rules.                        |
+| Misspelled route alias suppresses delivery   | Use provider-filtered destination records in a native select and label unavailable saved references.    |
 
 ## 5. Validation
 

@@ -10,7 +10,6 @@ import {
   canadianTechInternshipSourceTargets,
   CANADIAN_TECH_INTERNSHIP_COMPANIES,
   CANADIAN_TECH_INTERNSHIP_DEFERRED_COMPANIES,
-  createCanadianInternshipSearchScope,
   createCanadianInternshipSourceTarget,
   WatchPresetDefinition,
 } from "./canadian-tech-internships.preset";
@@ -268,20 +267,16 @@ function expandedExistingTargets(): WatchSourceTarget[] {
   return canadianTechInternshipSourceTargets().map((target) => ({
     ...target,
     searchScope: target.searchScope
-      ? createCanadianInternshipSearchScope(
-          target.searchScope.countryCodes,
-          CANADIAN_TECH_ADJACENT_INTERNSHIP_LOCATIONS,
-          {
-            ...(target.searchScope.searchTerms
-              ? { searchTerms: CANADIAN_TECH_ADJACENT_INTERNSHIP_SEARCH_TERMS }
-              : {}),
-            ...(target.searchScope.maxRequestsPerRun === undefined
-              ? {}
-              : {
-                  maxRequestsPerRun: target.searchScope.maxRequestsPerRun,
-                }),
-          },
-        )
+      ? {
+          ...target.searchScope,
+          ...(target.searchScope.searchTerms
+            ? {
+                searchTerms: [
+                  ...CANADIAN_TECH_ADJACENT_INTERNSHIP_SEARCH_TERMS,
+                ],
+              }
+            : {}),
+        }
       : undefined,
   }));
 }
@@ -291,21 +286,17 @@ function employerTargets(): WatchSourceTarget[] {
     createCanadianInternshipSourceTarget({
       ...employer,
       tier: 1,
-      intervalMinutes: 10,
       // Enterprise boards can advertise hundreds or thousands of keyword
       // hits. Keep each rotating search inside the watcher source deadline
       // and avoid enriching a large irrelevant tail before the next term.
       resultsWanted: 25,
       mode: "board-search",
       enabled: true,
-      searchScope: createCanadianInternshipSearchScope(
-        ["CA"],
-        CANADIAN_TECH_ADJACENT_INTERNSHIP_LOCATIONS,
-        {
-          searchTerms: CANADIAN_TECH_ADJACENT_INTERNSHIP_BOARD_SEARCH_TERMS,
-          maxRequestsPerRun: 2,
-        },
-      ),
+      searchScope: {
+        strictLocations: true,
+        searchTerms: [...CANADIAN_TECH_ADJACENT_INTERNSHIP_BOARD_SEARCH_TERMS],
+        maxRequestsPerRun: 2,
+      },
     }),
   );
 }

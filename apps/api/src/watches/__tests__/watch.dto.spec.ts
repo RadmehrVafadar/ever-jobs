@@ -36,6 +36,28 @@ describe("watch DTO nested source scope", () => {
     await expect(validate(dto)).resolves.toEqual([]);
   });
 
+  it("accepts sparse target defaults and a partial search scope", async () => {
+    const dto = plainToInstance(CreateWatchDto, {
+      name: "Inherited defaults",
+      intervalMinutes: 20,
+      countryCodes: ["CA", "US"],
+      locations: ["Toronto", "Remote"],
+      sourceTargets: [
+        {
+          site: Site.GOOGLE,
+          tier: 2,
+          enabled: true,
+          searchScope: {
+            searchTerms: ["software intern"],
+            maxRequestsPerRun: 2,
+          },
+        },
+      ],
+    });
+
+    await expect(validate(dto)).resolves.toEqual([]);
+  });
+
   it("rejects invalid target URLs, modes, and duplicate role families", async () => {
     const dto = plainToInstance(CreateWatchDto, {
       name: "Invalid target contract",

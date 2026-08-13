@@ -25,8 +25,9 @@ export const watchSearchScopeSchema = z
           .transform((value) => value.toUpperCase()),
       )
       .min(1)
-      .max(25),
-    locations: z.array(z.string().trim().min(1)).min(1).max(100),
+      .max(25)
+      .optional(),
+    locations: z.array(z.string().trim().min(1)).min(1).max(100).optional(),
     strictLocations: z.boolean().optional(),
     searchTerms: z.array(z.string().trim().min(1)).min(1).max(100).optional(),
     maxRequestsPerRun: z.number().int().min(1).max(1_000).optional(),
@@ -40,7 +41,8 @@ export const watchSourceTargetSchema = z.object({
     .number()
     .int()
     .min(1)
-    .max(24 * 60),
+    .max(24 * 60)
+    .optional(),
   resultsWanted: z.number().int().min(1).max(1_000).optional(),
   companySlug: z.string().trim().min(1).max(200).optional(),
   companyName: z.string().trim().min(1).max(200).optional(),

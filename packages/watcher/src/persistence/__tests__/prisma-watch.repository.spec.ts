@@ -72,6 +72,47 @@ describe("PrismaWatchRepository", () => {
     });
   });
 
+  it("round-trips sparse target cadence and geography without expanding defaults", async () => {
+    const updatedAt = new Date("2026-08-13T12:00:00.000Z");
+    const row = {
+      ...watchRow("Sparse defaults", updatedAt),
+      intervalMinutes: 20,
+      locations: ["Toronto", "Remote"],
+      countryCodes: ["CA", "US"],
+      sourceTargets: [
+        {
+          site: "google",
+          tier: 2,
+          enabled: true,
+          searchScope: {
+            searchTerms: ["software intern"],
+            maxRequestsPerRun: 2,
+          },
+        },
+      ],
+    };
+    const repository = makeRepository({
+      jobWatch: { findUnique: jest.fn().mockResolvedValue(row) },
+    });
+
+    await expect(repository.getWatch("watch-1")).resolves.toEqual(
+      expect.objectContaining({
+        intervalMinutes: 20,
+        sourceTargets: [
+          {
+            site: "google",
+            tier: 2,
+            enabled: true,
+            searchScope: {
+              searchTerms: ["software intern"],
+              maxRequestsPerRun: 2,
+            },
+          },
+        ],
+      }),
+    );
+  });
+
   it("claims a due watch with one conditional update", async () => {
     const updateMany = jest.fn().mockResolvedValue({ count: 1 });
     const repository = makeRepository({

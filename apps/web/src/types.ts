@@ -47,8 +47,8 @@ export interface NotificationRoute {
 }
 
 export interface WatchSearchScope {
-  countryCodes: string[];
-  locations: string[];
+  countryCodes?: string[];
+  locations?: string[];
   strictLocations?: boolean;
   searchTerms?: string[];
   maxRequestsPerRun?: number;
@@ -57,7 +57,7 @@ export interface WatchSearchScope {
 export interface WatchSourceTarget {
   site: string;
   tier: 1 | 2 | 3;
-  intervalMinutes: number;
+  intervalMinutes?: number;
   resultsWanted?: number;
   companySlug?: string;
   companyName?: string;
@@ -342,7 +342,7 @@ export interface OperatorOverview {
 
 export interface DestinationSummary {
   alias: string;
-  provider: "discord";
+  provider: NotificationDestination["type"];
   source: "environment" | "local" | "unconfigured";
   configured: boolean;
 }

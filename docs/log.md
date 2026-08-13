@@ -3,6 +3,46 @@
 > Append-only log of every doc/spec edit. **Newest entry at the top.** This is a
 > human-readable audit trail; for source-code history, see `git log`.
 
+## 2026-08-13 — run #6005 — Watch default inheritance
+
+- Made watch-level interval, country-code, location, and search-term fields the
+  source-target defaults; target properties are now sparse, independent
+  overrides and existing expanded watch documents remain valid.
+- Applied effective cadence consistently to planning, due checks, rotation, and
+  target/watch next-run advancement, and preserved sparse values through JSON
+  persistence, API validation, GUI import, and download.
+- Compacted Canadian internship preset output, aligned the tracked base example,
+  and added a migrated 47-target adjacent-internship example containing no
+  repeated target interval/country/location blocks.
+- Added inherited/custom source-editor states, individual reset controls, and a
+  one-step **Use defaults for all** action that retains target-only search terms,
+  request budgets, strict-location policy, result limits, and company settings.
+- Added Spec 6005, plan/tasks, human mirror, CLI/watcher/runbook guidance,
+  documentation index entries, and Q-080 for the fork-range numbering blocker.
+- Validation passed all 15 watcher suites (218 tests), all seven web test files
+  (26 tests), three affected API/persistence suites (33 tests), the final six-
+  suite focused regression (76 tests), API/web/CLI/watcher production builds,
+  Prettier, JSON/manifest parsing, compact-example invariants, and scoped diff
+  hygiene. Nx has no configured lint tasks. Documentation lint reaches only the
+  pre-existing two deprecated broken example links, four historical duplicate
+  log entries, and two Spec 5024 frontmatter findings.
+
+## 2026-08-13 — Provider-filtered notification route destinations
+
+- Replaced the routing rule's free-text destination field with a native select
+  populated from masked destination records and filtered by the selected
+  provider, preventing misspelled aliases from being introduced through the
+  operator GUI.
+- New routes now require an explicit destination choice, provider changes clear
+  incompatible selections, and saved missing or unconfigured aliases remain
+  visible as disabled unavailable options instead of being silently rewritten.
+- Updated Spec 6002, its plan/task ledger, human-readable mirror, runbook, and
+  documentation index. The complete web suite passed (6 files / 21 tests),
+  including 6 focused route-editor tests, and the TypeScript plus Vite
+  production build and `git diff --check` passed. Documentation lint remains
+  blocked only by the existing broken example links, duplicate historical log
+  entries, and Spec 5024 metadata findings.
+
 ## 2026-08-12 — Spec 6004: Canadian employer internship coverage
 
 - Added the authoritative specification, plan, task ledger, research notes, and

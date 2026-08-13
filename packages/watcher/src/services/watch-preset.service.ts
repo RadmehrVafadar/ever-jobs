@@ -393,8 +393,9 @@ function normalizedScope(
 ): Record<string, unknown> | null {
   if (!value) return null;
   return {
-    countryCodes: value.countryCodes.map((code) => code.trim().toUpperCase()),
-    locations: value.locations.map((location) => location.trim()),
+    countryCodes:
+      value.countryCodes?.map((code) => code.trim().toUpperCase()) ?? null,
+    locations: value.locations?.map((location) => location.trim()) ?? null,
     strictLocations: value.strictLocations ?? false,
     searchTerms: value.searchTerms?.map((term) => term.trim()) ?? null,
     maxRequestsPerRun: value.maxRequestsPerRun ?? null,

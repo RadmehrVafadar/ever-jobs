@@ -2,7 +2,7 @@
   "name": "Canadian Tech Internships",
   "description": "Toronto and Greater Toronto Area monitoring for Summer 2027 technology internships and co-ops.",
   "enabled": false,
-  "intervalMinutes": 30,
+  "intervalMinutes": 10,
   "timezone": "America/Toronto",
   "sources": [
     "google_careers",
@@ -35,23 +35,8 @@
       "site": "google_careers",
       "companyName": "Google",
       "tier": 1,
-      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
-        "countryCodes": ["CA"],
-        "locations": [
-          "Toronto, Ontario",
-          "Greater Toronto Area",
-          "Mississauga, Ontario",
-          "Brampton, Ontario",
-          "Vaughan, Ontario",
-          "Richmond Hill, Ontario",
-          "Markham, Ontario",
-          "Oakville, Ontario",
-          "Burlington, Ontario",
-          "Pickering, Ontario",
-          "Ajax, Ontario"
-        ],
         "strictLocations": true,
         "searchTerms": [
           "summer 2027 software engineer intern",
@@ -84,23 +69,8 @@
       "site": "shopify",
       "companyName": "Shopify",
       "tier": 1,
-      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
-        "countryCodes": ["CA"],
-        "locations": [
-          "Toronto, Ontario",
-          "Greater Toronto Area",
-          "Mississauga, Ontario",
-          "Brampton, Ontario",
-          "Vaughan, Ontario",
-          "Richmond Hill, Ontario",
-          "Markham, Ontario",
-          "Oakville, Ontario",
-          "Burlington, Ontario",
-          "Pickering, Ontario",
-          "Ajax, Ontario"
-        ],
         "strictLocations": true
       },
       "initializedAt": null,
@@ -112,23 +82,8 @@
       "companySlug": "wealthsimple",
       "companyName": "Wealthsimple",
       "tier": 1,
-      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
-        "countryCodes": ["CA"],
-        "locations": [
-          "Toronto, Ontario",
-          "Greater Toronto Area",
-          "Mississauga, Ontario",
-          "Brampton, Ontario",
-          "Vaughan, Ontario",
-          "Richmond Hill, Ontario",
-          "Markham, Ontario",
-          "Oakville, Ontario",
-          "Burlington, Ontario",
-          "Pickering, Ontario",
-          "Ajax, Ontario"
-        ],
         "strictLocations": true
       },
       "initializedAt": null,
@@ -140,23 +95,8 @@
       "companySlug": "plaid",
       "companyName": "Plaid",
       "tier": 1,
-      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
-        "countryCodes": ["CA"],
-        "locations": [
-          "Toronto, Ontario",
-          "Greater Toronto Area",
-          "Mississauga, Ontario",
-          "Brampton, Ontario",
-          "Vaughan, Ontario",
-          "Richmond Hill, Ontario",
-          "Markham, Ontario",
-          "Oakville, Ontario",
-          "Burlington, Ontario",
-          "Pickering, Ontario",
-          "Ajax, Ontario"
-        ],
         "strictLocations": true
       },
       "initializedAt": null,
@@ -167,23 +107,8 @@
       "site": "amazon",
       "companyName": "Amazon",
       "tier": 1,
-      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
-        "countryCodes": ["CA"],
-        "locations": [
-          "Toronto, Ontario",
-          "Greater Toronto Area",
-          "Mississauga, Ontario",
-          "Brampton, Ontario",
-          "Vaughan, Ontario",
-          "Richmond Hill, Ontario",
-          "Markham, Ontario",
-          "Oakville, Ontario",
-          "Burlington, Ontario",
-          "Pickering, Ontario",
-          "Ajax, Ontario"
-        ],
         "strictLocations": true
       },
       "initializedAt": null,
@@ -194,23 +119,8 @@
       "site": "microsoft",
       "companyName": "Microsoft",
       "tier": 1,
-      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
-        "countryCodes": ["CA"],
-        "locations": [
-          "Toronto, Ontario",
-          "Greater Toronto Area",
-          "Mississauga, Ontario",
-          "Brampton, Ontario",
-          "Vaughan, Ontario",
-          "Richmond Hill, Ontario",
-          "Markham, Ontario",
-          "Oakville, Ontario",
-          "Burlington, Ontario",
-          "Pickering, Ontario",
-          "Ajax, Ontario"
-        ],
         "strictLocations": true
       },
       "initializedAt": null,
@@ -221,23 +131,8 @@
       "site": "apple",
       "companyName": "Apple",
       "tier": 1,
-      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
-        "countryCodes": ["CA"],
-        "locations": [
-          "Toronto, Ontario",
-          "Greater Toronto Area",
-          "Mississauga, Ontario",
-          "Brampton, Ontario",
-          "Vaughan, Ontario",
-          "Richmond Hill, Ontario",
-          "Markham, Ontario",
-          "Oakville, Ontario",
-          "Burlington, Ontario",
-          "Pickering, Ontario",
-          "Ajax, Ontario"
-        ],
         "strictLocations": true
       },
       "initializedAt": null,
@@ -248,23 +143,8 @@
       "site": "nvidia",
       "companyName": "Nvidia",
       "tier": 1,
-      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
-        "countryCodes": ["CA"],
-        "locations": [
-          "Toronto, Ontario",
-          "Greater Toronto Area",
-          "Mississauga, Ontario",
-          "Brampton, Ontario",
-          "Vaughan, Ontario",
-          "Richmond Hill, Ontario",
-          "Markham, Ontario",
-          "Oakville, Ontario",
-          "Burlington, Ontario",
-          "Pickering, Ontario",
-          "Ajax, Ontario"
-        ],
         "strictLocations": true
       },
       "initializedAt": null,
@@ -275,23 +155,8 @@
       "site": "stripe",
       "companyName": "Stripe",
       "tier": 1,
-      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
-        "countryCodes": ["CA"],
-        "locations": [
-          "Toronto, Ontario",
-          "Greater Toronto Area",
-          "Mississauga, Ontario",
-          "Brampton, Ontario",
-          "Vaughan, Ontario",
-          "Richmond Hill, Ontario",
-          "Markham, Ontario",
-          "Oakville, Ontario",
-          "Burlington, Ontario",
-          "Pickering, Ontario",
-          "Ajax, Ontario"
-        ],
         "strictLocations": true
       },
       "initializedAt": null,
@@ -302,23 +167,8 @@
       "site": "openai",
       "companyName": "OpenAI",
       "tier": 1,
-      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
-        "countryCodes": ["CA"],
-        "locations": [
-          "Toronto, Ontario",
-          "Greater Toronto Area",
-          "Mississauga, Ontario",
-          "Brampton, Ontario",
-          "Vaughan, Ontario",
-          "Richmond Hill, Ontario",
-          "Markham, Ontario",
-          "Oakville, Ontario",
-          "Burlington, Ontario",
-          "Pickering, Ontario",
-          "Ajax, Ontario"
-        ],
         "strictLocations": true
       },
       "initializedAt": null,
@@ -329,23 +179,8 @@
       "site": "datadog",
       "companyName": "Datadog",
       "tier": 1,
-      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
-        "countryCodes": ["CA"],
-        "locations": [
-          "Toronto, Ontario",
-          "Greater Toronto Area",
-          "Mississauga, Ontario",
-          "Brampton, Ontario",
-          "Vaughan, Ontario",
-          "Richmond Hill, Ontario",
-          "Markham, Ontario",
-          "Oakville, Ontario",
-          "Burlington, Ontario",
-          "Pickering, Ontario",
-          "Ajax, Ontario"
-        ],
         "strictLocations": true
       },
       "initializedAt": null,
@@ -356,23 +191,8 @@
       "site": "doordash",
       "companyName": "DoorDash",
       "tier": 1,
-      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
-        "countryCodes": ["CA"],
-        "locations": [
-          "Toronto, Ontario",
-          "Greater Toronto Area",
-          "Mississauga, Ontario",
-          "Brampton, Ontario",
-          "Vaughan, Ontario",
-          "Richmond Hill, Ontario",
-          "Markham, Ontario",
-          "Oakville, Ontario",
-          "Burlington, Ontario",
-          "Pickering, Ontario",
-          "Ajax, Ontario"
-        ],
         "strictLocations": true
       },
       "initializedAt": null,
@@ -383,23 +203,8 @@
       "site": "coinbase",
       "companyName": "Coinbase",
       "tier": 1,
-      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
-        "countryCodes": ["CA"],
-        "locations": [
-          "Toronto, Ontario",
-          "Greater Toronto Area",
-          "Mississauga, Ontario",
-          "Brampton, Ontario",
-          "Vaughan, Ontario",
-          "Richmond Hill, Ontario",
-          "Markham, Ontario",
-          "Oakville, Ontario",
-          "Burlington, Ontario",
-          "Pickering, Ontario",
-          "Ajax, Ontario"
-        ],
         "strictLocations": true
       },
       "initializedAt": null,
@@ -410,23 +215,8 @@
       "site": "figma",
       "companyName": "Figma",
       "tier": 1,
-      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
-        "countryCodes": ["CA"],
-        "locations": [
-          "Toronto, Ontario",
-          "Greater Toronto Area",
-          "Mississauga, Ontario",
-          "Brampton, Ontario",
-          "Vaughan, Ontario",
-          "Richmond Hill, Ontario",
-          "Markham, Ontario",
-          "Oakville, Ontario",
-          "Burlington, Ontario",
-          "Pickering, Ontario",
-          "Ajax, Ontario"
-        ],
         "strictLocations": true
       },
       "initializedAt": null,
@@ -437,23 +227,8 @@
       "site": "vercel",
       "companyName": "Vercel",
       "tier": 1,
-      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
-        "countryCodes": ["CA"],
-        "locations": [
-          "Toronto, Ontario",
-          "Greater Toronto Area",
-          "Mississauga, Ontario",
-          "Brampton, Ontario",
-          "Vaughan, Ontario",
-          "Richmond Hill, Ontario",
-          "Markham, Ontario",
-          "Oakville, Ontario",
-          "Burlington, Ontario",
-          "Pickering, Ontario",
-          "Ajax, Ontario"
-        ],
         "strictLocations": true
       },
       "initializedAt": null,
@@ -464,23 +239,8 @@
       "site": "meta",
       "companyName": "Meta",
       "tier": 1,
-      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
-        "countryCodes": ["CA"],
-        "locations": [
-          "Toronto, Ontario",
-          "Greater Toronto Area",
-          "Mississauga, Ontario",
-          "Brampton, Ontario",
-          "Vaughan, Ontario",
-          "Richmond Hill, Ontario",
-          "Markham, Ontario",
-          "Oakville, Ontario",
-          "Burlington, Ontario",
-          "Pickering, Ontario",
-          "Ajax, Ontario"
-        ],
         "strictLocations": true
       },
       "initializedAt": null,
@@ -491,23 +251,8 @@
       "site": "wellfound",
       "companyName": "Wellfound",
       "tier": 1,
-      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
-        "countryCodes": ["CA"],
-        "locations": [
-          "Toronto, Ontario",
-          "Greater Toronto Area",
-          "Mississauga, Ontario",
-          "Brampton, Ontario",
-          "Vaughan, Ontario",
-          "Richmond Hill, Ontario",
-          "Markham, Ontario",
-          "Oakville, Ontario",
-          "Burlington, Ontario",
-          "Pickering, Ontario",
-          "Ajax, Ontario"
-        ],
         "strictLocations": true
       },
       "initializedAt": null,
@@ -518,24 +263,9 @@
       "site": "uber",
       "companyName": "Uber",
       "tier": 1,
-      "intervalMinutes": 30,
       "resultsWanted": 500,
       "enabled": true,
       "searchScope": {
-        "countryCodes": ["CA"],
-        "locations": [
-          "Toronto, Ontario",
-          "Greater Toronto Area",
-          "Mississauga, Ontario",
-          "Brampton, Ontario",
-          "Vaughan, Ontario",
-          "Richmond Hill, Ontario",
-          "Markham, Ontario",
-          "Oakville, Ontario",
-          "Burlington, Ontario",
-          "Pickering, Ontario",
-          "Ajax, Ontario"
-        ],
         "strictLocations": true
       },
       "initializedAt": null,
@@ -546,24 +276,9 @@
       "site": "notion",
       "companyName": "Notion",
       "tier": 1,
-      "intervalMinutes": 30,
       "resultsWanted": 500,
       "enabled": true,
       "searchScope": {
-        "countryCodes": ["CA"],
-        "locations": [
-          "Toronto, Ontario",
-          "Greater Toronto Area",
-          "Mississauga, Ontario",
-          "Brampton, Ontario",
-          "Vaughan, Ontario",
-          "Richmond Hill, Ontario",
-          "Markham, Ontario",
-          "Oakville, Ontario",
-          "Burlington, Ontario",
-          "Pickering, Ontario",
-          "Ajax, Ontario"
-        ],
         "strictLocations": true
       },
       "initializedAt": null,
@@ -574,24 +289,9 @@
       "site": "ramp",
       "companyName": "Ramp",
       "tier": 1,
-      "intervalMinutes": 30,
       "resultsWanted": 500,
       "enabled": true,
       "searchScope": {
-        "countryCodes": ["CA"],
-        "locations": [
-          "Toronto, Ontario",
-          "Greater Toronto Area",
-          "Mississauga, Ontario",
-          "Brampton, Ontario",
-          "Vaughan, Ontario",
-          "Richmond Hill, Ontario",
-          "Markham, Ontario",
-          "Oakville, Ontario",
-          "Burlington, Ontario",
-          "Pickering, Ontario",
-          "Ajax, Ontario"
-        ],
         "strictLocations": true
       },
       "initializedAt": null,
@@ -602,24 +302,9 @@
       "site": "netflix",
       "companyName": "Netflix",
       "tier": 1,
-      "intervalMinutes": 30,
       "resultsWanted": 500,
       "enabled": true,
       "searchScope": {
-        "countryCodes": ["CA"],
-        "locations": [
-          "Toronto, Ontario",
-          "Greater Toronto Area",
-          "Mississauga, Ontario",
-          "Brampton, Ontario",
-          "Vaughan, Ontario",
-          "Richmond Hill, Ontario",
-          "Markham, Ontario",
-          "Oakville, Ontario",
-          "Burlington, Ontario",
-          "Pickering, Ontario",
-          "Ajax, Ontario"
-        ],
         "strictLocations": true
       },
       "initializedAt": null,
@@ -630,24 +315,9 @@
       "site": "ibm",
       "companyName": "IBM",
       "tier": 1,
-      "intervalMinutes": 30,
       "resultsWanted": 500,
       "enabled": true,
       "searchScope": {
-        "countryCodes": ["CA"],
-        "locations": [
-          "Toronto, Ontario",
-          "Greater Toronto Area",
-          "Mississauga, Ontario",
-          "Brampton, Ontario",
-          "Vaughan, Ontario",
-          "Richmond Hill, Ontario",
-          "Markham, Ontario",
-          "Oakville, Ontario",
-          "Burlington, Ontario",
-          "Pickering, Ontario",
-          "Ajax, Ontario"
-        ],
         "strictLocations": true
       },
       "initializedAt": null,
@@ -658,23 +328,8 @@
       "site": "canadajobbank",
       "companyName": "Canada Job Bank",
       "tier": 2,
-      "intervalMinutes": 30,
       "enabled": true,
       "searchScope": {
-        "countryCodes": ["CA"],
-        "locations": [
-          "Toronto, Ontario",
-          "Greater Toronto Area",
-          "Mississauga, Ontario",
-          "Brampton, Ontario",
-          "Vaughan, Ontario",
-          "Richmond Hill, Ontario",
-          "Markham, Ontario",
-          "Oakville, Ontario",
-          "Burlington, Ontario",
-          "Pickering, Ontario",
-          "Ajax, Ontario"
-        ],
         "strictLocations": true,
         "searchTerms": [
           "summer 2027 software engineer intern",
@@ -707,23 +362,8 @@
       "site": "google",
       "companyName": "Google Jobs",
       "tier": 2,
-      "intervalMinutes": 30,
       "enabled": false,
       "searchScope": {
-        "countryCodes": ["CA"],
-        "locations": [
-          "Toronto, Ontario",
-          "Greater Toronto Area",
-          "Mississauga, Ontario",
-          "Brampton, Ontario",
-          "Vaughan, Ontario",
-          "Richmond Hill, Ontario",
-          "Markham, Ontario",
-          "Oakville, Ontario",
-          "Burlington, Ontario",
-          "Pickering, Ontario",
-          "Ajax, Ontario"
-        ],
         "strictLocations": true,
         "searchTerms": [
           "summer 2027 software engineer intern",
@@ -756,23 +396,8 @@
       "site": "linkedin",
       "companyName": "LinkedIn public guest search",
       "tier": 3,
-      "intervalMinutes": 60,
       "enabled": true,
       "searchScope": {
-        "countryCodes": ["CA"],
-        "locations": [
-          "Toronto, Ontario",
-          "Greater Toronto Area",
-          "Mississauga, Ontario",
-          "Brampton, Ontario",
-          "Vaughan, Ontario",
-          "Richmond Hill, Ontario",
-          "Markham, Ontario",
-          "Oakville, Ontario",
-          "Burlington, Ontario",
-          "Pickering, Ontario",
-          "Ajax, Ontario"
-        ],
         "strictLocations": true,
         "searchTerms": [
           "summer 2027 software engineer intern",
@@ -828,7 +453,10 @@
     "google": 2,
     "linkedin": 3
   },
-  "companySlugs": ["ashby:wealthsimple", "ashby:plaid"],
+  "companySlugs": [
+    "ashby:wealthsimple",
+    "ashby:plaid"
+  ],
   "companies": [
     "Google",
     "Amazon",
@@ -878,7 +506,13 @@
     "summer 2027 machine learning engineer intern",
     "summer 2027 AI engineer intern"
   ],
-  "requiredTerms": ["intern", "internship", "co-op", "coop", "summer 2027"],
+  "requiredTerms": [
+    "intern",
+    "internship",
+    "co-op",
+    "coop",
+    "summer 2027"
+  ],
   "preferredTerms": [
     "Python",
     "Java",
@@ -958,9 +592,18 @@
     "Pickering, Ontario",
     "Ajax, Ontario"
   ],
-  "countryCodes": ["CA"],
-  "allowedWorkplaceTypes": ["remote", "hybrid", "on-site"],
-  "allowedEmploymentTypes": ["internship", "co-op"],
+  "countryCodes": [
+    "CA"
+  ],
+  "allowedWorkplaceTypes": [
+    "remote",
+    "hybrid",
+    "on-site"
+  ],
+  "allowedEmploymentTypes": [
+    "internship",
+    "co-op"
+  ],
   "minimumScore": 60,
   "urgentScore": 80,
   "digestScore": 40,

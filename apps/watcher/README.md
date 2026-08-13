@@ -176,15 +176,21 @@ The complete setup, verification, pause/resume, and troubleshooting sequence is 
 
 ## Source cadence
 
-Source tiers define both cadence and target-specific eligibility geography.
+The watch default defines cadence unless a target contains an explicit interval.
+Source tiers retain priority, routing, health, and eligibility meaning.
 
 | Tier | Default cadence | Eligible geography | Intended sources |
 | ---- | --------------- | ------------------ | ---------------- |
-| Tier 1 | 10 minutes (Wellfound: 30) | Toronto/GTA, Canada | Fixture-backed direct company sources and complete ATS boards |
-| Tier 2 | 30 minutes | Toronto/GTA, Canada | Canada Job Bank and validated Google Jobs redundancy |
-| Tier 3 | 60 minutes | Toronto/GTA, Canada | Validated unauthenticated LinkedIn public guest search |
+| Tier 1 | Watch default (10 minutes in the preset) | Toronto/GTA, Canada | Fixture-backed direct company sources and complete ATS boards |
+| Tier 2 | Watch default (10 minutes in the preset) | Toronto/GTA, Canada | Canada Job Bank and validated Google Jobs redundancy |
+| Tier 3 | Watch default (10 minutes in the preset) | Toronto/GTA, Canada | Validated unauthenticated LinkedIn public guest search |
 
-The ten-minute cadence means a normal Tier 1 target becomes due every ten minutes; Wellfound uses a 30-minute override. It is not a publication-to-notification service-level guarantee: source runtime, source outages, missing publication timestamps, retries, PostgreSQL availability, and process restarts can add latency. A second run never starts while the same watch still holds its execution lease.
+The preset stores ten minutes once at watch level, so every target inherits it.
+An operator can add a source-specific override when needed. Cadence is not a
+publication-to-notification service-level guarantee: source runtime, source
+outages, missing publication timestamps, retries, PostgreSQL availability, and
+process restarts can add latency. A second run never starts while the same watch
+still holds its execution lease.
 
 The preset selects explicit targets rather than querying every registered plugin.
 Plugin metadata declares whether a source is a complete `board` or a search
@@ -194,7 +200,7 @@ rotating slice capped by `maxRequestsPerRun`, so a permanently fixed first
 country/location cannot starve the remaining matrix. The preset has 19 terms
 and 11 Toronto/GTA locations, producing 209 matrix entries for each query
 target. Their request caps are 1, 12, 12, and 8 per run respectively. Google Careers therefore makes only one
-rotating search per 10-minute run.
+rotating search per inherited watch interval.
 
 ## Default source readiness
 
@@ -417,6 +423,11 @@ watch must baseline every enabled target reported by its preset diff.
 
 The current example is
 [Canadian Tech Internships](../../examples/canadian-tech-internships.watch.json).
+Its top-level interval, country codes, and locations are inherited by source
+targets unless a target explicitly supplies the corresponding property. Partial
+`searchScope` objects are supported, so target-only terms or request budgets do
+not duplicate geography. A compacted copy of the 47-target expanded preset is
+[Canadian Tech + Adjacent Internships](../../examples/canadian-tech-adjacent-internships.watch.json).
 The older Canada/USA and broad-Canada example paths remain only as deprecated
 compatibility artifacts.
 

@@ -1323,7 +1323,9 @@ function sourceTargetsForStorage(
   return targets.map((target) => ({
     site: String(target.site),
     tier: target.tier,
-    intervalMinutes: target.intervalMinutes,
+    ...(target.intervalMinutes === undefined
+      ? {}
+      : { intervalMinutes: target.intervalMinutes }),
     enabled: target.enabled,
     ...(target.resultsWanted === undefined
       ? {}
@@ -1342,8 +1344,12 @@ function sourceTargetsForStorage(
       ? {}
       : {
           searchScope: {
-            countryCodes: target.searchScope.countryCodes,
-            locations: target.searchScope.locations,
+            ...(target.searchScope.countryCodes === undefined
+              ? {}
+              : { countryCodes: target.searchScope.countryCodes }),
+            ...(target.searchScope.locations === undefined
+              ? {}
+              : { locations: target.searchScope.locations }),
             ...(target.searchScope.strictLocations === undefined
               ? {}
               : { strictLocations: target.searchScope.strictLocations }),
@@ -1378,7 +1384,8 @@ function sourceTargetsFromStorage(
     if (
       typeof candidate.site !== "string" ||
       (tier !== 1 && tier !== 2 && tier !== 3) ||
-      typeof candidate.intervalMinutes !== "number" ||
+      (candidate.intervalMinutes !== undefined &&
+        typeof candidate.intervalMinutes !== "number") ||
       typeof candidate.enabled !== "boolean"
     ) {
       continue;
@@ -1386,7 +1393,9 @@ function sourceTargetsFromStorage(
     targets.push({
       site: candidate.site,
       tier,
-      intervalMinutes: candidate.intervalMinutes,
+      ...(typeof candidate.intervalMinutes === "number"
+        ? { intervalMinutes: candidate.intervalMinutes }
+        : {}),
       enabled: candidate.enabled,
       ...(typeof candidate.resultsWanted === "number" &&
       Number.isFinite(candidate.resultsWanted)
@@ -1558,9 +1567,12 @@ function searchScopeFromStorage(
   value: Prisma.JsonValue | undefined,
 ): WatchSourceTarget["searchScope"] | undefined {
   if (!value || !isJsonObject(value)) return undefined;
-  const countryCodes = stringArray(value.countryCodes ?? []);
-  const locations = stringArray(value.locations ?? []);
-  if (countryCodes.length === 0 || locations.length === 0) return undefined;
+  const countryCodes =
+    value.countryCodes === undefined
+      ? undefined
+      : stringArray(value.countryCodes);
+  const locations =
+    value.locations === undefined ? undefined : stringArray(value.locations);
   const searchTerms =
     value.searchTerms === undefined
       ? undefined
@@ -1574,13 +1586,14 @@ function searchScopeFromStorage(
     typeof value.strictLocations === "boolean"
       ? value.strictLocations
       : undefined;
-  return {
-    countryCodes,
-    locations,
+  const result: WatchSourceTarget["searchScope"] = {
+    ...(countryCodes === undefined ? {} : { countryCodes }),
+    ...(locations === undefined ? {} : { locations }),
     ...(strictLocations === undefined ? {} : { strictLocations }),
     ...(searchTerms === undefined ? {} : { searchTerms }),
     ...(maxRequestsPerRun === undefined ? {} : { maxRequestsPerRun }),
   };
+  return Object.keys(result).length > 0 ? result : undefined;
 }
 
 function nullableDate(value: unknown): Date | null {

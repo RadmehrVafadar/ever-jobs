@@ -46,8 +46,10 @@ export const LEGACY_INTERNSHIP_ROLE_FAMILIES: readonly InternshipRoleFamily[] =
   ]);
 
 export interface WatchSearchScope {
-  countryCodes: string[];
-  locations: string[];
+  /** Omit to inherit the watch-level countryCodes. */
+  countryCodes?: string[];
+  /** Omit to inherit the watch-level locations. */
+  locations?: string[];
   /** Require at least one returned job location to match this location list. */
   strictLocations?: boolean;
   searchTerms?: string[];
@@ -57,7 +59,8 @@ export interface WatchSearchScope {
 export interface WatchSourceTarget {
   site: Site | string;
   tier: 1 | 2 | 3;
-  intervalMinutes: number;
+  /** Omit to inherit the watch-level intervalMinutes. */
+  intervalMinutes?: number;
   /** Per-run normalized result ceiling forwarded to the source scraper. */
   resultsWanted?: number;
   companySlug?: string;

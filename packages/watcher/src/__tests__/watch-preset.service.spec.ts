@@ -78,6 +78,16 @@ describe("canadian-tech-internships preset", () => {
       "linkedin",
     ]);
     expect(targets.every((target) => target.initializedAt === null)).toBe(true);
+    expect(
+      targets.every((target) => target.intervalMinutes === undefined),
+    ).toBe(true);
+    expect(
+      targets.every(
+        (target) =>
+          target.searchScope?.countryCodes === undefined &&
+          target.searchScope?.locations === undefined,
+      ),
+    ).toBe(true);
     expect(watch.searchTerms).toHaveLength(19);
     expect(
       watch.searchTerms?.every((term) => term.startsWith("summer 2027 ")),
@@ -89,46 +99,37 @@ describe("canadian-tech-internships preset", () => {
     expect(byKey.get("google_careers")).toEqual(
       expect.objectContaining({
         tier: 1,
-        intervalMinutes: 10,
         enabled: true,
         searchScope: expect.objectContaining({
-          countryCodes: ["CA"],
           maxRequestsPerRun: 1,
         }),
       }),
     );
     expect(byKey.get("canadajobbank")).toEqual(
-      expect.objectContaining({ tier: 2, intervalMinutes: 30, enabled: true }),
+      expect.objectContaining({ tier: 2, enabled: true }),
     );
     expect(byKey.get("google")?.searchScope).toEqual(
       expect.objectContaining({
-        countryCodes: ["CA"],
-        locations: CANADIAN_TECH_INTERNSHIP_LOCATIONS,
         maxRequestsPerRun: 12,
       }),
     );
     expect(byKey.get("linkedin")).toEqual(
       expect.objectContaining({
         tier: 3,
-        intervalMinutes: 60,
         enabled: true,
         searchScope: expect.objectContaining({ maxRequestsPerRun: 8 }),
       }),
     );
     expect(byKey.get("meta")?.enabled).toBe(true);
-    expect(byKey.get("meta")?.intervalMinutes).toBe(10);
-    expect(byKey.get("wellfound")).toEqual(
-      expect.objectContaining({ enabled: true, intervalMinutes: 30 }),
-    );
+    expect(byKey.get("wellfound")?.enabled).toBe(true);
     for (const key of ["uber", "notion", "ramp", "netflix", "ibm"]) {
       expect(byKey.get(key)).toEqual(
         expect.objectContaining({
           enabled: true,
           tier: 1,
-          intervalMinutes: 10,
           resultsWanted: 500,
           initializedAt: null,
-          searchScope: expect.objectContaining({ countryCodes: ["CA"] }),
+          searchScope: expect.objectContaining({ strictLocations: true }),
         }),
       );
     }
@@ -137,11 +138,9 @@ describe("canadian-tech-internships preset", () => {
       targets.every(
         (target) =>
           !target.searchScope ||
-          (target.searchScope.countryCodes.length === 1 &&
-            target.searchScope.countryCodes[0] === "CA" &&
-            target.searchScope.strictLocations === true &&
-            JSON.stringify(target.searchScope.locations) ===
-              JSON.stringify(CANADIAN_TECH_INTERNSHIP_LOCATIONS)),
+          (target.searchScope.countryCodes === undefined &&
+            target.searchScope.locations === undefined &&
+            target.searchScope.strictLocations === true),
       ),
     ).toBe(true);
 
@@ -383,7 +382,7 @@ describe("WatchPresetService", () => {
             ...target.searchScope,
             countryCodes: ["CA", "US"],
             locations: [
-              ...target.searchScope.locations,
+              ...CANADIAN_TECH_INTERNSHIP_LOCATIONS,
               "Waterloo, Ontario",
               "United States",
             ],
@@ -429,9 +428,8 @@ describe("WatchPresetService", () => {
       result.watch?.sourceTargets.every(
         (target) =>
           !target.searchScope ||
-          (target.searchScope.countryCodes.join(",") === "CA" &&
-            target.searchScope.locations.includes("Toronto, Ontario") &&
-            !target.searchScope.locations.includes("United States")),
+          (target.searchScope.countryCodes === undefined &&
+            target.searchScope.locations === undefined),
       ),
     ).toBe(true);
   });

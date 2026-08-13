@@ -521,7 +521,7 @@ export class WatchExecutionService {
         initializedAt,
         lastRunAt: completedAt,
         nextRunAt: new Date(
-          completedAt.getTime() + target.intervalMinutes * 60_000,
+          completedAt.getTime() + planned.intervalMinutes * 60_000,
         ),
       };
     });

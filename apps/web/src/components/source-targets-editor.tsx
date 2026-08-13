@@ -1,7 +1,7 @@
 import { ChevronDown, Plus, Search, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { SourceHealth, WatchSourceTarget } from "../types";
-import { blankTarget } from "../lib/watch-draft";
+import { blankTarget, inheritWatchDefaults } from "../lib/watch-draft";
 import { Badge, Button, Field, StatusBadge, TagInput, Toggle } from "./ui";
 
 const FALLBACK_SOURCES = [
@@ -22,10 +22,16 @@ const FALLBACK_SOURCES = [
 export function SourceTargetsEditor({
   targets,
   sourceHealth,
+  defaultIntervalMinutes,
+  defaultCountryCodes,
+  defaultLocations,
   onChange,
 }: {
   targets: WatchSourceTarget[];
   sourceHealth: SourceHealth[];
+  defaultIntervalMinutes: number;
+  defaultCountryCodes: string[];
+  defaultLocations: string[];
   onChange(targets: WatchSourceTarget[]): void;
 }) {
   const [search, setSearch] = useState("");
@@ -60,13 +66,13 @@ export function SourceTargetsEditor({
     patch: Partial<NonNullable<WatchSourceTarget["searchScope"]>>,
   ) => {
     const target = targets[index];
+    const nextScope = Object.fromEntries(
+      Object.entries({ ...target.searchScope, ...patch }).filter(
+        ([, value]) => value !== undefined,
+      ),
+    ) as NonNullable<WatchSourceTarget["searchScope"]>;
     update(index, {
-      searchScope: {
-        countryCodes: target.searchScope?.countryCodes ?? ["CA"],
-        locations: target.searchScope?.locations ?? ["Canada"],
-        ...target.searchScope,
-        ...patch,
-      },
+      searchScope: Object.keys(nextScope).length > 0 ? nextScope : undefined,
     });
   };
   const add = () => {
@@ -109,6 +115,21 @@ export function SourceTargetsEditor({
           <Button size="small" onClick={add} disabled={!newSite.trim()}>
             <Plus size={15} />
             Add source
+          </Button>
+          <Button
+            variant="secondary"
+            size="small"
+            onClick={() => onChange(targets.map(inheritWatchDefaults))}
+            disabled={
+              !targets.some(
+                (target) =>
+                  target.intervalMinutes !== undefined ||
+                  target.searchScope?.countryCodes !== undefined ||
+                  target.searchScope?.locations !== undefined,
+              )
+            }
+          >
+            Use defaults for all
           </Button>
         </div>
       </div>
@@ -154,7 +175,8 @@ export function SourceTargetsEditor({
                   }
                 />
                 <span className="target-card__interval">
-                  Every {target.intervalMinutes} min
+                  Every {target.intervalMinutes ?? defaultIntervalMinutes} min
+                  {target.intervalMinutes === undefined ? " (default)" : ""}
                 </span>
                 <ChevronDown className="target-card__chevron" size={17} />
               </summary>
@@ -183,21 +205,42 @@ export function SourceTargetsEditor({
                       <option value={3}>Tier 3 · discovery</option>
                     </select>
                   </Field>
-                  <Field label="Run interval">
+                  <Field
+                    label="Run interval"
+                    hint={
+                      target.intervalMinutes === undefined
+                        ? `Using watch default: ${defaultIntervalMinutes} minutes`
+                        : "Custom for this source"
+                    }
+                  >
                     <div className="input-suffix">
                       <input
                         type="number"
                         min={1}
                         max={1440}
-                        value={target.intervalMinutes}
+                        value={target.intervalMinutes ?? ""}
+                        placeholder={String(defaultIntervalMinutes)}
                         onChange={(event) =>
                           update(index, {
-                            intervalMinutes: Number(event.target.value),
+                            intervalMinutes: event.target.value
+                              ? Number(event.target.value)
+                              : undefined,
                           })
                         }
                       />
                       <span>min</span>
                     </div>
+                    {target.intervalMinutes !== undefined ? (
+                      <Button
+                        variant="ghost"
+                        size="small"
+                        onClick={() =>
+                          update(index, { intervalMinutes: undefined })
+                        }
+                      >
+                        Use watch default
+                      </Button>
+                    ) : null}
                   </Field>
                   <Field label="Result limit">
                     <input
@@ -250,89 +293,125 @@ export function SourceTargetsEditor({
                       </small>
                     </div>
                     <Badge tone={target.searchScope ? "info" : "neutral"}>
-                      {target.searchScope ? "Custom" : "Uses watch defaults"}
+                      {target.searchScope
+                        ? "Has source overrides"
+                        : "Uses watch defaults"}
                     </Badge>
                   </div>
-                  {target.searchScope ? (
-                    <>
-                      <div className="form-grid form-grid--two">
-                        <TagInput
-                          label="Country codes"
-                          values={target.searchScope.countryCodes}
-                          onChange={(countryCodes) =>
-                            updateScope(index, {
-                              countryCodes: countryCodes.map((code) =>
-                                code.toUpperCase(),
-                              ),
-                            })
-                          }
-                          placeholder="CA"
-                        />
-                        <TagInput
-                          label="Locations"
-                          values={target.searchScope.locations}
-                          onChange={(locations) =>
-                            updateScope(index, { locations })
-                          }
-                          placeholder="Toronto, Ontario"
-                        />
-                      </div>
+                  <div className="form-grid form-grid--two">
+                    <div>
                       <TagInput
-                        label="Search terms"
-                        values={target.searchScope.searchTerms ?? []}
-                        onChange={(searchTerms) =>
+                        label={`Country codes — ${
+                          target.searchScope?.countryCodes
+                            ? "custom"
+                            : "watch default"
+                        }`}
+                        values={
+                          target.searchScope?.countryCodes ??
+                          defaultCountryCodes
+                        }
+                        onChange={(countryCodes) =>
                           updateScope(index, {
-                            searchTerms: searchTerms.length
-                              ? searchTerms
+                            countryCodes: countryCodes.length
+                              ? countryCodes.map((code) => code.toUpperCase())
                               : undefined,
                           })
                         }
+                        placeholder="CA"
                       />
-                      <Toggle
-                        checked={target.searchScope.strictLocations ?? false}
-                        onChange={(strictLocations) =>
-                          updateScope(index, { strictLocations })
-                        }
-                        label="Require listed locations"
-                        description="Reject returned jobs that do not advertise at least one configured location."
-                      />
-                      <div className="inline-actions">
-                        <Field label="Request budget">
-                          <input
-                            type="number"
-                            min={1}
-                            max={1000}
-                            value={target.searchScope.maxRequestsPerRun ?? ""}
-                            placeholder="No override"
-                            onChange={(event) =>
-                              updateScope(index, {
-                                maxRequestsPerRun: event.target.value
-                                  ? Number(event.target.value)
-                                  : undefined,
-                              })
-                            }
-                          />
-                        </Field>
+                      {target.searchScope?.countryCodes ? (
                         <Button
                           variant="ghost"
                           size="small"
                           onClick={() =>
-                            update(index, { searchScope: undefined })
+                            updateScope(index, { countryCodes: undefined })
                           }
                         >
-                          Use watch defaults
+                          Use watch country codes
                         </Button>
-                      </div>
-                    </>
-                  ) : (
-                    <Button
-                      variant="secondary"
-                      size="small"
-                      onClick={() => updateScope(index, {})}
-                    >
-                      Add a source-specific scope
-                    </Button>
-                  )}
+                      ) : null}
+                    </div>
+                    <div>
+                      <TagInput
+                        label={`Locations — ${
+                          target.searchScope?.locations
+                            ? "custom"
+                            : "watch default"
+                        }`}
+                        values={
+                          target.searchScope?.locations ?? defaultLocations
+                        }
+                        onChange={(locations) =>
+                          updateScope(index, {
+                            locations: locations.length ? locations : undefined,
+                          })
+                        }
+                        placeholder="Toronto, Ontario"
+                      />
+                      {target.searchScope?.locations ? (
+                        <Button
+                          variant="ghost"
+                          size="small"
+                          onClick={() =>
+                            updateScope(index, { locations: undefined })
+                          }
+                        >
+                          Use watch locations
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+                  <TagInput
+                    label="Search terms — source override"
+                    values={target.searchScope?.searchTerms ?? []}
+                    onChange={(searchTerms) =>
+                      updateScope(index, {
+                        searchTerms: searchTerms.length
+                          ? searchTerms
+                          : undefined,
+                      })
+                    }
+                    placeholder="Leave empty to use watch search terms"
+                  />
+                  <Toggle
+                    checked={target.searchScope?.strictLocations ?? false}
+                    onChange={(strictLocations) =>
+                      updateScope(index, {
+                        strictLocations: strictLocations || undefined,
+                      })
+                    }
+                    label="Require listed locations"
+                    description="Reject returned jobs that do not advertise at least one configured location."
+                  />
+                  <div className="inline-actions">
+                    <Field label="Request budget">
+                      <input
+                        type="number"
+                        min={1}
+                        max={1000}
+                        value={target.searchScope?.maxRequestsPerRun ?? ""}
+                        placeholder="No override"
+                        onChange={(event) =>
+                          updateScope(index, {
+                            maxRequestsPerRun: event.target.value
+                              ? Number(event.target.value)
+                              : undefined,
+                          })
+                        }
+                      />
+                    </Field>
+                    {target.searchScope ? (
+                      <Button
+                        variant="ghost"
+                        size="small"
+                        onClick={() =>
+                          update(index, { searchScope: undefined })
+                        }
+                      >
+                        Clear all source overrides
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
                 <div className="target-card__footer">
                   <Toggle

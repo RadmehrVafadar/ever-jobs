@@ -10,6 +10,29 @@
 
 ---
 
+## Q-080 — Which spec number should describe watch-default inheritance?
+
+**Context:** The repository's `spec:next` helper cannot allocate a number because
+the current `radmehrvafadar/rad.ar` fork has no entry in `.specify/ranges.json`.
+The local 6000-series sequence currently ends at Spec 6004, and this change must
+have its required Spec Kit artifacts before implementation begins.
+
+**Options:**
+
+- **A — Use Spec 6005.** Continues the collision-free local product sequence and
+  allows the requested work to proceed immediately.
+- **B — Add or change a fork range first.** Restores automatic allocation but
+  changes repository-wide numbering policy outside this feature's scope.
+- **C — Stop until a range owner assigns a number.** Avoids making a local
+  numbering choice but blocks the requested behavior change.
+
+**Default (proceeding):** **A.** Use Spec 6005 for watch-default inheritance and
+leave fork-range policy unchanged for human review.
+
+**Resolution:** _(pending human review — default A continues.)_
+
+---
+
 ## Q-079 — Which previously disabled source targets should now be enabled?
 
 **Context:** The operator explicitly requested that every legacy direct-company
