@@ -584,7 +584,15 @@ Compose overrides the worker's `DATABASE_URL` with `COMPOSE_DATABASE_URL`, which
 
 Rebuilding reruns migration deployment safely and idempotently; it does not regenerate or roll back migrations. Restarting never resets watch state, and the bootstrap seeder never updates an existing named watch.
 
-Do not leave `npm run start:watcher:dev` running while the Compose watcher is active unless testing multiple replicas intentionally. Multiple replicas are correctness-safe because of PostgreSQL leases, but both poll the database and produce logs.
+Do not leave `npm run start:watcher:dev` running while the Compose watcher is active unless testing multiple replicas intentionally. Multiple replicas of the same revision are correctness-safe because PostgreSQL leases are acquired per watch, but both poll the database and produce logs. Multiple watch definitions (for example, separate Canadian and US searches) are also supported and scheduled independently.
+
+When deploying a watch-configuration format change, stop every API, CLI-driven
+administration process, and watcher worker that shares the database, then build
+and restart them from one revision. Spec 6005 physically stores inherited
+intervals in a backward-readable form, rejects partially decoded target arrays,
+and prevents a long run from overwriting a backup restore or edit made after the
+run started. A watch already shortened by the earlier release must still be
+restored from its complete backup after the new worker is running.
 
 ## 12. Authenticated REST management
 

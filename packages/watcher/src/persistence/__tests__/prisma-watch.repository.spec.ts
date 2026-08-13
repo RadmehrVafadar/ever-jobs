@@ -113,6 +113,78 @@ describe("PrismaWatchRepository", () => {
     );
   });
 
+  it("stores inherited intervals for the preceding worker while current reads stay sparse", async () => {
+    const create = jest.fn().mockRejectedValue(new Error("captured"));
+    const repository = makeRepository({ jobWatch: { create } });
+
+    await expect(
+      repository.createWatch({
+        name: "Rolling deployment",
+        intervalMinutes: 30,
+        sourceTargets: [
+          { site: "google", tier: 2, enabled: true },
+          {
+            site: "linkedin",
+            tier: 3,
+            intervalMinutes: 60,
+            enabled: true,
+          },
+        ],
+      }),
+    ).rejects.toThrow("captured");
+
+    const stored = create.mock.calls[0][0].data.sourceTargets;
+    expect(stored).toEqual([
+      expect.objectContaining({
+        site: "google",
+        intervalMinutes: 30,
+        intervalMinutesSource: "watch-default",
+      }),
+      expect.objectContaining({
+        site: "linkedin",
+        intervalMinutes: 60,
+      }),
+    ]);
+    expect(stored[1]).not.toHaveProperty("intervalMinutesSource");
+    expect(
+      stored.filter(
+        (target: Record<string, unknown>) =>
+          typeof target.site === "string" &&
+          typeof target.intervalMinutes === "number" &&
+          typeof target.enabled === "boolean",
+      ),
+    ).toHaveLength(2);
+
+    const row = {
+      ...watchRow("Rolling deployment", new Date("2026-08-13T12:00:00Z")),
+      intervalMinutes: 30,
+      sourceTargets: stored,
+    };
+    const reader = makeRepository({
+      jobWatch: { findUnique: jest.fn().mockResolvedValue(row) },
+    });
+    const read = await reader.getWatch("watch-1");
+    expect(read?.sourceTargets[0]).not.toHaveProperty("intervalMinutes");
+    expect(read?.sourceTargets[1].intervalMinutes).toBe(60);
+  });
+
+  it("fails a watch read instead of silently dropping one malformed target", async () => {
+    const row = {
+      ...watchRow("Corrupted targets", new Date("2026-08-13T12:00:00Z")),
+      sourceTargets: [
+        { site: "linkedin", tier: 3, intervalMinutes: 60, enabled: true },
+        { site: "google", tier: 2, intervalMinutes: "30", enabled: true },
+      ],
+    };
+    const repository = makeRepository({
+      jobWatch: { findUnique: jest.fn().mockResolvedValue(row) },
+    });
+
+    await expect(repository.getWatch("watch-1")).rejects.toThrow(
+      "WATCH_SOURCE_TARGETS_INVALID: watch watch-1 sourceTargets entry 1",
+    );
+  });
+
   it("claims a due watch with one conditional update", async () => {
     const updateMany = jest.fn().mockResolvedValue({ count: 1 });
     const repository = makeRepository({
@@ -222,6 +294,59 @@ describe("PrismaWatchRepository", () => {
       }),
     });
     expect(findUnique).toHaveBeenCalledWith({ where: { id: "watch-1" } });
+  });
+
+  it("uses the current watch interval when an atomic patch contains sparse targets", async () => {
+    const expectedUpdatedAt = new Date("2026-08-13T12:00:00.000Z");
+    const appliedUpdatedAt = new Date("2026-08-13T12:00:01.000Z");
+    const updateMany = jest.fn().mockResolvedValue({ count: 1 });
+    const storedTarget = {
+      site: "google",
+      tier: 2,
+      intervalMinutes: 20,
+      intervalMinutesSource: "watch-default",
+      enabled: true,
+    };
+    const transaction = {
+      jobWatch: {
+        updateMany,
+        findUnique: jest.fn().mockResolvedValue({
+          ...watchRow("Sparse patch", appliedUpdatedAt),
+          intervalMinutes: 20,
+          sourceTargets: [storedTarget],
+        }),
+      },
+    };
+    const findCurrent = jest.fn().mockResolvedValue({ intervalMinutes: 20 });
+    const repository = makeRepository({
+      jobWatch: { findUnique: findCurrent },
+      $transaction: jest
+        .fn()
+        .mockImplementation(
+          async (work: (client: unknown) => Promise<unknown>) =>
+            work(transaction),
+        ),
+    });
+
+    const updated = await repository.updateWatchIfCurrent(
+      "watch-1",
+      expectedUpdatedAt,
+      {
+        sourceTargets: [{ site: "google", tier: 2, enabled: true }],
+      },
+    );
+
+    expect(findCurrent).toHaveBeenCalledWith({
+      where: { id: "watch-1" },
+      select: { intervalMinutes: true },
+    });
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: "watch-1", updatedAt: expectedUpdatedAt },
+      data: {
+        sourceTargets: [storedTarget],
+      },
+    });
+    expect(updated?.sourceTargets[0]).not.toHaveProperty("intervalMinutes");
   });
 
   it("returns null from a stale atomic watch patch without reading a row", async () => {

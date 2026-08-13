@@ -1,11 +1,11 @@
 # Spec 6005 — Watch Default Inheritance
 
-| Field | Value |
-| --- | --- |
-| Status | Implemented |
-| Owner | rad.ar |
-| Date | 2026-08-13 |
-| Related specs | 016, 6002, 6003, 6004 |
+| Field         | Value                                         |
+| ------------- | --------------------------------------------- |
+| Status        | Implemented (compatibility hardening amended) |
+| Owner         | rad.ar                                        |
+| Date          | 2026-08-13                                    |
+| Related specs | 016, 6002, 6003, 6004                         |
 
 ## Problem Statement
 
@@ -120,6 +120,34 @@ into `sourceTargets`. Existing documents whose targets contain explicit
 intervals or geography retain those overrides exactly. No data migration is
 required because the persisted JSON target shape only becomes less strict.
 
+The public/API model and exported JSON remain sparse, but PostgreSQL's internal
+JSON representation must remain readable by a worker from the immediately
+preceding expanded-target release. An inherited interval is therefore stored
+with a numeric compatibility value plus an internal inheritance marker. Current
+readers remove that physical value from the public model when the marker is
+present. This prevents a rolling or partially restarted deployment from
+silently treating compact targets as malformed and filtering them out.
+
+Persistence decoding must be all-or-nothing for `sourceTargets`. A malformed
+target array or target entry raises a watch-specific corruption error; a reader
+must never return only the entries it happened to understand. In particular,
+runtime execution must not persist a partially decoded target list.
+
+### Concurrent execution and configuration edits
+
+A watch run operates on a snapshot, but that snapshot is not authoritative for
+configuration when the run completes. Runtime completion may update only
+runtime-owned target fields (`initializedAt`, `lastRunAt`, and `nextRunAt`) on
+the latest target configuration. It must preserve targets added during the run,
+preserve edits to target cadence/scope/identity, and leave targets removed
+during the run removed.
+
+Completion uses the repository's optimistic `updatedAt` contract and retries a
+bounded number of times when an operator edit wins the race. The execution
+heartbeat is stopped before this merge so the worker does not conflict with its
+own lease-renewal updates. If the bounded merge cannot succeed, the run fails
+without replacing the latest configuration.
+
 ### Presets and exports
 
 Preset builders must place shared geography and cadence in watch-level fields
@@ -185,6 +213,12 @@ client requirement.
 
 - Watch create/patch round-trips sparse source targets without expansion.
 - Existing explicit source targets remain behaviorally unchanged.
+- Physical PostgreSQL JSON for inherited intervals remains readable by the
+  preceding release while current API reads remain sparse.
+- A malformed persisted target entry fails the entire watch read instead of
+  returning a shortened list.
+- An operator edit or full backup restore made during a long run survives that
+  run's completion; only runtime-owned fields are merged into matching targets.
 - Watcher and web project builds pass, followed by focused watcher/API/web test
   suites and repository diff checks.
 
@@ -199,4 +233,9 @@ client requirement.
 - Partial target scope settings never cause unrelated defaults to be copied.
 - Generated Canadian internship preset JSON is compact and its effective runtime
   behavior remains covered by tests.
+- Rolling deployment between the expanded and compact target releases cannot
+  delete inherited targets merely because one process still uses the older
+  reader.
+- Completing a run that started before a watch edit cannot roll back the edit
+  or shrink the source-target list.
 - Documentation, index, changelog, and task ledger describe the new contract.
