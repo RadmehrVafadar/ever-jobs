@@ -1,6 +1,7 @@
 import {
   buildCompanyCoverageReport,
   JobWatch,
+  LEGACY_INTERNSHIP_ROLE_FAMILIES,
   PRESTIGE_INTERNSHIPS_V2_ID,
   WatchPresetService,
   WatchRepository,
@@ -199,6 +200,7 @@ function watchFixture(patch: Partial<JobWatch> = {}): JobWatch {
     companySlugs: [],
     companies: [],
     searchTerms: ["software intern"],
+    roleFamilies: [...LEGACY_INTERNSHIP_ROLE_FAMILIES],
     requiredTerms: [],
     preferredTerms: [],
     excludedTerms: [],

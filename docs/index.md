@@ -1763,6 +1763,7 @@
 | 6001 | [rad.ar Product Branding](../.specify/specs/6001-rad-ar-branding/spec.md) — [plan](../.specify/specs/6001-rad-ar-branding/plan.md) — [tasks](../.specify/specs/6001-rad-ar-branding/tasks.md) — [mirror](specs/6001-rad-ar-branding.md) | Implemented 2026-08-01. Makes `rad.ar` the canonical display name while retaining compatibility-sensitive package, environment, metric, protocol, and deployment identifiers. |
 | 6002 | [Local Operator GUI and Notification Routing](../.specify/specs/6002-local-operator-gui/spec.md) — [plan](../.specify/specs/6002-local-operator-gui/plan.md) — [tasks](../.specify/specs/6002-local-operator-gui/tasks.md) — [mirror](specs/6002-local-operator-gui.md) | In progress 2026-08-04. Adds a loopback React/Vite operator GUI, safe optimistic watch apply, named Discord destinations, conditional routing, and browser parity for user-facing CLI operations while retaining legacy contracts. |
 | 6003 | [Canadian Tech Internships](../.specify/specs/6003-canadian-tech-internships/spec.md) — [plan](../.specify/specs/6003-canadian-tech-internships/plan.md) — [tasks](../.specify/specs/6003-canadian-tech-internships/tasks.md) — [mirror](specs/6003-canadian-tech-internships.md) | Implemented 2026-08-10. Replaces the selectable watcher template with a single Toronto/GTA, CA-only profile while retaining the curated companies and term filters. |
+| 6004 | [Canadian Employer Internship Coverage](../.specify/specs/6004-canadian-employer-internship-coverage/spec.md) — [plan](../.specify/specs/6004-canadian-employer-internship-coverage/plan.md) — [tasks](../.specify/specs/6004-canadian-employer-internship-coverage/tasks.md) — [notes](../.specify/specs/6004-canadian-employer-internship-coverage/notes.md) — [mirror](specs/6004-canadian-employer-internship-coverage.md) | Implemented 2026-08-12. Adds a separate disabled 41-employer GTA/Summer-2027 preset, nine role families, efficient official ATS board searches, extraction-failure detection, and a 22-endpoint opt-in live smoke gate (18 parsed-job passes, four authoritative empties, zero failures). Whole-repository validation closeout remains tracked in T13. |
 
 ## 8. Templates
 
@@ -1785,7 +1786,9 @@
 - [GUI Spec-Kit contracts](../.specify/specs/6002-local-operator-gui/spec.md) — authoritative requirements; [implementation plan](../.specify/specs/6002-local-operator-gui/plan.md) and [task ledger](../.specify/specs/6002-local-operator-gui/tasks.md)
 - [Canadian Tech Internships](specs/6003-canadian-tech-internships.md) — human-readable Toronto/GTA template, compatibility, and safe migration contract
 - [Canadian Tech Internships Spec-Kit contracts](../.specify/specs/6003-canadian-tech-internships/spec.md) — authoritative requirements; [implementation plan](../.specify/specs/6003-canadian-tech-internships/plan.md) and [task ledger](../.specify/specs/6003-canadian-tech-internships/tasks.md)
+- [Canadian Employer Internship Coverage](specs/6004-canadian-employer-internship-coverage.md) — human-readable 41-employer preset, ATS mapping, role-family, reliability, smoke, and safe activation contract
+- [Canadian Employer Internship Coverage Spec-Kit contracts](../.specify/specs/6004-canadian-employer-internship-coverage/spec.md) — authoritative requirements; [implementation plan](../.specify/specs/6004-canadian-employer-internship-coverage/plan.md), [task ledger](../.specify/specs/6004-canadian-employer-internship-coverage/tasks.md), and [research notes](../.specify/specs/6004-canadian-employer-internship-coverage/notes.md)
 
 ---
 
-_Last revised: 2026-08-10 (Spec 6003 Canadian Tech Internships)._
+_Last revised: 2026-08-12 (Spec 6004 Canadian Employer Internship Coverage)._

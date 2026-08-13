@@ -1,0 +1,31 @@
+{
+  "jobSearchResult": [
+    {
+      "response": {
+        "id": "DEL-1001",
+        "unifiedStandardTitle": "Technology Risk Analyst Intern - Summer 2027",
+        "unifiedUrlTitle": "Technology-Risk-Analyst-Intern-Summer-2027",
+        "urlTitle": "Technology-Risk-Analyst-Intern-Summer-2027",
+        "mfield1": ["Toronto, ON", "Vaughan, ON"],
+        "employeeType": "Internship",
+        "filter6": ["Co-op/Intern"],
+        "unifiedStandardStart": "8/12/26",
+        "department": "Technology & Transformation",
+        "description": "<p>Assess technology controls with the digital risk team.</p>"
+      }
+    },
+    {
+      "response": {
+        "id": "DEL-1002",
+        "unifiedStandardTitle": "Technical Product Co-op - Summer 2027",
+        "unifiedUrlTitle": "Technical-Product-Co-op-Summer-2027",
+        "jobLocationShort": "Toronto, ON, CA",
+        "filter6": ["Student"],
+        "unifiedStandardStart": "8/11/26",
+        "company": "Deloitte Canada",
+        "jobFunction": "Product & Engineering"
+      }
+    }
+  ],
+  "totalJobs": 26
+}

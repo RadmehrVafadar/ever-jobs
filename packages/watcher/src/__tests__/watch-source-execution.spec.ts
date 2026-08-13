@@ -263,6 +263,47 @@ describe("WatchSourcePlanner", () => {
     expect(queryRequests).toHaveLength(4);
   });
 
+  it("builds bounded term-only requests for explicit board-search targets", () => {
+    const plan = planner.plan(
+      createWatch({
+        sourceTargets: [
+          {
+            site: Site.WORKDAY,
+            tier: 1,
+            intervalMinutes: 10,
+            companySlug: "rbc:3:RBCEARLYTALENT1",
+            companyName: "RBC",
+            companyUrl: "https://rbc.wd3.myworkdayjobs.com/RBCEARLYTALENT1",
+            mode: "board-search",
+            enabled: true,
+            searchScope: {
+              countryCodes: ["CA"],
+              locations: ["Toronto", "Mississauga"],
+              searchTerms: ["Summer 2027", "May 2027", "intern", "co-op"],
+              maxRequestsPerRun: 2,
+            },
+          },
+        ],
+      }),
+      { force: true, rotationSeed: 0 },
+    );
+
+    expect(plan.issues).toEqual([]);
+    expect(plan.requests).toHaveLength(2);
+    expect(
+      plan.requests.every((request) => request.location === undefined),
+    ).toBe(true);
+    expect(plan.requests.map((request) => request.searchTerm)).toEqual(
+      expect.arrayContaining([expect.any(String)]),
+    );
+    expect(plan.requests[0].target).toEqual(
+      expect.objectContaining({
+        mode: "board-search",
+        companyUrl: "https://rbc.wd3.myworkdayjobs.com/RBCEARLYTALENT1",
+      }),
+    );
+  });
+
   it.each([Site.NOTION, Site.RAMP])(
     "classifies %s as a single board request with or without runtime metadata",
     (site) => {
@@ -459,6 +500,60 @@ describe("JobsServiceWatchExecutor", () => {
 
     expect(capturedInputs).toHaveLength(1);
     expect(capturedInputs[0].resultsWanted).toBe(500);
+  });
+
+  it("propagates companyUrl and board-search terms to scraper input", async () => {
+    const capturedInputs: ScraperInputDto[] = [];
+    const executor = new JobsServiceWatchExecutor(
+      {
+        listRegisteredSources: () => [Site.WORKDAY],
+        searchJobs: async (input) => {
+          capturedInputs.push(input);
+          return [];
+        },
+      },
+      new WatchSourcePlanner(),
+      { maxJitterMs: 0 },
+    );
+
+    await executor.execute({
+      watch: createWatch({
+        sourceTargets: [
+          {
+            site: Site.WORKDAY,
+            tier: 1,
+            intervalMinutes: 10,
+            companySlug: "rbc:3:RBCEARLYTALENT1",
+            companyUrl: "https://rbc.wd3.myworkdayjobs.com/RBCEARLYTALENT1",
+            mode: "board-search",
+            enabled: true,
+            searchScope: {
+              countryCodes: ["CA"],
+              locations: ["Toronto"],
+              searchTerms: ["intern", "co-op"],
+              maxRequestsPerRun: 2,
+            },
+          },
+        ],
+      }),
+      force: true,
+    });
+
+    expect(capturedInputs).toHaveLength(2);
+    expect(capturedInputs.map((input) => input.searchTerm).sort()).toEqual([
+      "co-op",
+      "intern",
+    ]);
+    expect(capturedInputs.every((input) => input.location === undefined)).toBe(
+      true,
+    );
+    expect(
+      capturedInputs.every(
+        (input) =>
+          input.companyUrl ===
+          "https://rbc.wd3.myworkdayjobs.com/RBCEARLYTALENT1",
+      ),
+    ).toBe(true);
   });
 
   it("serializes multiple query requests to the same source", async () => {
@@ -725,6 +820,12 @@ function createWatch(overrides: Partial<JobWatch> = {}): JobWatch {
     companySlugs: [],
     companies: [],
     searchTerms: ["software engineer intern"],
+    roleFamilies: [
+      "software-engineering",
+      "data-ai",
+      "cybersecurity",
+      "cloud-platform-infrastructure",
+    ],
     requiredTerms: ["intern"],
     preferredTerms: [],
     excludedTerms: [],

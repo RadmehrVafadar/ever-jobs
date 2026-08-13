@@ -26,6 +26,7 @@ const EDITABLE_FIELDS: Array<keyof EditableWatch> = [
   "companySlugs",
   "companies",
   "searchTerms",
+  "roleFamilies",
   "requiredTerms",
   "preferredTerms",
   "excludedTerms",
@@ -57,6 +58,7 @@ const BEHAVIOR_FIELDS = new Set([
   "companySlugs",
   "companies",
   "searchTerms",
+  "roleFamilies",
   "requiredTerms",
   "preferredTerms",
   "excludedTerms",
@@ -219,6 +221,10 @@ function editableSourceTarget(target: WatchSourceTarget): WatchSourceTarget {
     ...(target.companyName === undefined
       ? {}
       : { companyName: target.companyName }),
+    ...(target.companyUrl === undefined
+      ? {}
+      : { companyUrl: target.companyUrl }),
+    ...(target.mode === undefined ? {} : { mode: target.mode }),
     ...(target.searchScope
       ? {
           searchScope: {
@@ -276,6 +282,7 @@ function assertDraftStructure(
     "companySlugs",
     "companies",
     "searchTerms",
+    "roleFamilies",
     "requiredTerms",
     "preferredTerms",
     "excludedTerms",
@@ -337,6 +344,8 @@ function isSourceTarget(value: unknown): value is WatchSourceTarget {
       "resultsWanted",
       "companySlug",
       "companyName",
+      "companyUrl",
+      "mode",
       "searchScope",
       "enabled",
     ])
@@ -354,6 +363,13 @@ function isSourceTarget(value: unknown): value is WatchSourceTarget {
   if (value.companySlug !== undefined && typeof value.companySlug !== "string")
     return false;
   if (value.companyName !== undefined && typeof value.companyName !== "string")
+    return false;
+  if (value.companyUrl !== undefined && typeof value.companyUrl !== "string")
+    return false;
+  if (
+    value.mode !== undefined &&
+    !["board", "board-search", "query"].includes(String(value.mode))
+  )
     return false;
   if (value.searchScope === undefined) return true;
   return (

@@ -13,6 +13,7 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  IsUrl,
   IsUUID,
   Length,
   Max,
@@ -21,6 +22,10 @@ import {
   ValidateNested,
 } from "class-validator";
 import { ApiProperty, ApiPropertyOptional, PartialType } from "@nestjs/swagger";
+import {
+  INTERNSHIP_ROLE_FAMILIES,
+  InternshipRoleFamily,
+} from "@ever-jobs/watcher";
 
 const WATCH_MATCH_STATUSES = [
   "new",
@@ -126,6 +131,19 @@ export class WatchSourceTargetDto {
   @IsNotEmpty()
   @MaxLength(200)
   companyName?: string;
+
+  @ApiPropertyOptional({ example: "https://jobs.example.ca" })
+  @IsOptional()
+  @IsString()
+  @IsUrl({ require_tld: false })
+  @IsNotEmpty()
+  @MaxLength(2_000)
+  companyUrl?: string;
+
+  @ApiPropertyOptional({ enum: ["board", "board-search", "query"] })
+  @IsOptional()
+  @IsIn(["board", "board-search", "query"])
+  mode?: "board" | "board-search" | "query";
 
   @ApiPropertyOptional({ type: () => WatchSearchScopeDto })
   @IsOptional()
@@ -323,6 +341,15 @@ export class CreateWatchDto {
   @ArrayMaxSize(100)
   @IsString({ each: true })
   searchTerms?: string[];
+
+  @ApiPropertyOptional({ enum: INTERNSHIP_ROLE_FAMILIES, isArray: true })
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(INTERNSHIP_ROLE_FAMILIES.length)
+  @ArrayUnique()
+  @IsIn(INTERNSHIP_ROLE_FAMILIES, { each: true })
+  roleFamilies?: InternshipRoleFamily[];
 
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()

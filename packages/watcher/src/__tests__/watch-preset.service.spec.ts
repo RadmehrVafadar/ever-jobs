@@ -2,6 +2,7 @@ import { readFileSync } from "fs";
 import { resolve } from "path";
 import { BadRequestException, ConflictException } from "@nestjs/common";
 import { Site } from "@ever-jobs/models";
+import { JobWatch } from "../interfaces/watch.types";
 import { InMemoryWatchRepository } from "../persistence/in-memory-watch.repository";
 import {
   assertCanadianTechInternshipCompanyCoverage,
@@ -12,6 +13,15 @@ import {
   CANADIAN_TECH_INTERNSHIPS_ID,
   CANADIAN_TECH_INTERNSHIPS_NAME,
 } from "../services/canadian-tech-internships.preset";
+import {
+  assertCanadianTechAdjacentInternshipCompanyCoverage,
+  CANADIAN_TECH_ADJACENT_INTERNSHIP_COMPANIES,
+  CANADIAN_TECH_ADJACENT_INTERNSHIP_LOCATIONS,
+  CANADIAN_TECH_ADJACENT_INTERNSHIP_ROLE_FAMILIES,
+  canadianTechAdjacentInternshipsWatch,
+  CANADIAN_TECH_ADJACENT_INTERNSHIPS_ID,
+  CANADIAN_TECH_ADJACENT_INTERNSHIPS_NAME,
+} from "../services/canadian-tech-adjacent-internships.preset";
 import {
   validateWatchTargetKeys,
   watchSourceTargetKey,
@@ -207,7 +217,19 @@ describe("canadian-tech-internships preset", () => {
 });
 
 describe("WatchPresetService", () => {
-  it("lists only the Canadian Tech Internships preset and rejects the retired ID", () => {
+  it("hydrates legacy watches with the engineering-family defaults", async () => {
+    const repository = new InMemoryWatchRepository();
+    const watch = await repository.createWatch(canadianTechInternshipsWatch());
+
+    expect(watch.roleFamilies).toEqual([
+      "software-engineering",
+      "data-ai",
+      "cybersecurity",
+      "cloud-platform-infrastructure",
+    ]);
+  });
+
+  it("lists both Canadian internship presets and rejects the retired ID", () => {
     const service = new WatchPresetService(new InMemoryWatchRepository());
 
     expect(service.list()).toEqual([
@@ -216,9 +238,136 @@ describe("WatchPresetService", () => {
         version: 1,
         name: CANADIAN_TECH_INTERNSHIPS_NAME,
       },
+      {
+        id: CANADIAN_TECH_ADJACENT_INTERNSHIPS_ID,
+        version: 1,
+        name: CANADIAN_TECH_ADJACENT_INTERNSHIPS_NAME,
+      },
     ]);
     expect(() => service.get("prestige-internships-v2")).toThrow(
       BadRequestException,
+    );
+  });
+
+  it("defines the separate disabled 41-company tech-adjacent preset", () => {
+    const watch = canadianTechAdjacentInternshipsWatch();
+    const targets = watch.sourceTargets ?? [];
+    const covered = new Set(
+      targets
+        .filter((target) => target.enabled && target.companyName)
+        .map((target) => target.companyName),
+    );
+
+    expect(watch).toEqual(
+      expect.objectContaining({
+        name: CANADIAN_TECH_ADJACENT_INTERNSHIPS_NAME,
+        enabled: false,
+        initializationMode: "baseline",
+        companies: CANADIAN_TECH_ADJACENT_INTERNSHIP_COMPANIES,
+        locations: CANADIAN_TECH_ADJACENT_INTERNSHIP_LOCATIONS,
+        roleFamilies: CANADIAN_TECH_ADJACENT_INTERNSHIP_ROLE_FAMILIES,
+      }),
+    );
+    expect(watch.companies).toHaveLength(41);
+    expect(
+      CANADIAN_TECH_ADJACENT_INTERNSHIP_COMPANIES.every((company) =>
+        covered.has(company),
+      ),
+    ).toBe(true);
+    expect(() =>
+      assertCanadianTechAdjacentInternshipCompanyCoverage(targets),
+    ).not.toThrow();
+    expect(() => new WatchValidationService().parseCreate(watch)).not.toThrow();
+    expect(
+      targets
+        .filter((target) =>
+          CANADIAN_TECH_ADJACENT_INTERNSHIP_COMPANIES.slice(21).includes(
+            target.companyName as never,
+          ),
+        )
+        .every(
+          (target) =>
+            target.enabled &&
+            target.mode === "board-search" &&
+            target.resultsWanted === 25 &&
+            target.searchScope?.maxRequestsPerRun === 2,
+        ),
+    ).toBe(true);
+  });
+
+  it("treats companyUrl and planning mode changes as material", async () => {
+    const repository = new InMemoryWatchRepository();
+    const desired = canadianTechAdjacentInternshipsWatch();
+    const initializedAt = new Date("2026-08-12T12:00:00.000Z");
+    const currentTargets = (desired.sourceTargets ?? []).map((target) =>
+      target.companyName === "RBC"
+        ? {
+            ...target,
+            companyUrl: "https://old.example/rbc",
+            mode: "board" as const,
+            initializedAt,
+          }
+        : { ...target, initializedAt: target.enabled ? initializedAt : null },
+    );
+    const watch = await repository.createWatch({
+      ...desired,
+      sourceTargets: currentTargets,
+      initializedAt,
+    });
+
+    const result = await new WatchPresetService(repository).apply(
+      CANADIAN_TECH_ADJACENT_INTERNSHIPS_ID,
+      watch.id,
+      { apply: true },
+    );
+
+    expect(result.targets.materiallyChanged).toEqual([
+      "workday:rbc:3:RBCEARLYTALENT1",
+    ]);
+    expect(result.targetKeysRequiringInitialization).toEqual([
+      "workday:rbc:3:RBCEARLYTALENT1",
+    ]);
+    expect(
+      result.watch?.sourceTargets.find(
+        (target) => target.companyName === "RBC",
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        companyUrl: "https://rbc.wd3.myworkdayjobs.com/RBCEARLYTALENT1",
+        mode: "board-search",
+        initializedAt: null,
+      }),
+    );
+  });
+
+  it("replaces role-family matching scope with the preset's exact nine families", async () => {
+    const repository = new InMemoryWatchRepository();
+    const desired = canadianTechAdjacentInternshipsWatch();
+    const watch = await repository.createWatch({
+      ...desired,
+      roleFamilies: [
+        "software-engineering",
+        "legacy-experimental" as JobWatch["roleFamilies"][number],
+      ],
+    });
+    const service = new WatchPresetService(repository);
+
+    const preview = await service.apply(
+      CANADIAN_TECH_ADJACENT_INTERNSHIPS_ID,
+      watch.id,
+    );
+    const applied = await service.apply(
+      CANADIAN_TECH_ADJACENT_INTERNSHIPS_ID,
+      watch.id,
+      { apply: true },
+    );
+
+    expect(preview.fields.roleFamiliesAdded).toEqual(
+      CANADIAN_TECH_ADJACENT_INTERNSHIP_ROLE_FAMILIES.slice(1),
+    );
+    expect(preview.fields.roleFamiliesRemoved).toEqual(["legacy-experimental"]);
+    expect(applied.watch?.roleFamilies).toEqual(
+      CANADIAN_TECH_ADJACENT_INTERNSHIP_ROLE_FAMILIES,
     );
   });
 

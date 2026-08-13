@@ -3475,6 +3475,9 @@ export enum Site {
   WEEZTIX = 'weeztix',
   // Phase 1676: Spec 1676 — Source Company Plugin: XSARUS
   XSARUS = 'xsarus',
+  // Spec 6004: Canadian employer internship coverage
+  YELLO = 'yello',
+  ACCENTURE = 'accenture',
 }
 
 /**

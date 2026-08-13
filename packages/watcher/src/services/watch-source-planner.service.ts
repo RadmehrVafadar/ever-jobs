@@ -3,12 +3,12 @@ import { Site } from "@ever-jobs/models";
 import {
   JobWatch,
   WatchSearchScope,
+  WatchSourceMode,
   WatchSourceTarget as ConfiguredWatchSourceTarget,
 } from "../interfaces/watch.types";
 
 export type WatchSourceTier = 1 | 2 | 3;
 export type WatchSourceKind = "direct" | "ats" | "structured" | "fragile";
-export type WatchSourceMode = "board" | "query";
 
 export interface WatchSourceMetadata {
   site: Site | string;
@@ -37,6 +37,7 @@ export interface WatchSourceTarget {
   resultsWanted?: number;
   companySlug?: string;
   companyName?: string;
+  companyUrl?: string;
   searchScope: WatchSearchScope;
   initializedAt?: Date | null;
 }
@@ -151,6 +152,7 @@ const ATS_SITES = new Set<Site>([
   Site.JOIN_COM,
   Site.ORACLE,
   Site.MERCOR,
+  Site.YELLO,
 ]);
 
 /** Direct integrations used by the default internship watch. */
@@ -177,6 +179,7 @@ const DIRECT_SITES = new Set<Site>([
   Site.DATABRICKS,
   Site.NOTION,
   Site.RAMP,
+  Site.ACCENTURE,
 ]);
 
 const STRUCTURED_SITES = new Set<Site>([
@@ -366,6 +369,8 @@ export class WatchSourcePlanner {
         configuredTarget.companySlug?.trim(),
         configuredTarget.companyName?.trim(),
         configuredTarget.resultsWanted,
+        configuredTarget.companyUrl?.trim(),
+        configuredTarget.mode,
       );
       targets.push(target);
 
@@ -637,6 +642,8 @@ export class WatchSourcePlanner {
     companySlug?: string,
     companyName?: string,
     resultsWanted?: number,
+    companyUrl?: string,
+    configuredMode?: WatchSourceMode,
   ): WatchSourceTarget {
     return {
       key: companySlug ? `${source.site}:${companySlug}` : source.site,
@@ -645,12 +652,14 @@ export class WatchSourcePlanner {
       tier,
       kind: source.kind,
       mode:
+        configuredMode ??
         metadata?.watchMode ??
         (source.kind === "direct" || source.kind === "ats" ? "board" : "query"),
       intervalMinutes,
       resultsWanted,
       companySlug,
       companyName,
+      companyUrl,
       searchScope,
       initializedAt,
     };
@@ -670,6 +679,36 @@ export class WatchSourcePlanner {
           countryCodes: [...target.searchScope.countryCodes],
           matrixIndex: 0,
         });
+        continue;
+      }
+
+      if (target.mode === "board-search") {
+        const searchTerms = uniqueNonEmpty(target.searchScope.searchTerms);
+        if (searchTerms.length === 0) {
+          issues.push({
+            code: "missing-search-terms",
+            source: target.key,
+            message: `Board-search source "${target.key}" requires at least one non-empty search term`,
+            severity: "error",
+          });
+          continue;
+        }
+        const complete = searchTerms.map(
+          (searchTerm, matrixIndex): WatchSourceRequest => ({
+            id: `${target.key}:term-${matrixIndex + 1}`,
+            target,
+            searchTerm,
+            countryCodes: [...target.searchScope.countryCodes],
+            matrixIndex,
+          }),
+        );
+        const maximum = positiveInteger(
+          target.searchScope.maxRequestsPerRun ?? options.maximum,
+          DEFAULT_MAX_REQUESTS_PER_SOURCE,
+        );
+        requests.push(
+          ...rotateMatrixRequests(complete, target, maximum, options),
+        );
         continue;
       }
 

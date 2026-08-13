@@ -392,6 +392,12 @@ function watchFixture(patch: Partial<JobWatch> = {}): JobWatch {
     companySlugs: [],
     companies: [],
     searchTerms: ["software intern"],
+    roleFamilies: [
+      "software-engineering",
+      "data-ai",
+      "cybersecurity",
+      "cloud-platform-infrastructure",
+    ],
     requiredTerms: [],
     preferredTerms: [],
     excludedTerms: [],

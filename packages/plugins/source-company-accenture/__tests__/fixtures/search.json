@@ -1,0 +1,36 @@
+{
+  "data": [
+    {
+      "country": "Canada",
+      "updateDate": "2026-08-10T12:30:00-04:00",
+      "jobScheduleDescription": "Full time",
+      "jobFamilyGroup": ["Software Engineering"],
+      "jobTypeDescription": "Early Career",
+      "title": "Summer 2027 Software Engineering Intern",
+      "jobDetailUrl": "https://www.accenture.com/{0}/careers/jobdetails?id=R100_en&title=Software+Intern",
+      "requisitionId": "R100",
+      "guid": "R100_en",
+      "jobDescription": "<p>Build cloud software with TypeScript. Email campus@example.test.</p>",
+      "location": ["Toronto, Ontario", "Mississauga, Ontario"],
+      "internalReferURL": "https://accenture.wd103.myworkdayjobs.com/AccentureCareers/job/Toronto/Software-Intern_R100/apply",
+      "jobProfile": "Custom Software Engineering New Associate",
+      "employeeType": "Internship",
+      "skill": ["Software Engineering"],
+      "workdaySkill": ["Cloud"]
+    },
+    {
+      "country": "Canada",
+      "updateDate": "2026-08-09T12:30:00-04:00",
+      "jobFamilyGroup": ["Security"],
+      "title": "Summer 2027 Cybersecurity Co-op",
+      "jobDetailUrl": "https://www.accenture.com/{0}/careers/jobdetails?id=R101_en",
+      "requisitionId": "R101",
+      "jobDescriptionClean": "Support security assessments.",
+      "location": ["Toronto, Ontario"],
+      "remoteType": "Hybrid",
+      "employeeType": "Full-time"
+    }
+  ],
+  "totalHits": { "total": 2, "overMaxHits": "False" },
+  "message": "Success"
+}

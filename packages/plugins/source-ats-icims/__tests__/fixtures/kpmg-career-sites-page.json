@@ -1,0 +1,47 @@
+{
+  "jobs": [
+    {
+      "data": {
+        "slug": "33352",
+        "req_id": "33352",
+        "title": "Deal Advisory Summer Intern - Toronto - Summer 2027",
+        "description": "<p>Build digital infrastructure models.</p>",
+        "location_name": "Toronto, ON",
+        "city": "Toronto",
+        "state": "Ontario",
+        "country": "Canada",
+        "country_code": "CA",
+        "categories": [{ "name": "Advisory" }],
+        "tags1": ["Intern/Co-op"],
+        "tags2": ["Application deadline: September 13, 2026"],
+        "tags3": ["Campus Hire"],
+        "employment_type": "INTERN",
+        "posted_date": "2026-08-10T12:00:00+0000",
+        "apply_url": "https://students-kpmgca.icims.com/jobs/33352/login",
+        "hiring_organization": { "name": "KPMG Canada" }
+      }
+    },
+    {
+      "data": {
+        "slug": "33361",
+        "req_id": "33361",
+        "title": "IT Audit Co-op - Mississauga - Summer 2027",
+        "description": "<p>Support technology risk and IT controls engagements.</p>",
+        "location_name": "Mississauga, ON",
+        "city": "Mississauga",
+        "state": "Ontario",
+        "country": "Canada",
+        "country_code": "CA",
+        "categories": [{ "name": "Risk Services" }],
+        "tags1": ["Intern/Co-op"],
+        "tags2": ["Application deadline: September 13, 2026"],
+        "posted_date": "2026-08-11T09:30:00+0000",
+        "apply_url": "https://students-kpmgca.icims.com/jobs/33361/login",
+        "hiring_organization": "KPMG Canada"
+      }
+    }
+  ],
+  "totalCount": 2,
+  "count": 2,
+  "languageCounts": { "en-us": { "displayName": "English", "count": 2 } }
+}

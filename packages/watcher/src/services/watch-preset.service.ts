@@ -17,9 +17,14 @@ import {
   WatchPresetApplyPolicy,
   WatchPresetDefinition,
 } from "./canadian-tech-internships.preset";
+import { CANADIAN_TECH_ADJACENT_INTERNSHIPS_PRESET } from "./canadian-tech-adjacent-internships.preset";
 
 const PRESETS = new Map<string, WatchPresetDefinition>([
   [CANADIAN_TECH_INTERNSHIPS_PRESET.id, CANADIAN_TECH_INTERNSHIPS_PRESET],
+  [
+    CANADIAN_TECH_ADJACENT_INTERNSHIPS_PRESET.id,
+    CANADIAN_TECH_ADJACENT_INTERNSHIPS_PRESET,
+  ],
 ]);
 
 const LEGACY_BROAD_REQUIRED_TERMS = new Set([
@@ -41,6 +46,8 @@ export interface WatchPresetFieldDiff {
   intervalMinutes: { from: number; to: number } | null;
   sourcesAdded: string[];
   searchTermsAdded: string[];
+  roleFamiliesAdded: string[];
+  roleFamiliesRemoved: string[];
   locationsAdded: string[];
   locationsRemoved: string[];
   countryCodesAdded: string[];
@@ -267,6 +274,10 @@ function buildPresetPatch(
     companySlugs: mergeValues(current.companySlugs, desired.companySlugs ?? []),
     companies: mergeValues(current.companies, desired.companies ?? []),
     searchTerms: mergeValues(current.searchTerms, desired.searchTerms ?? []),
+    roleFamilies:
+      applyPolicy?.roleFamilies === "replace"
+        ? [...new Set(desired.roleFamilies ?? [])]
+        : mergeRoleFamilies(current.roleFamilies, desired.roleFamilies ?? []),
     // Broad legacy values such as "student" are removed because they are not
     // internship evidence. Unrelated operator-authored requirements survive.
     requiredTerms: mergeValues(retainedRequired, desiredRequired),
@@ -328,6 +339,14 @@ function fieldDiff(
         : { from: current.intervalMinutes, to: nextInterval },
     sourcesAdded: addedValues(current.sources, patch.sources ?? []),
     searchTermsAdded: addedValues(current.searchTerms, patch.searchTerms ?? []),
+    roleFamiliesAdded: addedValues(
+      current.roleFamilies,
+      patch.roleFamilies ?? [],
+    ),
+    roleFamiliesRemoved: addedValues(
+      patch.roleFamilies ?? [],
+      current.roleFamilies,
+    ),
     locationsAdded: addedValues(current.locations, patch.locations ?? []),
     locationsRemoved: addedValues(patch.locations ?? [], current.locations),
     countryCodesAdded: addedValues(
@@ -360,6 +379,8 @@ function materialTarget(target: WatchSourceTarget): Record<string, unknown> {
     site: String(target.site).trim(),
     companySlug: target.companySlug?.trim() ?? null,
     companyName: target.companyName?.trim() ?? null,
+    companyUrl: target.companyUrl?.trim() ?? null,
+    mode: target.mode ?? null,
     tier: target.tier,
     intervalMinutes: target.intervalMinutes,
     resultsWanted: target.resultsWanted ?? null,
@@ -404,6 +425,13 @@ function mergeValues(
   right: readonly string[],
 ): string[] {
   return uniqueValues([...left, ...right]);
+}
+
+function mergeRoleFamilies(
+  left: JobWatch["roleFamilies"],
+  right: JobWatch["roleFamilies"],
+): JobWatch["roleFamilies"] {
+  return [...new Set([...left, ...right])];
 }
 
 function uniqueValues(values: readonly string[]): string[] {

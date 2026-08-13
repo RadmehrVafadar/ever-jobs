@@ -218,15 +218,26 @@ non-empty timestamps, consecutive hard failures, and degradation state.
 
 Coverage is a normalized exact company-name match against
 `sourceTargets[].companyName`. Generic discovery boards do not count. The
-Canadian Tech Internships preset reports 21 first-class covered companies and
-leaves RBC, TD, Scotiabank, BMO, and CIBC visibly uncovered.
+original Canadian Tech Internships preset reports 21 first-class covered
+companies and leaves RBC, TD, Scotiabank, BMO, and CIBC visibly uncovered. The
+separate Canadian Tech + Adjacent Internships preset requires first-class
+coverage for all 41 configured employer groups, including the Big Five banks
+and 15 additional consulting, retail, insurance, and telecom employers.
 
-#### Apply the Canadian Tech Internships preset
+The 2026-08-12 opt-in live gate completed all 22 official cohort endpoints with
+18 parsed-job passes, four authoritative empty boards, no failures, and no
+invalid direct application URLs. Endpoint success does not imply that every
+employer currently has a GTA Summer 2027 role. Repeat
+`npm run smoke:canadian-employers` before applying and baselining the expanded
+preset.
+
+#### Apply a Canadian internship preset
 
 Preset application is a dry run by default:
 
 ```bash
 npm run cli -- watch preset apply canadian-tech-internships --watch <watch-id>
+npm run cli -- watch preset apply canadian-tech-adjacent-internships --watch <watch-id>
 ```
 
 The JSON diff classifies targets as unchanged, added, materially changed,
@@ -238,13 +249,20 @@ npm run cli -- watch pause <watch-id> --json
 npm run cli -- watch preset apply canadian-tech-internships \
   --watch <watch-id> \
   --apply
+
+# Or apply the separate 41-employer, nine-role-family preset.
+npm run cli -- watch preset apply canadian-tech-adjacent-internships \
+  --watch <watch-id> \
+  --apply
 ```
 
 Mutation rejects an enabled watch. It preserves notification destinations,
-thresholds, history, and unrelated operator edits. Target `resultsWanted` is
-material configuration: it accepts integers from 1 through 1000, persists in
-the existing target JSON, and defaults to existing executor behavior when
-omitted. Baseline only target keys
+thresholds, history, and unrelated operator edits. Target `resultsWanted`,
+`mode`, `companyUrl`, and search scope are material configuration. `mode` is
+`board`, `board-search`, or `query`; `companyUrl` carries an official vanity ATS
+listing URL into the source request without changing the stable target key.
+`resultsWanted` accepts integers from 1 through 1000, persists in the existing
+target JSON, and defaults to existing executor behavior when omitted. Baseline only target keys
 reported as added or materially changed, inspect their locations/application
 URLs and health, then repeat targeted initialization for two additional
 no-notification observation cycles before resume.

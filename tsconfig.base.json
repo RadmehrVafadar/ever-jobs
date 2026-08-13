@@ -852,6 +852,9 @@
       "@ever-jobs/source-company-deloitte": [
         "packages/plugins/source-company-deloitte/src/index.ts"
       ],
+      "@ever-jobs/source-company-accenture": [
+        "packages/plugins/source-company-accenture/src/index.ts"
+      ],
       "@ever-jobs/source-company-deliveryhero": [
         "packages/plugins/source-company-deliveryhero/src/index.ts"
       ],
@@ -5471,6 +5474,9 @@
       ],
       "@ever-jobs/source-ats-gem": [
         "packages/plugins/source-ats-gem/src/index.ts"
+      ],
+      "@ever-jobs/source-ats-yello": [
+        "packages/plugins/source-ats-yello/src/index.ts"
       ],
       "@ever-jobs/source-ats-joincom": [
         "packages/plugins/source-ats-joincom/src/index.ts"

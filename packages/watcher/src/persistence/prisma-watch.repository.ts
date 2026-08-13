@@ -13,7 +13,10 @@ import {
   AcquireWatchLeaseInput,
   ClaimNotificationDeliveryInput,
   CreateNotificationDeliveryInput,
+  INTERNSHIP_ROLE_FAMILIES,
+  InternshipRoleFamily,
   JobWatch,
+  LEGACY_INTERNSHIP_ROLE_FAMILIES,
   NotificationDelivery,
   NotificationDeliveryQuery,
   NotificationStatus,
@@ -70,7 +73,7 @@ export class PrismaWatchRepository implements WatchRepository {
       // Connectivity alone is insufficient: the scheduler cannot operate
       // until watcher migrations have created its durable tables.
       await this.prisma.$queryRaw(
-        Prisma.sql`SELECT "targetHealth", "notificationRoutes" FROM "JobWatch" LIMIT 0`,
+        Prisma.sql`SELECT "targetHealth", "notificationRoutes", "roleFamilies" FROM "JobWatch" LIMIT 0`,
       );
       await this.prisma.$queryRaw(
         Prisma.sql`SELECT "sourceTargetKey", "locations", "canonicalEpisodeKey", "canonicalEpisodeStartedAt" FROM "ObservedJob" LIMIT 0`,
@@ -858,6 +861,9 @@ function watchCreateData(
     companySlugs: jsonInput(input.companySlugs ?? []),
     companies: jsonInput(input.companies ?? []),
     searchTerms: jsonInput(input.searchTerms ?? []),
+    roleFamilies: jsonInput(
+      input.roleFamilies ?? [...LEGACY_INTERNSHIP_ROLE_FAMILIES],
+    ),
     requiredTerms: jsonInput(input.requiredTerms ?? []),
     preferredTerms: jsonInput(input.preferredTerms ?? []),
     excludedTerms: jsonInput(input.excludedTerms ?? []),
@@ -919,6 +925,9 @@ function watchUpdateData(
     data.companies = jsonInput(input.companies);
   if (input.searchTerms !== undefined) {
     data.searchTerms = jsonInput(input.searchTerms);
+  }
+  if (input.roleFamilies !== undefined) {
+    data.roleFamilies = jsonInput(input.roleFamilies);
   }
   if (input.requiredTerms !== undefined) {
     data.requiredTerms = jsonInput(input.requiredTerms);
@@ -1172,6 +1181,7 @@ function mapWatch(row: PrismaJobWatch): JobWatch {
     companySlugs: stringArray(row.companySlugs),
     companies: stringArray(row.companies),
     searchTerms: stringArray(row.searchTerms),
+    roleFamilies: roleFamiliesFromStorage(row.roleFamilies),
     requiredTerms: stringArray(row.requiredTerms),
     preferredTerms: stringArray(row.preferredTerms),
     excludedTerms: stringArray(row.excludedTerms),
@@ -1324,6 +1334,10 @@ function sourceTargetsForStorage(
     ...(target.companyName === undefined
       ? {}
       : { companyName: target.companyName }),
+    ...(target.companyUrl === undefined
+      ? {}
+      : { companyUrl: target.companyUrl }),
+    ...(target.mode === undefined ? {} : { mode: target.mode }),
     ...(target.searchScope === undefined
       ? {}
       : {
@@ -1388,6 +1402,14 @@ function sourceTargetsFromStorage(
         : {}),
       ...(typeof candidate.companyName === "string"
         ? { companyName: candidate.companyName }
+        : {}),
+      ...(typeof candidate.companyUrl === "string"
+        ? { companyUrl: candidate.companyUrl }
+        : {}),
+      ...(candidate.mode === "board" ||
+      candidate.mode === "board-search" ||
+      candidate.mode === "query"
+        ? { mode: candidate.mode }
         : {}),
       ...(searchScopeFromStorage(candidate.searchScope)
         ? { searchScope: searchScopeFromStorage(candidate.searchScope) }
@@ -1575,6 +1597,18 @@ function isJsonObject(value: unknown): value is Prisma.JsonObject {
 function stringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.filter((item): item is string => typeof item === "string");
+}
+
+function roleFamiliesFromStorage(value: unknown): InternshipRoleFamily[] {
+  if (!Array.isArray(value)) return [...LEGACY_INTERNSHIP_ROLE_FAMILIES];
+  const allowed = new Set<string>(INTERNSHIP_ROLE_FAMILIES);
+  const values = value.filter(
+    (item): item is InternshipRoleFamily =>
+      typeof item === "string" && allowed.has(item),
+  );
+  return values.length > 0
+    ? [...new Set(values)]
+    : [...LEGACY_INTERNSHIP_ROLE_FAMILIES];
 }
 
 function numberRecord(value: Prisma.JsonValue): Record<string, number> {

@@ -4,10 +4,12 @@ import { DescriptionFormat, ScraperInputDto, Site } from '@ever-jobs/models';
 
 const mockPost = jest.fn();
 const mockGet = jest.fn();
+const mockRandomSleep = jest.fn();
 jest.mock('@ever-jobs/common', () => {
   const actual = jest.requireActual('@ever-jobs/common');
   return {
     ...actual,
+    randomSleep: mockRandomSleep,
     createHttpClient: jest.fn(() => ({
       post: mockPost,
       get: mockGet,
@@ -18,6 +20,10 @@ jest.mock('@ever-jobs/common', () => {
 
 import { WorkdayModule } from '../src/workday.module';
 import { WorkdayService } from '../src/workday.service';
+import {
+  WORKDAY_EXTRACTION_ERROR_CODE,
+  WorkdayExtractionError,
+} from '../src/workday.error';
 
 /** A single short page (< WORKDAY_PAGE_SIZE) so scrape() does one request. */
 const JOBS_PAGE = {
@@ -70,7 +76,9 @@ describe('WorkdayService — Spec 720 / T05', () => {
   beforeEach(() => {
     mockPost.mockReset();
     mockGet.mockReset();
+    mockRandomSleep.mockReset();
     mockGet.mockResolvedValue({ data: {} });
+    mockRandomSleep.mockResolvedValue(undefined);
   });
 
   describe('registration scaffolding', () => {
@@ -98,6 +106,7 @@ describe('WorkdayService — Spec 720 / T05', () => {
       const after = isoDateOf(new Date());
 
       expect(result.jobs).toHaveLength(4);
+      expect(result.advertisedCount).toBe(4);
       expect(mockPost).toHaveBeenCalledTimes(1);
       expect(mockPost.mock.calls[0][0]).toBe(
         'https://tesla.wd5.myworkdayjobs.com/wday/cxs/tesla/Tesla/jobs',
@@ -141,6 +150,8 @@ describe('WorkdayService — Spec 720 / T05', () => {
       expect(job?.jobUrl).toBe(
         'https://tesla.wd5.myworkdayjobs.com/job/Austin-TX/Software-Engineer_R-101/12345',
       );
+      expect(job?.jobUrlDirect).toBe(job?.jobUrl);
+      expect(job?.applyUrl).toBe(job?.jobUrl);
       expect(job?.location?.city).toBe('Austin');
       expect(job?.location?.state).toBe('TX');
       expect(job?.department).toBe('Engineering');
@@ -157,6 +168,7 @@ describe('WorkdayService — Spec 720 / T05', () => {
         siteType: [Site.WORKDAY],
       } as ScraperInputDto);
       expect(result.jobs).toEqual([]);
+      expect(result.advertisedCount).toBeUndefined();
       expect(mockPost).not.toHaveBeenCalled();
     });
 
@@ -168,6 +180,7 @@ describe('WorkdayService — Spec 720 / T05', () => {
         companySlug: 'tesla:5:Tesla',
       } as ScraperInputDto);
       expect(result.jobs).toEqual([]);
+      expect(result.advertisedCount).toBeUndefined();
     });
 
     it('returns empty when the payload has no jobPostings', async () => {
@@ -178,6 +191,106 @@ describe('WorkdayService — Spec 720 / T05', () => {
         companySlug: 'tesla:5:Tesla',
       } as ScraperInputDto);
       expect(result.jobs).toEqual([]);
+      expect(result.advertisedCount).toBe(0);
+    });
+
+    it('throws a typed extraction error when Workday advertises jobs but parses none', async () => {
+      mockPost.mockResolvedValueOnce({ data: { total: 7, jobPostings: [] } });
+      const service = new WorkdayService();
+      let thrown: unknown;
+
+      try {
+        await service.scrape({
+          siteType: [Site.WORKDAY],
+          companySlug: 'tesla:5:Tesla',
+        } as ScraperInputDto);
+      } catch (error) {
+        thrown = error;
+      }
+
+      expect(thrown).toBeInstanceOf(WorkdayExtractionError);
+      expect(thrown).toEqual(
+        expect.objectContaining({
+          name: 'WorkdayExtractionError',
+          code: WORKDAY_EXTRACTION_ERROR_CODE,
+          companySlug: 'tesla:5:Tesla',
+          advertisedResultCount: 7,
+        }),
+      );
+    });
+  });
+
+  describe('server-side search and result bounds — Spec 6004', () => {
+    function makeListings(start: number, count: number) {
+      return Array.from({ length: count }, (_, index) => {
+        const jobNumber = start + index;
+        return {
+          title: `Internship Role ${jobNumber}`,
+          externalPath: `/job/Toronto-ON/Internship-Role-${jobNumber}/${10000 + jobNumber}`,
+          locationsText: 'Toronto, ON',
+          postedOn: 'Posted Today',
+        };
+      });
+    }
+
+    it('passes the requested term to the Workday CXS search payload', async () => {
+      mockPost.mockResolvedValueOnce({
+        data: { total: 1, jobPostings: makeListings(0, 1) },
+      });
+
+      const result = await new WorkdayService().scrape({
+        siteType: [Site.WORKDAY],
+        companySlug: 'rbc:3:RBCEARLYTALENT1',
+        searchTerm: 'Summer 2027',
+      } as ScraperInputDto);
+
+      expect(result.jobs).toHaveLength(1);
+      expect(mockPost).toHaveBeenCalledWith(
+        'https://rbc.wd3.myworkdayjobs.com/wday/cxs/rbc/RBCEARLYTALENT1/jobs',
+        {
+          appliedFacets: {},
+          limit: 20,
+          offset: 0,
+          searchText: 'Summer 2027',
+        },
+      );
+    });
+
+    it('paginates with the same search term and caps listing detail enrichment', async () => {
+      mockPost
+        .mockResolvedValueOnce({
+          data: { total: 40, jobPostings: makeListings(0, 20) },
+        })
+        .mockResolvedValueOnce({
+          data: { total: 40, jobPostings: makeListings(20, 20) },
+        });
+
+      const result = await new WorkdayService().scrape({
+        siteType: [Site.WORKDAY],
+        companySlug: 'rbc:3:RBCEARLYTALENT1',
+        searchTerm: 'co-op',
+        resultsWanted: 25,
+      } as ScraperInputDto);
+
+      expect(result.jobs).toHaveLength(25);
+      expect(result.advertisedCount).toBe(40);
+      expect(mockPost).toHaveBeenCalledTimes(2);
+      expect(mockPost.mock.calls.map((call) => call[1])).toEqual([
+        {
+          appliedFacets: {},
+          limit: 20,
+          offset: 0,
+          searchText: 'co-op',
+        },
+        {
+          appliedFacets: {},
+          limit: 20,
+          offset: 20,
+          searchText: 'co-op',
+        },
+      ]);
+      expect(mockGet).toHaveBeenCalledTimes(25);
+      expect(mockRandomSleep).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -243,6 +356,8 @@ describe('WorkdayService — Spec 720 / T05', () => {
       expect(job.department).toBe('Engineering');
       expect(job.isRemote).toBe(true);
       expect(job.jobUrl).toBe(DETAIL.jobPostingInfo.externalUrl);
+      expect(job.jobUrlDirect).toBe(DETAIL.jobPostingInfo.externalUrl);
+      expect(job.applyUrl).toBe(DETAIL.jobPostingInfo.externalUrl);
       expect(job.datePosted).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });
 
@@ -315,6 +430,8 @@ describe('WorkdayService — Spec 720 / T05', () => {
       expect(result.jobs[0].location?.city).toBe('Rockville');
       expect(result.jobs[0].location?.state).toBe('MD');
       expect(result.jobs[0].companyName).toBe('xenergy');
+      expect(result.jobs[0].jobUrlDirect).toBe(result.jobs[0].jobUrl);
+      expect(result.jobs[0].applyUrl).toBe(result.jobs[0].jobUrl);
     });
 
     it('starts no more than five detail requests before the first batch settles', async () => {
@@ -445,11 +562,11 @@ describe('WorkdayService — Spec 720 / T05', () => {
       expect(job.location?.country).toBe('United States');
     });
 
-    it('leaves country unset when no alpha2Code is present', async () => {
+    it('retains shared-parser country inference when no alpha2Code is present', async () => {
       const job = await scrapeWith(
         detail({ location: 'Rockville, MD', additionalLocations: [], jobRequisitionLocation: null }),
       );
-      expect(job.location?.country == null).toBe(true);
+      expect(job.location?.country).toBe('United States');
     });
 
     it('prefers the absolute startDate over the lossy relative postedOn label', async () => {

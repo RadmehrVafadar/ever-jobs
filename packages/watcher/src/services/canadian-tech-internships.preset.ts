@@ -18,6 +18,7 @@ export interface WatchPresetDefinition {
   applyPolicy?: {
     locations?: "merge" | "replace";
     countryCodes?: "merge" | "replace";
+    roleFamilies?: "merge" | "replace";
   };
   createWatch(): Partial<JobWatch>;
 }
@@ -222,6 +223,8 @@ function scope(
   };
 }
 
+export const createCanadianInternshipSearchScope = scope;
+
 function target(
   input: Omit<WatchSourceTarget, "initializedAt" | "lastRunAt" | "nextRunAt">,
 ): WatchSourceTarget {
@@ -240,7 +243,9 @@ function target(
   };
 }
 
-function sourceTargets(): WatchSourceTarget[] {
+export const createCanadianInternshipSourceTarget = target;
+
+export function canadianTechInternshipSourceTargets(): WatchSourceTarget[] {
   const gtaScope = () => scope(["CA"], CANADIAN_TECH_INTERNSHIP_LOCATIONS);
   const targets: WatchSourceTarget[] = [
     target({
@@ -339,7 +344,7 @@ function sourceTargets(): WatchSourceTarget[] {
 }
 
 export function canadianTechInternshipsWatch(): Partial<JobWatch> {
-  const targets = sourceTargets();
+  const targets = canadianTechInternshipSourceTargets();
   assertCanadianTechInternshipCompanyCoverage(targets);
   const sources = [...new Set(targets.map(({ site }) => String(site)))];
   return {

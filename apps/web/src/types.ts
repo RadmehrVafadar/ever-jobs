@@ -61,6 +61,8 @@ export interface WatchSourceTarget {
   resultsWanted?: number;
   companySlug?: string;
   companyName?: string;
+  companyUrl?: string;
+  mode?: "board" | "board-search" | "query";
   searchScope?: WatchSearchScope;
   enabled: boolean;
   initializedAt?: string | null;
@@ -97,6 +99,7 @@ export interface JobWatch {
   companySlugs: string[];
   companies: string[];
   searchTerms: string[];
+  roleFamilies: InternshipRoleFamily[];
   requiredTerms: string[];
   preferredTerms: string[];
   excludedTerms: string[];
@@ -118,6 +121,17 @@ export interface JobWatch {
   createdAt: string;
   updatedAt: string;
 }
+
+export type InternshipRoleFamily =
+  | "software-engineering"
+  | "data-ai"
+  | "cybersecurity"
+  | "cloud-platform-infrastructure"
+  | "qa-automation"
+  | "technical-product"
+  | "ux-product-design"
+  | "systems-business-analysis"
+  | "technology-risk-it-audit";
 
 export interface ScoreBreakdown {
   total: number;

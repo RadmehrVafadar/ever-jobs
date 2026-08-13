@@ -14,9 +14,8 @@
  *    `?site=gem&companySlug=accel`,
  *    `?site=join_com&companySlug=primer-ai` — each returns
  *    `200 OK` + non-empty body, against a sandboxed nock-fixture
- *    upstream. Asserts dedup-engine collapses identical postings
- *    across the three plugins (zero collisions on the synthetic
- *    fixture)."
+ *    upstream. Asserts the dedup engine collapses the single canonical
+ *    posting shared by the Avature and Gem synthetic fixtures."
  *
  * Departures from the literal acceptance text:
  *
@@ -36,9 +35,8 @@
  *   3. **Slug = `acme-corp` for all three.** The unit suites pin
  *      tenant-specific slugs (`bloomberg` / `accel` / `primer-ai`),
  *      but the fixture corpus is a thin synthetic — the same slug
- *      across all three plugins exercises the `same-input → distinct
- *      outputs` branch of the dedup engine (different vendor prefixes
- *      on the canonical id collapse zero pairs).
+ *      across all three plugins exercises content-based canonical dedup:
+ *      vendor ids stay distinct, but one Acme remote-SRE pair collapses.
  */
 import 'reflect-metadata';
 import * as fs from 'fs';
@@ -230,7 +228,7 @@ describe('E2E — Spec 006 / T10 (POST /api/jobs/search across avature × gem ×
     }
   });
 
-  it('cross-plugin fan-out → all three contribute, dedup runs but produces zero collisions', async () => {
+  it('cross-plugin fan-out → all three contribute and one canonical pair deduplicates', async () => {
     const res = await request(app.getHttpServer())
       .post('/api/jobs/search')
       .send({
@@ -250,10 +248,11 @@ describe('E2E — Spec 006 / T10 (POST /api/jobs/search across avature × gem ×
     expect(sites.has(Site.GEM)).toBe(true);
     expect(sites.has(Site.JOIN_COM)).toBe(true);
 
-    // Zero collisions on the synthetic fixture: post-dedup count equals
-    // the raw fan-out count. A future fixture refactor that shares
-    // canonical-key inputs across plugins would relax this assertion.
-    expect(res.body.count).toBe(res.body.raw_count);
+    // Avature and Gem intentionally normalize one Acme remote-SRE posting to
+    // the same canonical key; the remaining fixture rows stay distinct.
+    expect(res.body.raw_count).toBe(17);
+    expect(res.body.count).toBe(16);
+    expect(res.body.raw_count - res.body.count).toBe(1);
   });
 
   it('cross-plugin with ?dedup=false → flag is false, count equals raw_count', async () => {

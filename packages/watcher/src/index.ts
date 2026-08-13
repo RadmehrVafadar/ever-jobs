@@ -8,6 +8,7 @@ export * from "./services/daily-digest.service";
 export * from "./services/default-watch";
 export * from "./services/default-watch-seeder.service";
 export * from "./services/canadian-tech-internships.preset";
+export * from "./services/canadian-tech-adjacent-internships.preset";
 export * from "./services/prestige-internships-v2.preset";
 export * from "./services/watch-preset.service";
 export * from "./services/company-coverage.service";
@@ -23,7 +24,6 @@ export {
 export type {
   WatchSourceKind,
   WatchSourceMetadata,
-  WatchSourceMode,
   WatchSourcePlan,
   WatchSourcePlanIssue,
   WatchSourcePlanIssueCode,

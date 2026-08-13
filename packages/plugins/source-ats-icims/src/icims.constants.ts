@@ -1,5 +1,8 @@
 /**
- * iCIMS is a JS-rendered SPA that requires Playwright for reliable scraping.
+ * iCIMS exposes two public career-site generations. Legacy portals render a
+ * search document under `*.icims.com/jobs/search`; current Career Sites
+ * (formerly Jibe) expose a paginated `/api/jobs` JSON endpoint. Playwright is
+ * retained only as a bounded last-resort compatibility path.
  *
  * Company slug format: subdomain (e.g., `facebook`)
  * Search URL: https://{company}.icims.com/jobs/search?ss=1&searchKeyword={term}&searchLocation={location}
@@ -8,8 +11,20 @@
  * Delay: 3000-5000ms
  */
 
-/** Default page size for iCIMS pagination */
+/** Default page size for legacy `*.icims.com/jobs/search` pagination. */
 export const ICIMS_PAGE_SIZE = 20;
+
+/** Default page size for current iCIMS Career Sites `/api/jobs`. */
+export const ICIMS_CAREER_SITES_PAGE_SIZE = 25;
+
+/** Maximum redirect/iframe discovery hops before using the browser fallback. */
+export const ICIMS_MAX_DISCOVERY_HOPS = 2;
+
+/** Maximum hydrated pages visited by the Playwright fallback. */
+export const ICIMS_MAX_PLAYWRIGHT_PAGES = 3;
+
+/** Hydration wait used only by the browser fallback. */
+export const ICIMS_PLAYWRIGHT_HYDRATION_MS = 2500;
 
 /** Minimum delay between iCIMS requests (ms) */
 export const ICIMS_DELAY_MIN = 3000;
@@ -55,4 +70,22 @@ export function buildIcimsGatewayUrl(company: string, offset: number): string {
   params.set('mode', 'job');
   params.set('iis', 'Internet');
   return `https://${company}.icims.com/jobs/search?${params.toString()}`;
+}
+
+/** Build the current iCIMS Career Sites (Jibe) public JSON endpoint. */
+export function buildIcimsCareerSitesApiUrl(
+  portalUrl: string,
+  page: number,
+  limit: number,
+  keyword?: string,
+  location?: string,
+): string {
+  const portal = new URL(portalUrl);
+  const url = new URL('/api/jobs', portal.origin);
+  url.searchParams.set('lang', 'en-US');
+  url.searchParams.set('limit', String(limit));
+  url.searchParams.set('page', String(page));
+  if (keyword) url.searchParams.set('keywords', keyword);
+  if (location) url.searchParams.set('location', location);
+  return url.toString();
 }

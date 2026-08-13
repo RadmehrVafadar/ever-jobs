@@ -35,6 +35,7 @@ import {
   WorkdayJobListItem,
   WorkdaySearchResponse,
 } from './workday.types';
+import { WorkdayExtractionError } from './workday.error';
 
 @SourcePlugin({
   site: Site.WORKDAY,
@@ -66,6 +67,7 @@ export class WorkdayService implements IScraper {
     const resultsWanted = input.resultsWanted ?? 100;
     const listingsToEnrich: WorkdayJobListItem[] = [];
     let offset = 0;
+    let advertisedResultCount: number | null = null;
 
     try {
       this.logger.log(`Fetching Workday jobs for ${company} (wd${wdNumber}/${site})`);
@@ -75,12 +77,16 @@ export class WorkdayService implements IScraper {
           appliedFacets: {},
           limit: WORKDAY_PAGE_SIZE,
           offset,
-          searchText: '',
+          searchText: input.searchTerm ?? '',
         };
 
         const response = await client.post(apiUrl, payload);
         const data: WorkdaySearchResponse = response.data ?? {};
-        const listings = data.jobPostings ?? [];
+        const listings = Array.isArray(data.jobPostings) ? data.jobPostings : [];
+
+        if (typeof data.total === 'number' && Number.isFinite(data.total)) {
+          advertisedResultCount = Math.max(advertisedResultCount ?? 0, data.total);
+        }
 
         if (listings.length === 0) break;
 
@@ -93,6 +99,10 @@ export class WorkdayService implements IScraper {
           if (listingsToEnrich.length >= resultsWanted) break;
           listingsToEnrich.push(listing);
         }
+
+        // Reaching the caller's cap is a successful terminal condition. Avoid
+        // both another page request and an unnecessary rate-limit delay.
+        if (listingsToEnrich.length >= resultsWanted) break;
 
         offset += listings.length;
 
@@ -107,7 +117,7 @@ export class WorkdayService implements IScraper {
       this.logger.error(`Workday scrape error for ${company}: ${err.message}`);
     }
 
-    return this.buildResponse(
+    const result = await this.buildResponse(
       client,
       listingsToEnrich,
       company,
@@ -115,6 +125,17 @@ export class WorkdayService implements IScraper {
       site,
       input.descriptionFormat,
     );
+
+    if (advertisedResultCount !== null) {
+      result.advertisedCount = advertisedResultCount;
+    }
+
+    const advertisedCount = result.advertisedCount ?? 0;
+    if (advertisedCount > 0 && result.jobs.length === 0) {
+      throw new WorkdayExtractionError(companySlug, advertisedCount);
+    }
+
+    return result;
   }
 
   private async buildResponse(
@@ -205,7 +226,7 @@ export class WorkdayService implements IScraper {
     const summaryJobUrl = externalPath
       ? `https://${company}.wd${wdNumber}.myworkdayjobs.com${externalPath.startsWith('/') ? '' : '/'}${externalPath}`
       : `https://${company}.wd${wdNumber}.myworkdayjobs.com/en-US/${site}/details/${encodeURIComponent(title)}`;
-    const jobUrl = info?.externalUrl ?? summaryJobUrl;
+    const jobUrl = info?.externalUrl?.trim() || summaryJobUrl;
 
     const description = this.formatDescription(info?.jobDescription, format);
 
@@ -263,6 +284,8 @@ export class WorkdayService implements IScraper {
       title,
       companyName,
       jobUrl,
+      jobUrlDirect: jobUrl,
+      applyUrl: jobUrl,
       location,
       description,
       compensation,

@@ -3,6 +3,39 @@
 > Append-only log of every doc/spec edit. **Newest entry at the top.** This is a
 > human-readable audit trail; for source-code history, see `git log`.
 
+## 2026-08-12 — Spec 6004: Canadian employer internship coverage
+
+- Added the authoritative specification, plan, task ledger, research notes, and
+  human-readable mirror for the separate disabled **Canadian Tech + Adjacent
+  Internships** revision-1 preset. The original Canadian Tech Internships preset
+  remains unchanged.
+- Added branded official-source coverage for the five banks and 15 consulting,
+  retail/consumer, insurance, and telecom employer groups, bringing the expanded
+  preset to 41 covered companies with zero intentional deferrals.
+- Added bounded term-only board searching (two rotating requests with 25
+  normalized results per request), official vanity ATS URL propagation, nine
+  technology role families, broader strict-GTA aliases, and extraction-
+  failure handling for positive advertised counts that parse to zero jobs.
+- Added Yello and Accenture source coverage and strengthened Workday, iCIMS, and
+  SuccessFactors behavior for the approved employer cohort.
+- Added the TypeScript-only, opt-in `smoke:canadian-employers` command and
+  deterministic helper tests. The reviewed network-enabled run on 2026-08-12
+  completed all 22 endpoints with exit code 0: 18 parsed-job passes, four
+  authoritative upstream-zero boards (Loblaw main, PC Financial, Shoppers Drug
+  Mart, and Bell), no failures, and no invalid parsed direct URLs. KPMG's bounded
+  sample included four combined GTA + Summer 2027 + role matches; Deloitte
+  parsed successfully but had no Summer 2027 evidence. No claim is made that
+  every employer currently has a qualifying opening.
+- Updated the README, watcher and CLI guides, local runbook, machine-readable
+  tool manifest, ATS company-slug directory, and documentation index with the
+  new preset, role families, official board mappings, and paused
+  apply/baseline/review/resume workflow.
+- Marked implementation tasks T01–T13 complete after the five-project production
+  build, 15-suite/215-test watcher run, 14-suite/79-test API run, focused
+  24-suite/330-test Spec 6004 regressions, deterministic smoke tests, and live
+  smoke passed. Recorded the unrelated pre-existing docs-lint findings and the
+  Windows Prisma DLL lock without modifying the operator's running services.
+
 ## 2026-08-11 — Windows-safe Prisma GUI startup
 
 - Changed the local GUI launcher to reuse an already-current Prisma client when

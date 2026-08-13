@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.1.0",
+  "schema_version": "1.2.0",
   "name": "ever-jobs",
   "display_name": "rad.ar",
   "description": "Multi-source job search and persistent watcher. Searches job boards, ATS platforms, and company career pages concurrently, returns normalized multi-location job postings, and can monitor target-scoped internship coverage through REST API and CLI.",
@@ -14,8 +14,8 @@
       "supported_sites": {
         "job_boards": ["linkedin", "indeed", "glassdoor", "zip_recruiter", "google", "bayt", "naukri", "bdjobs", "internshala", "exa", "upwork", "dice", "simplyhired", "wellfound", "stepstone", "monster", "careerbuilder", "builtin", "snagajob", "dribbble", "solidjobs"],
         "remote_boards": ["remoteok", "remotive", "weworkremotely", "jobicy", "himalayas", "arbeitnow"],
-        "ats_platforms": ["greenhouse", "lever", "ashby", "workable", "smartrecruiters", "jobvite", "workday", "successfactors", "taleo", "icims", "adp", "ukg", "rippling", "recruitee", "teamtailor", "bamboohr", "personio", "jazzhr"],
-        "company_pages": ["amazon", "apple", "microsoft", "nvidia", "tiktok", "uber", "cursor", "google_careers", "shopify", "meta", "netflix", "stripe", "openai", "notion", "ramp", "ibm"],
+        "ats_platforms": ["greenhouse", "lever", "ashby", "workable", "smartrecruiters", "jobvite", "workday", "successfactors", "taleo", "icims", "yello", "adp", "ukg", "rippling", "recruitee", "teamtailor", "bamboohr", "personio", "jazzhr"],
+        "company_pages": ["amazon", "apple", "microsoft", "nvidia", "tiktok", "uber", "cursor", "google_careers", "shopify", "meta", "netflix", "stripe", "openai", "notion", "ramp", "ibm", "accenture"],
         "aggregators": ["usajobs", "adzuna", "reed", "jooble", "careerjet"]
       },
       "output_formats": ["json", "csv", "table", "summary"],
@@ -40,9 +40,30 @@
       "description": "Persist, baseline, schedule, inspect, and safely update target-aware job watches",
       "preset": "canadian-tech-internships",
       "preset_revision": 1,
+      "available_presets": [
+        {
+          "id": "canadian-tech-internships",
+          "name": "Canadian Tech Internships",
+          "revision": 1,
+          "configured_companies": 26,
+          "first_class_covered_companies": 21
+        },
+        {
+          "id": "canadian-tech-adjacent-internships",
+          "name": "Canadian Tech + Adjacent Internships",
+          "revision": 1,
+          "configured_companies": 41,
+          "first_class_covered_companies": 41,
+          "enabled_by_default": false,
+          "initialized_by_default": false,
+          "role_families": ["software-engineering", "data-ai", "cybersecurity", "cloud-platform-infrastructure", "qa-automation", "technical-product", "ux-product-design", "systems-business-analysis", "technology-risk-it-audit"]
+        }
+      ],
       "preset_apply": {
         "dry_run_command": "npm run cli -- watch preset apply canadian-tech-internships --watch <watch-id>",
         "apply_command": "npm run cli -- watch preset apply canadian-tech-internships --watch <watch-id> --apply",
+        "expanded_dry_run_command": "npm run cli -- watch preset apply canadian-tech-adjacent-internships --watch <watch-id>",
+        "expanded_apply_command": "npm run cli -- watch preset apply canadian-tech-adjacent-internships --watch <watch-id> --apply",
         "mutation_requires_paused_watch": true
       },
       "targeted_initialize": {
@@ -59,8 +80,20 @@
           "optional": true,
           "legacy_default_behavior": "When omitted, the watcher executor uses its configured default."
         },
+        "mode": {
+          "type": "string",
+          "values": ["board", "board-search", "query"],
+          "optional": true,
+          "board_search_behavior": "Rotates bounded term-only requests and applies strict geography after normalization."
+        },
+        "companyUrl": {
+          "type": "string",
+          "format": "uri",
+          "optional": true,
+          "description": "Official vanity-domain ATS listing URL forwarded to the source adapter."
+        },
         "persistence": "Stored in the existing sourceTargets JSON; no database migration is required.",
-        "material_diff_field": true
+        "material_diff_fields": ["resultsWanted", "mode", "companyUrl", "searchScope"]
       },
       "company_coverage": {
         "rest": "GET /api/watches/:id/coverage",
@@ -73,6 +106,12 @@
           "configured": 26,
           "covered": 21,
           "deferred_uncovered": ["RBC", "TD", "Scotiabank", "BMO", "CIBC"]
+        },
+        "expanded_target_company_inventory": {
+          "configured": 41,
+          "covered": 41,
+          "deferred_uncovered": [],
+          "added_employer_groups": ["RBC", "TD", "Scotiabank", "BMO", "CIBC", "KPMG", "PwC", "Deloitte Canada", "EY Canada", "Accenture Canada", "Aritzia", "Loblaw", "Canadian Tire", "Canada Goose", "Manulife", "Sun Life", "Intact", "Bell", "Rogers", "TELUS"]
         }
       },
       "geography": {
@@ -96,6 +135,12 @@
         "canadajobbank": { "entries": 209, "max_requests_per_run": 12 },
         "google": { "entries": 209, "max_requests_per_run": 12 },
         "linkedin": { "entries": 209, "max_requests_per_run": 8, "recent_window_hours": 72 }
+      },
+      "board_search": {
+        "terms": ["Summer 2027", "May 2027", "intern", "co-op"],
+        "max_requests_per_ten_minute_run": 2,
+        "multiplies_terms_by_locations": false,
+        "location_filter_stage": "after normalization"
       },
       "activation_policy": "Keep the watch paused; preview/apply the Canadian Tech Internships preset, baseline every added or materially changed enabled target without notifications, review failures and results, then explicitly resume",
       "canonical_identity": {
@@ -124,7 +169,35 @@
         "linkedin": "Unauthenticated public listing/detail live pass",
         "microsoft": "Live timeout; target remains operator-enabled inside the globally disabled watch",
         "google": "SOURCE_BLOCKED enable-JavaScript shell; target disabled",
-        "phase_13_rollout_gate": "Fixture validation, operator-authorized disabled live smokes, targeted baselines, and two no-notification observation cycles for uber, notion, ramp, netflix, and ibm"
+        "phase_13_rollout_gate": "Fixture validation, operator-authorized disabled live smokes, targeted baselines, and two no-notification observation cycles for uber, notion, ramp, netflix, and ibm",
+        "spec_6004_live_smoke": {
+          "date": "2026-08-12",
+          "command": "npm run smoke:canadian-employers -- --json",
+          "exit_code": 0,
+          "endpoints": 22,
+          "employer_groups": 20,
+          "parsed_job_passes": 18,
+          "authoritative_empty": ["Loblaw main", "PC Financial", "Shoppers Drug Mart", "Bell"],
+          "failures": 0,
+          "invalid_direct_urls": 0,
+          "kpmg": {
+            "advertised": 28,
+            "parsed": 25,
+            "gta": 23,
+            "summer_2027": 19,
+            "gta_summer_2027_role": 4,
+            "valid_direct_urls": 25
+          },
+          "deloitte_canada": {
+            "advertised": 109,
+            "parsed": 25,
+            "gta": 25,
+            "role_matches": 1,
+            "summer_2027": 0,
+            "valid_direct_urls": 25
+          },
+          "interpretation": "Endpoint/parser evidence for the dated run only; it does not claim every employer currently has a qualifying GTA Summer 2027 role."
+        }
       },
       "linkedin_policy": "Unauthenticated public guest search only; newest-first 72-hour window; no login, personal cookies, CAPTCHA bypass, or personalized-alert parity claim"
     }
@@ -145,6 +218,9 @@
       "initialize_body": { "targetKeys": ["uber", "notion", "ramp", "netflix", "ibm"] },
       "coverage_endpoint": "GET /api/watches/:id/coverage",
       "coverage_command": "npm run cli -- watch coverage --id <watch-id>",
+      "expanded_preset_preview_command": "npm run cli -- watch preset apply canadian-tech-adjacent-internships --watch <watch-id>",
+      "expanded_preset_apply_command": "npm run cli -- watch preset apply canadian-tech-adjacent-internships --watch <watch-id> --apply",
+      "canadian_employer_live_smoke_command": "npm run smoke:canadian-employers",
       "health_endpoint": "GET /health",
       "metrics_endpoint": "GET /metrics"
     }
