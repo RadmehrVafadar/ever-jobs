@@ -38,6 +38,7 @@ export class WatcherMetricsService {
   readonly notificationLatency: Histogram;
   readonly schedulerLastPoll: Gauge;
   readonly schedulerActiveRuns: Gauge;
+  readonly schedulerCapacity: Gauge;
   readonly targetRunsTotal: Counter;
   readonly targetConsecutiveHardFailures: Gauge;
   readonly targetDegraded: Gauge;
@@ -121,6 +122,11 @@ export class WatcherMetricsService {
     this.schedulerActiveRuns = new Gauge({
       name: "ever_jobs_watcher_scheduler_active_runs",
       help: "Number of watch runs active in this process.",
+      registers: [this.registry],
+    });
+    this.schedulerCapacity = new Gauge({
+      name: "ever_jobs_watcher_scheduler_capacity",
+      help: "Maximum concurrent scheduled watch runs in this process.",
       registers: [this.registry],
     });
     this.targetRunsTotal = new Counter({
@@ -218,10 +224,7 @@ export class WatcherMetricsService {
     counts: CompanyCoverageMetricCounts,
   ): void {
     for (const status of COMPANY_COVERAGE_METRIC_STATUSES) {
-      this.companyCoverage.set(
-        { watch_id: watchId, status },
-        counts[status],
-      );
+      this.companyCoverage.set({ watch_id: watchId, status }, counts[status]);
     }
   }
 

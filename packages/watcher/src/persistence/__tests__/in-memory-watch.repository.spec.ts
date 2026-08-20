@@ -1,6 +1,46 @@
 import { InMemoryWatchRepository } from "../in-memory-watch.repository";
 
 describe("InMemoryWatchRepository contract", () => {
+  it("orders due watches null-first and then by due time, creation time, and id", async () => {
+    const repository = new InMemoryWatchRepository();
+    const now = new Date("2026-08-19T12:00:00.000Z");
+    const earlierCreation = new Date("2026-08-01T00:00:00.000Z");
+    const laterCreation = new Date("2026-08-02T00:00:00.000Z");
+    const inputs = [
+      {
+        id: "scheduled-later",
+        nextRunAt: new Date(now.getTime() - 1_000),
+        createdAt: earlierCreation,
+      },
+      { id: "null-b", nextRunAt: null, createdAt: laterCreation },
+      {
+        id: "scheduled-b",
+        nextRunAt: new Date(now.getTime() - 2_000),
+        createdAt: laterCreation,
+      },
+      { id: "null-a", nextRunAt: null, createdAt: laterCreation },
+      { id: "null-oldest", nextRunAt: null, createdAt: earlierCreation },
+      {
+        id: "scheduled-a",
+        nextRunAt: new Date(now.getTime() - 2_000),
+        createdAt: laterCreation,
+      },
+    ];
+    for (const input of inputs) {
+      await repository.createWatch({ ...input, enabled: true });
+    }
+
+    const due = await repository.listDueWatches(now, 20);
+    expect(due.map(({ id }) => id)).toEqual([
+      "null-oldest",
+      "null-a",
+      "null-b",
+      "scheduled-a",
+      "scheduled-b",
+      "scheduled-later",
+    ]);
+  });
+
   it("allows explicit initialization of a disabled watch but never schedules it", async () => {
     const repository = new InMemoryWatchRepository();
     const now = new Date("2026-07-14T12:00:00.000Z");

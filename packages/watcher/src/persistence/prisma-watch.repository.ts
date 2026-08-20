@@ -109,7 +109,11 @@ export class PrismaWatchRepository implements WatchRepository {
           },
         ],
       },
-      orderBy: [{ nextRunAt: "asc" }, { createdAt: "asc" }],
+      orderBy: [
+        { nextRunAt: { sort: "asc", nulls: "first" } },
+        { createdAt: "asc" },
+        { id: "asc" },
+      ],
       take: clampLimit(limit),
     });
     return rows.map(mapWatch);

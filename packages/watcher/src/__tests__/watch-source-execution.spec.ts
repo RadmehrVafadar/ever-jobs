@@ -657,6 +657,125 @@ describe("JobsServiceWatchExecutor", () => {
     );
   });
 
+  it("shares the global concurrency limit across concurrent watch executions", async () => {
+    let active = 0;
+    let maximumActive = 0;
+    let calls = 0;
+    const release = deferredValue<void>();
+    const executor = new JobsServiceWatchExecutor(
+      {
+        listRegisteredSources: () => [
+          Site.GOOGLE_CAREERS,
+          Site.AMAZON,
+          Site.UBER,
+        ],
+        searchJobs: async () => {
+          calls += 1;
+          active += 1;
+          maximumActive = Math.max(maximumActive, active);
+          await release.promise;
+          active -= 1;
+          return [];
+        },
+      },
+      new WatchSourcePlanner(),
+      {
+        maxConcurrency: 2,
+        maxConcurrencyPerSource: 2,
+        maxJitterMs: 0,
+        timeoutMs: 1_000,
+      },
+    );
+
+    const executions = [
+      executor.execute({
+        watch: createWatch({
+          id: "global-limit-watch-1",
+          sourceTargets: [sourceTarget(Site.GOOGLE_CAREERS, 1)],
+        }),
+        force: true,
+      }),
+      executor.execute({
+        watch: createWatch({
+          id: "global-limit-watch-2",
+          sourceTargets: [sourceTarget(Site.AMAZON, 1)],
+        }),
+        force: true,
+      }),
+      executor.execute({
+        watch: createWatch({
+          id: "global-limit-watch-3",
+          sourceTargets: [sourceTarget(Site.UBER, 1)],
+        }),
+        force: true,
+      }),
+    ];
+
+    await waitFor(() => calls >= 2);
+    const activeBeforeRelease = active;
+    release.resolve(undefined);
+    const results = await Promise.all(executions);
+
+    expect(activeBeforeRelease).toBe(2);
+    expect(maximumActive).toBe(2);
+    expect(calls).toBe(3);
+    expect(results.every((result) => result.status === "completed")).toBe(true);
+  });
+
+  it("shares the per-source concurrency limit across concurrent watch executions", async () => {
+    let active = 0;
+    let maximumActive = 0;
+    let calls = 0;
+    const release = deferredValue<void>();
+    const executor = new JobsServiceWatchExecutor(
+      {
+        listRegisteredSources: () => [Site.GOOGLE_CAREERS],
+        searchJobs: async () => {
+          calls += 1;
+          active += 1;
+          maximumActive = Math.max(maximumActive, active);
+          await release.promise;
+          active -= 1;
+          return [];
+        },
+      },
+      new WatchSourcePlanner(),
+      {
+        maxConcurrency: 4,
+        maxConcurrencyPerSource: 1,
+        maxJitterMs: 0,
+        timeoutMs: 1_000,
+      },
+    );
+
+    const executions = [
+      executor.execute({
+        watch: createWatch({
+          id: "source-limit-watch-1",
+          sourceTargets: [sourceTarget(Site.GOOGLE_CAREERS, 1)],
+        }),
+        force: true,
+      }),
+      executor.execute({
+        watch: createWatch({
+          id: "source-limit-watch-2",
+          sourceTargets: [sourceTarget(Site.GOOGLE_CAREERS, 1)],
+        }),
+        force: true,
+      }),
+    ];
+
+    await waitFor(() => calls >= 1);
+    const activeBeforeRelease = active;
+    release.resolve(undefined);
+    const results = await Promise.all(executions);
+
+    expect(activeBeforeRelease).toBe(1);
+    expect(maximumActive).toBe(1);
+    expect(calls).toBe(2);
+    expect(results.every((result) => result.status === "completed")).toBe(true);
+  });
+
   it("forwards scoped locations and effective countries and attributes each job", async () => {
     const capturedInputs: ScraperInputDto[] = [];
     const service: WatchJobsService = {
@@ -899,4 +1018,25 @@ function sourceTarget(site: Site, tier: 1 | 2 | 3) {
 
 function delay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function deferredValue<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+} {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolver) => {
+    resolve = resolver;
+  });
+  return { promise, resolve };
+}
+
+async function waitFor(predicate: () => boolean): Promise<void> {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    if (predicate()) return;
+    await new Promise<void>((resolve) => setImmediate(resolve));
+  }
+  throw new Error(
+    "Condition was not met before the deterministic test deadline",
+  );
 }

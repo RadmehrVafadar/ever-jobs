@@ -237,7 +237,7 @@ describe("WatchExecutionService durable pipeline", () => {
     expect(page.items[0].externalJobId).toBe("1970393556866710");
   });
 
-  it("allows only one replica to hold the database lease for a watch", async () => {
+  it("prevents manual and scheduled triggers from overlapping across replicas", async () => {
     const now = new Date("2026-07-14T12:00:00.000Z");
     const repository = new InMemoryWatchRepository();
     const watch = await repository.createWatch(pipelineWatch());
@@ -258,16 +258,146 @@ describe("WatchExecutionService durable pipeline", () => {
       "replica-b",
     );
 
-    const activeRun = first.runWatch(watch.id, "baseline");
+    const activeRun = first.runWatch(watch.id, "baseline", {
+      trigger: "manual",
+      forceSources: true,
+    });
     await waitFor(() => executor.execute.mock.calls.length === 1);
 
-    await expect(second.runWatch(watch.id, "baseline")).rejects.toBeInstanceOf(
-      ConflictException,
-    );
+    await expect(
+      second.runWatch(watch.id, "baseline", {
+        trigger: "scheduled",
+        requireDue: true,
+        forceSources: false,
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
     expect(executor.execute).toHaveBeenCalledTimes(1);
 
     deferred.resolve(sourceResult([]));
     await expect(activeRun).resolves.toMatchObject({ status: "completed" });
+  });
+
+  it("keeps concurrent watches scoped while sharing one observed job", async () => {
+    const initializedAt = new Date("2026-07-14T11:00:00.000Z");
+    const now = new Date("2026-07-14T12:00:00.000Z");
+    const repository = new InMemoryWatchRepository();
+    const firstWatch = await repository.createWatch(
+      pipelineWatch({
+        name: "Concurrent pipeline A",
+        initializedAt,
+        sourceTargets: [sourceTarget(Site.GOOGLE_CAREERS, 1, initializedAt)],
+        notificationChannels: [
+          { type: "discord", destinationRef: "concurrent-watch-a" },
+        ],
+      }),
+    );
+    const secondWatch = await repository.createWatch(
+      pipelineWatch({
+        name: "Concurrent pipeline B",
+        initializedAt,
+        sourceTargets: [sourceTarget(Site.GOOGLE_CAREERS, 1, initializedAt)],
+        notificationChannels: [
+          { type: "discord", destinationRef: "concurrent-watch-b" },
+        ],
+      }),
+    );
+    const sharedJob = internship(
+      "concurrent-shared-1",
+      "Shared concurrent observation",
+    );
+    const deferred = deferredValue<WatchSourcesExecutionResult>();
+    const executor = fakeExecutor(() => deferred.promise);
+    const provider = successfulProvider();
+    const execution = executionService(
+      repository,
+      executor,
+      provider,
+      () => now,
+      "concurrent-pipeline-worker",
+    );
+
+    const firstRun = execution.runWatch(firstWatch.id);
+    const secondRun = execution.runWatch(secondWatch.id);
+    await waitFor(() => executor.execute.mock.calls.length === 2);
+    deferred.resolve(sourceResult([sharedJob]));
+    const runs = await Promise.all([firstRun, secondRun]);
+
+    expect(runs.map((run) => run.status)).toEqual(["completed", "completed"]);
+    expect(runs.reduce((total, run) => total + run.newJobsDetected, 0)).toBe(1);
+    expect(runs.map((run) => run.matchesCreated)).toEqual([1, 1]);
+    expect(runs.map((run) => run.notificationsSent)).toEqual([1, 1]);
+
+    const [
+      observed,
+      firstMatches,
+      secondMatches,
+      firstDeliveries,
+      secondDeliveries,
+    ] = await Promise.all([
+      repository.listObservedJobs({}),
+      repository.listMatches({ watchId: firstWatch.id }),
+      repository.listMatches({ watchId: secondWatch.id }),
+      repository.listNotifications({ watchId: firstWatch.id }),
+      repository.listNotifications({ watchId: secondWatch.id }),
+    ]);
+
+    expect(observed).toMatchObject({ total: 1 });
+    expect(firstMatches).toMatchObject({
+      total: 1,
+      items: [
+        expect.objectContaining({
+          watchId: firstWatch.id,
+          observedJobId: observed.items[0].id,
+          notificationState: "sent",
+        }),
+      ],
+    });
+    expect(secondMatches).toMatchObject({
+      total: 1,
+      items: [
+        expect.objectContaining({
+          watchId: secondWatch.id,
+          observedJobId: observed.items[0].id,
+          notificationState: "sent",
+        }),
+      ],
+    });
+    expect(firstMatches.items[0].id).not.toBe(secondMatches.items[0].id);
+    expect(firstDeliveries).toMatchObject({
+      total: 1,
+      items: [
+        expect.objectContaining({
+          watchMatchId: firstMatches.items[0].id,
+          destinationRef: "concurrent-watch-a",
+          status: "sent",
+        }),
+      ],
+    });
+    expect(secondDeliveries).toMatchObject({
+      total: 1,
+      items: [
+        expect.objectContaining({
+          watchMatchId: secondMatches.items[0].id,
+          destinationRef: "concurrent-watch-b",
+          status: "sent",
+        }),
+      ],
+    });
+    expect(provider.send).toHaveBeenCalledTimes(2);
+    expect(provider.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        watch: expect.objectContaining({ id: firstWatch.id }),
+        match: expect.objectContaining({ watchId: firstWatch.id }),
+      }),
+      expect.objectContaining({ destinationRef: "concurrent-watch-a" }),
+    );
+    expect(provider.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        watch: expect.objectContaining({ id: secondWatch.id }),
+        match: expect.objectContaining({ watchId: secondWatch.id }),
+      }),
+      expect.objectContaining({ destinationRef: "concurrent-watch-b" }),
+    );
   });
 
   it("preserves a full backup restore applied while a long run is active", async () => {

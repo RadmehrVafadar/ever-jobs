@@ -59,10 +59,20 @@ export class InMemoryWatchRepository implements WatchRepository {
           (!watch.nextRunAt || watch.nextRunAt <= now) &&
           (!watch.leaseExpiresAt || watch.leaseExpiresAt <= now),
       )
-      .sort(
-        (left, right) =>
-          (left.nextRunAt?.getTime() ?? 0) - (right.nextRunAt?.getTime() ?? 0),
-      )
+      .sort((left, right) => {
+        if (!left.nextRunAt && right.nextRunAt) return -1;
+        if (left.nextRunAt && !right.nextRunAt) return 1;
+        if (left.nextRunAt && right.nextRunAt) {
+          const nextRunDifference =
+            left.nextRunAt.getTime() - right.nextRunAt.getTime();
+          if (nextRunDifference !== 0) return nextRunDifference;
+        }
+        const createdDifference =
+          left.createdAt.getTime() - right.createdAt.getTime();
+        return createdDifference !== 0
+          ? createdDifference
+          : left.id.localeCompare(right.id);
+      })
       .slice(0, clampLimit(limit));
   }
 

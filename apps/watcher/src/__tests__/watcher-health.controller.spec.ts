@@ -78,6 +78,11 @@ describe("WatcherHealthController", () => {
     await expect(controller.health()).resolves.toEqual(
       expect.objectContaining({
         status: "healthy",
+        scheduler: expect.objectContaining({
+          maxConcurrentWatches: 2,
+          activeWatchCount: 1,
+          activeWatchIds: ["watch-1"],
+        }),
         coverage: expect.objectContaining({
           status: "degraded",
           tier1Degraded: true,
@@ -116,6 +121,9 @@ function makeController(
       databaseHealthy: true,
       lastPollAt: new Date("2026-07-14T12:00:00.000Z"),
       lastError: null,
+      maxConcurrentWatches: 2,
+      activeWatchCount: 1,
+      activeWatchIds: ["watch-1"],
     })),
   } as unknown as WatcherSchedulerService;
   const config = {

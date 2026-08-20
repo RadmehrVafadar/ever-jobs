@@ -3,6 +3,32 @@
 > Append-only log of every doc/spec edit. **Newest entry at the top.** This is a
 > human-readable audit trail; for source-code history, see `git log`.
 
+## 2026-08-19 — run #6007 — Spec 6006 concurrent watch scheduling
+
+- Added the authoritative Spec 6006 specification, implementation plan, task
+  ledger, and human-readable mirror for bounded concurrent automatically
+  scheduled watches.
+- Serialized and coalesced scheduler admission around active run promises so
+  distinct due IDs can fill `WATCHER_MAX_CONCURRENT_WATCHES` without
+  oversubscription or same-watch overlap, and released slots request prompt
+  backfill.
+- Standardized durable due ordering as null-first `nextRunAt`, then `createdAt`
+  and ID; excess candidates remain due in PostgreSQL instead of entering an
+  in-memory pending queue.
+- Documented that `WATCHER_MAX_CONCURRENT_SOURCES` and per-source limiters are
+  process-wide across concurrent watches, while PostgreSQL leases retain the
+  cross-trigger and cross-replica same-watch safety boundary.
+- Added configured/occupied scheduler capacity to health and Prometheus
+  guidance, documented non-accepting bounded shutdown, and added controlled
+  two-watch plus optional FIFO-backfill verification procedures for local,
+  Cloud Run, and Mac Mini operators.
+- Validation passed all 15 watcher suites (238 tests), the watcher health
+  controller suite (2 tests), watcher package and app type checks, and all five
+  production builds. Nx has no configured lint tasks. Documentation lint
+  reaches only the eight pre-existing findings: two deprecated broken example
+  links, four historical duplicate log entries, and two Spec 5024 metadata
+  findings.
+
 ## 2026-08-13 — run #6006 — Spec 6005 persistence and long-run overwrite hardening
 
 - Traced disappearing source targets to two independent persistence hazards:

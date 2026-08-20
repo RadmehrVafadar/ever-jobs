@@ -2,6 +2,24 @@ import { PrismaWatchRepository } from "../prisma-watch.repository";
 import { WatcherPrismaService } from "../watcher-prisma.service";
 
 describe("PrismaWatchRepository", () => {
+  it("queries due watches in deterministic null-first FIFO order", async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const repository = makeRepository({ jobWatch: { findMany } });
+    const now = new Date("2026-08-19T12:00:00.000Z");
+
+    await expect(repository.listDueWatches(now, 4)).resolves.toEqual([]);
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [
+          { nextRunAt: { sort: "asc", nulls: "first" } },
+          { createdAt: "asc" },
+          { id: "asc" },
+        ],
+        take: 4,
+      }),
+    );
+  });
+
   it("requires the role-family migration in the repository health check", async () => {
     const queryRaw = jest.fn().mockResolvedValue([]);
     const repository = makeRepository({ $queryRaw: queryRaw });

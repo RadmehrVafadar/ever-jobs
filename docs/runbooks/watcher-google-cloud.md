@@ -8,6 +8,11 @@ instance, and one maximum instance.
 
 Complete and validate the [local watcher runbook](watcher-local.md) first. The worker must baseline successfully and deliver a Discord test locally before cloud deployment is treated as ready.
 
+[Spec 6006](../../.specify/specs/6006-concurrent-watch-scheduling/spec.md)
+defines bounded concurrent scheduled-watch admission. Its capacity is local to
+each worker process; Cloud SQL leases continue to provide same-watch exclusion
+across Cloud Run replicas.
+
 The cloud deployment does not change source readiness. Registration and fixtures
 alone never authorize unattended polling. The shipped preset target-enables
 `google_careers`, `shopify`, `ashby:wealthsimple`, `ashby:plaid`,
@@ -36,6 +41,14 @@ Cloud Run's default request-based billing can throttle CPU outside incoming requ
 Set one maximum instance initially for simple costs and operations. Correctness does not require a singleton: PostgreSQL execution leases and notification idempotency protect multiple replicas. Additional replicas still poll, consume database connections, cost money, and create redundant lease races, so increase the maximum only for a measured reason.
 
 Cloud Run may replace or restart a warm instance. The scheduler is restart-safe because observations, due times, leases, matches, runs, and delivery attempts are in PostgreSQL. A restart can still add detection latency.
+
+Within one instance, distinct due watches run up to
+`WATCHER_MAX_CONCURRENT_WATCHES`. Candidates are admitted in null-first,
+oldest-due FIFO order (`nextRunAt`, `createdAt`, then ID). Rows beyond capacity
+stay due in Cloud SQL, and a released slot triggers immediate coalesced backfill.
+There is no in-memory pending queue. `WATCHER_MAX_CONCURRENT_SOURCES` and the
+per-source limiters are process-wide across all of those watch runs, so watch
+concurrency does not multiply the request allowance for a source.
 
 ## 2. Target architecture
 
@@ -180,6 +193,11 @@ Critical settings are:
 - `WATCHER_HEALTH_PORT=8080` matches the deployed container port. Do not rely on shell expansion of Cloud Run's `PORT` variable.
 - `WATCHER_ENABLED=true` starts scheduler polling after database health succeeds.
 - `WATCHER_SEED_DEFAULT=false` reflects the explicit production seed step; set it to `true` only when intentionally relying on the safe create-if-missing bootstrap behavior.
+- `WATCHER_MAX_CONCURRENT_WATCHES=2` permits at most two automatically
+  scheduled watch IDs in this container. Manual runs and initialization do not
+  consume these slots, but still contend through the per-watch lease.
+- `WATCHER_MAX_CONCURRENT_SOURCES=5` is one process-wide source-request budget
+  shared by every concurrent watch run; it is not five requests per watch.
 - `--no-cpu-throttling` keeps CPU available for background work when there are no HTTP requests.
 - `--min-instances 1` keeps an instance warm; this incurs cost while idle.
 - `--max-instances 1` limits initial replica count and cost.
@@ -196,6 +214,9 @@ Read the private service's `/health` endpoint using an identity with Cloud Run I
 
 - healthy application and database;
 - scheduler enabled and started;
+- scheduler `maxConcurrentWatches` equal to the configured capacity;
+- scheduler `activeWatchCount` equal to `activeWatchIds.length` and no greater
+  than `maxConcurrentWatches`;
 - Discord configuration present;
 - aggregate Tier 1 coverage state and target-health availability;
 - a current timestamp.
@@ -253,6 +274,38 @@ rather than hard failure. Verify both observation cycles, including Tier 1,
 completed without notifications and aggregate coverage is not degraded. Only
 then test Discord and resume.
 
+### Verify concurrent watch admission
+
+Perform this check in staging or during a controlled production change with
+reviewed test destinations. Prepare and baseline two distinct small watches
+while paused, then resume both before the next poll:
+
+```bash
+npm run cli -- watch initialize <watch-a-id> --json
+npm run cli -- watch initialize <watch-b-id> --json
+npm run cli -- watch resume <watch-a-id> --json
+npm run cli -- watch resume <watch-b-id> --json
+```
+
+Through the authenticated `/health` and `/metrics` paths, sample the worker
+while source work is active. With the documented capacity, expect two distinct
+IDs and these values:
+
+```text
+scheduler.maxConcurrentWatches = 2
+scheduler.activeWatchCount = 2
+ever_jobs_watcher_scheduler_capacity 2
+ever_jobs_watcher_scheduler_active_runs 2
+```
+
+If both runs settle between samples, use each watch's durable run history to
+confirm their start/end intervals overlapped. After settlement, active count
+returns to zero. To verify backfill, make a third initialized watch due while
+both slots are full: it must remain due in PostgreSQL and start automatically
+when either slot opens, following null-first oldest-due FIFO. Pause the test
+watches after verification; do not extend a live run artificially or route
+unreviewed matches merely to make concurrency visible.
+
 ## 9. Monitoring and alerts
 
 Monitor all of these signals:
@@ -270,6 +323,11 @@ Monitor all of these signals:
 - detection and notification latency histograms.
 
 The worker's `/metrics` endpoint emits Prometheus text. Use an authenticated collector compatible with private Cloud Run or bridge the series into Cloud Monitoring. Do not expose the service publicly only for scraping.
+
+Scheduler-capacity series are:
+
+- `ever_jobs_watcher_scheduler_capacity`
+- `ever_jobs_watcher_scheduler_active_runs`
 
 Coverage-specific series are:
 
@@ -321,7 +379,7 @@ For each release:
    Tier 1, before resuming and enabling notifications.
 7. Keep the previous image digest for application rollback.
 
-Cloud Run revision replacement can briefly overlap old and new instances even with a maximum of one steady-state instance. PostgreSQL leases prevent both revisions from executing the same watch concurrently. Notification identity is watch + canonical episode + channel/destination and excludes notification type, so a score-band change or overlapping revision cannot recreate a completed delivery.
+Cloud Run revision replacement can briefly overlap old and new instances even with a maximum of one steady-state instance. `WATCHER_MAX_CONCURRENT_WATCHES` is not a cluster-wide budget; each overlapping process has its own capacity. PostgreSQL leases prevent both revisions from executing the same watch concurrently. Notification identity is watch + canonical episode + channel/destination and excludes notification type, so a score-band change or overlapping revision cannot recreate a completed delivery.
 
 For a source regression, pause the watch and disable the individual target. Do
 not delete observations, canonical episodes, target health, or additive columns.
@@ -366,7 +424,8 @@ The present watcher still starts an HTTP server, so a worker pool would run that
 - Keep Cloud Run private and use least-privilege service accounts.
 - Store secrets in Secret Manager; never log database credentials, Discord URLs, API keys, cookies, or authorization headers.
 - Keep Cloud SQL off the public internet when practical; use supported socket/private networking paths.
-- Bound Cloud SQL connection pools and source concurrency before increasing replica counts.
+- Bound Cloud SQL connection pools, per-process watch capacity, and process-wide
+  source concurrency before increasing replica counts.
 - Review each external source's terms and rate limits. Do not bypass authentication, anti-bot controls, CAPTCHAs, or access controls.
 - LinkedIn uses only its unauthenticated public guest surface with a bounded
   newest-first 72-hour window. Do not add automated login, personal cookies,
@@ -374,7 +433,7 @@ The present watcher still starts an HTTP server, so a worker pool would run that
 
 ## 14. Honest limitations
 
-- The watch-level interval (ten minutes in the shipped Canadian presets) is a scheduling target, not a guarantee. Explicit target intervals override it. The 15-second scheduler poll, jitter, a previous long run, source latency, retries, Cloud Run restarts, database events, and Discord outages can add time.
+- The watch-level interval (ten minutes in the shipped Canadian presets) is a scheduling target, not a guarantee. Explicit target intervals override it. The 15-second scheduler poll, jitter, all scheduler slots being occupied, the same watch still holding its lease, source latency, retries, Cloud Run restarts, database events, and Discord outages can add time.
 - Cloud Run does not guarantee a particular minimum instance will live forever; durable state makes restarts safe but cannot eliminate the pause.
 - Source publication times may be delayed or missing. The watcher records first observation rather than fabricating a publication timestamp.
 - Live source schemas, availability, IP policies, and rate limits are outside rad.ar's control.

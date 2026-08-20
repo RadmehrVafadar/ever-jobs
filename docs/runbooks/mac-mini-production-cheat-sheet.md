@@ -46,13 +46,18 @@ Healthy service indicators:
 - Health `status` is `healthy`.
 - `database` is `true`.
 - Scheduler `enabled` and `started` are `true`.
+- Scheduler `maxConcurrentWatches` matches the LaunchAgent setting (default
+  `2`).
+- Scheduler `activeWatchCount` equals `activeWatchIds.length` and never exceeds
+  `maxConcurrentWatches`.
 - `lastPollAt` is recent and `lastError` is `null`.
 - Discord status is `configured`.
 - The watch itself has `enabled: true` when monitoring should be on.
 
-`activeWatchIds: []` means no execution was in progress at that exact moment. It
-does not mean the service is off. Health can also include a paused watch, so
-always inspect the watch's own `enabled` field.
+`activeWatchIds: []` and `activeWatchCount: 0` mean no scheduled execution was
+in progress at that exact moment. They do not mean the service is off. Health
+can also include a paused watch, so always inspect the watch's own `enabled`
+field.
 
 ## Current production cadence
 
@@ -68,6 +73,67 @@ always inspect the watch's own `enabled` field.
 The watch-level `intervalMinutes` may remain `3`. That is the scheduler check
 frequency, not the external-query cadence. Each source target's interval controls
 when it is actually due.
+
+`WATCHER_MAX_CONCURRENT_WATCHES=2` permits two different automatically
+scheduled watch IDs to run at once in this watcher process. The same watch never
+overlaps because it also requires a PostgreSQL lease. Waiting watches remain due
+in PostgreSQL and are admitted null-first, then oldest `nextRunAt`, `createdAt`,
+and ID. When a slot opens, the oldest waiting watch backfills immediately rather
+than waiting for another fixed poll.
+
+`WATCHER_MAX_CONCURRENT_SOURCES=5` is one process-wide source budget shared by
+all concurrent watch runs, not five per watch. Per-source limiters are shared as
+well. Increase either value only after checking PostgreSQL connections, machine
+load, normal run duration, and provider limits.
+
+Read the two non-secret LaunchAgent values without printing its full environment:
+
+```bash
+/usr/libexec/PlistBuddy -c "Print :EnvironmentVariables:WATCHER_MAX_CONCURRENT_WATCHES" \
+  /Users/vafadar/Library/LaunchAgents/com.everjobs.watcher.plist
+/usr/libexec/PlistBuddy -c "Print :EnvironmentVariables:WATCHER_MAX_CONCURRENT_SOURCES" \
+  /Users/vafadar/Library/LaunchAgents/com.everjobs.watcher.plist
+```
+
+## Verify two watches safely
+
+Use staging or a controlled production window with two reviewed, initialized
+watches and test notification routing. Assign their IDs without reusing the
+production-ID placeholder:
+
+```bash
+WATCH_A_ID="first-reviewed-watch-id"
+WATCH_B_ID="second-reviewed-watch-id"
+node dist/apps/cli/main.js watch show "$WATCH_A_ID" --json
+node dist/apps/cli/main.js watch show "$WATCH_B_ID" --json
+```
+
+Resume both before the next poll, then sample health and the scheduler gauges
+while normal source work is active:
+
+```bash
+node dist/apps/cli/main.js watch resume "$WATCH_A_ID" --json
+node dist/apps/cli/main.js watch resume "$WATCH_B_ID" --json
+curl -sS http://localhost:3002/health
+curl -sS http://localhost:3002/metrics | grep -E \
+  '^ever_jobs_watcher_scheduler_(capacity|active_runs) '
+```
+
+With capacity two, health should briefly report two distinct `activeWatchIds`,
+`activeWatchCount: 2`, and `maxConcurrentWatches: 2`; metrics should report
+capacity `2` and active runs `2`. If the runs finish between samples, compare
+their durable run start/end times:
+
+```bash
+node dist/apps/cli/main.js watch runs "$WATCH_A_ID" --json
+node dist/apps/cli/main.js watch runs "$WATCH_B_ID" --json
+```
+
+For a backfill check, make a third reviewed watch due while both slots are
+occupied. It must remain due, then start automatically when one slot opens in
+the oldest-due FIFO order. Pause only the test watches after verification. Do
+not add artificial production delays or unreviewed notification routes to make
+concurrency easier to observe.
 
 ## Safe production update
 
@@ -105,10 +171,11 @@ window as well. Do not restore or compact a watch until every process that can
 read or write its configuration is on this revision.
 
 The number of watch definitions is not restricted to one. A Canadian watch and
-a US watch can run concurrently; leases are scoped by watch ID. The dangerous
-state is mixed program revisions, not multiple watches. Spec 6005 additionally
-ensures that a long-running scrape cannot overwrite a backup restore or source
-edit made after that run began.
+a US watch can run concurrently up to the configured process capacity; leases
+are scoped by watch ID. Excess due watches remain durable and backfill as slots
+open. The dangerous state is mixed program revisions, not multiple watches.
+Spec 6005 additionally ensures that a long-running scrape cannot overwrite a
+backup restore or source edit made after that run began.
 
 If dependencies and migrations are known to be unchanged, `npm ci`, Prisma
 generation, and migration still remain safe; the commands should be kept in the

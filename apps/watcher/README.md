@@ -44,12 +44,23 @@ PostgreSQL due-watch query and lease
   -> run history, target health, latency data, and metrics
 ```
 
-The scheduler polls PostgreSQL every 15 seconds by default. A PostgreSQL lease
-prevents two replicas from executing the same watch concurrently; a process-local
-guard prevents overlap within one replica. Query targets build a bounded,
-deterministically rotating term × location matrix. Source requests use bounded
-concurrency, timeouts, retries with jitter, hard-failure classification, and
-partial-failure accounting. Redis is not required by this scheduler.
+The scheduler polls PostgreSQL every 15 seconds by default and admits distinct
+due watch IDs concurrently up to `WATCHER_MAX_CONCURRENT_WATCHES`. Admission is
+serialized, so overlapping timer ticks cannot oversubscribe the configured
+capacity or dispatch the same ID twice. PostgreSQL returns candidates in
+null-first, oldest-due FIFO order; watches beyond current capacity remain due in
+PostgreSQL. A released slot triggers prompt backfill without waiting for the
+next fixed poll.
+
+A PostgreSQL lease prevents two replicas, timer ticks, or manual triggers from
+executing the same watch concurrently; a process-local active-promise map
+prevents duplicate scheduled dispatch within one replica. Query targets build a
+bounded, deterministically rotating term × location matrix. Source requests use
+bounded concurrency, timeouts, retries with jitter, hard-failure classification,
+and partial-failure accounting. `WATCHER_MAX_CONCURRENT_SOURCES` is shared
+process-wide across all concurrent watch runs, as are the per-source limiters;
+watch concurrency does not multiply source request concurrency. Redis is not
+required by this scheduler.
 
 Large ATS targets may instead use `board-search`. Those targets rotate a
 bounded term-only slice (at most two requests per ten-minute Spec 6004 cycle)
@@ -67,7 +78,8 @@ The worker listens on `0.0.0.0:${WATCHER_HEALTH_PORT}` and exposes only operatio
   and aggregate Tier 1 coverage status.
 - `GET /metrics` returns Prometheus metrics.
 
-Worker health exposes `coverage.status`, `coverage.tier1Degraded`,
+Worker health exposes scheduler `maxConcurrentWatches`, `activeWatchCount`, and
+`activeWatchIds`, plus `coverage.status`, `coverage.tier1Degraded`,
 `coverage.degradedTargets`, and `coverage.watches`. The API's separate `/health`
 response exposes `watcherCoverage.status`, `watcherCoverage.tier1Degraded`, and
 `watcherCoverage.watches`.
@@ -351,8 +363,8 @@ The defaults are shown in [.env.example](../../.env.example).
 | `WATCHER_HEALTH_PORT`              | Worker health/metrics port                                     | `3002`                                                      |
 | `WATCHER_DEFAULT_TIMEZONE`         | Default watch and digest timezone                              | `America/Toronto`                                           |
 | `WATCHER_DEFAULT_INTERVAL_MINUTES` | Default Tier 1 interval for newly created watches              | `3`                                                         |
-| `WATCHER_MAX_CONCURRENT_WATCHES`   | Per-process watch concurrency                                  | `2`                                                         |
-| `WATCHER_MAX_CONCURRENT_SOURCES`   | Global source concurrency per execution                        | `5`                                                         |
+| `WATCHER_MAX_CONCURRENT_WATCHES`   | Per-process automatically scheduled watch capacity             | `2`                                                         |
+| `WATCHER_MAX_CONCURRENT_SOURCES`   | Process-wide source capacity shared by concurrent watch runs    | `5`                                                         |
 | `WATCHER_SOURCE_TIMEOUT_MS`        | Per-source execution timeout                                   | `12000`                                                     |
 | `WATCHER_RETRY_ATTEMPTS`           | Retry ceiling for retryable operations                         | `3`                                                         |
 | `WATCHER_RETRY_BASE_DELAY_MS`      | Initial retry delay                                            | `500`                                                       |
@@ -452,9 +464,15 @@ Rebuilding reruns `prisma migrate deploy`, which is idempotent for already-appli
 The Prometheus endpoint includes counters, gauges, and histograms for watch runs, target
 requests and duration, hard failures versus valid empty runs, fetched and newly
 detected jobs, matches, notification outcomes, canonical duplicate suppression,
-execution duration, detection/notification latency, scheduler poll time, active
-runs, and aggregate Tier 1 degradation. Key series use the
+execution duration, detection/notification latency, scheduler poll time,
+configured scheduler capacity, active runs, and aggregate Tier 1 degradation. Key series use the
 `ever_jobs_watcher_` prefix.
+
+Scheduler capacity is exposed by
+`ever_jobs_watcher_scheduler_capacity`; current occupancy remains
+`ever_jobs_watcher_scheduler_active_runs`. Worker health reports the same values
+as `scheduler.maxConcurrentWatches` and `scheduler.activeWatchCount`, with
+`scheduler.activeWatchIds` retained for operational diagnosis.
 
 Durable target health records attempts, successes, hard failures, valid empty
 runs, partial runs, consecutive hard failures, last success, last non-empty time,

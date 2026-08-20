@@ -20,6 +20,9 @@ defines the original Toronto/GTA-only profile.
 [Spec 6004](../../.specify/specs/6004-canadian-employer-internship-coverage/spec.md)
 adds the separate 41-employer technology-adjacent profile, official ATS board
 searches, and role-family eligibility.
+[Spec 6006](../../.specify/specs/6006-concurrent-watch-scheduling/spec.md)
+defines concurrent scheduled-watch admission, oldest-due FIFO ordering,
+process-wide source limits, immediate capacity backfill, and shutdown behavior.
 
 ## 1. Operating model
 
@@ -33,7 +36,24 @@ There are three independently due source tiers:
 | Tier 2 | Watch default (10 minutes in the presets) | Toronto/GTA, Canada | Canada Job Bank and validated Google Jobs redundancy |
 | Tier 3 | Watch default (10 minutes in the presets) | Toronto/GTA, Canada | Validated unauthenticated LinkedIn public guest redundancy |
 
-The scheduler polls PostgreSQL every 15 seconds by default. Therefore, the normal start delay after a tier becomes due is up to one scheduler poll, subject to another run holding the lease, database availability, process load, and jitter. The interval is a target cadence rather than an end-to-end notification guarantee.
+The scheduler polls PostgreSQL every 15 seconds by default. Distinct watch IDs
+can run concurrently up to `WATCHER_MAX_CONCURRENT_WATCHES`; the default is two.
+Admission is serialized, and the process keeps one active scheduled promise per
+watch ID. PostgreSQL leases remain the same-watch exclusion mechanism across
+replicas, timer ticks, and manual triggers.
+
+Due candidates use a deterministic null-first, oldest-due FIFO order:
+`nextRunAt`, then `createdAt`, then watch ID. A row that does not fit remains due
+in PostgreSQL; there is no volatile pending queue. When a slot opens, the
+scheduler immediately requests a coalesced admission pass, so the oldest
+waiting row can backfill without waiting for the next fixed poll. A long active
+run is not preempted. The interval is a target cadence rather than an end-to-end
+notification guarantee.
+
+`WATCHER_MAX_CONCURRENT_SOURCES` is one process-wide source-request budget
+shared by every concurrent watch run. The source executor also shares its
+per-source limiters across runs, so increasing watch capacity does not multiply
+traffic to one source.
 
 ### Default source readiness
 
@@ -184,6 +204,8 @@ WATCHER_HEALTH_PORT=3002
 WATCHER_DEFAULT_TIMEZONE=America/Toronto
 WATCHER_DEFAULT_INTERVAL_MINUTES=3
 WATCHER_SCHEDULER_POLL_MS=15000
+WATCHER_MAX_CONCURRENT_WATCHES=2
+WATCHER_MAX_CONCURRENT_SOURCES=5
 DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/REDACTED/REDACTED
 DIGEST_ENABLED=true
 DIGEST_DEFAULT_HOUR=8
@@ -268,9 +290,62 @@ Expected health properties are:
 - `status` is healthy.
 - `database` reports healthy.
 - the scheduler reports enabled and started.
+- `scheduler.maxConcurrentWatches` matches
+  `WATCHER_MAX_CONCURRENT_WATCHES`.
+- `scheduler.activeWatchCount` equals `scheduler.activeWatchIds.length` and is
+  never greater than `scheduler.maxConcurrentWatches`.
 - `notifications.discordConfigured` is `true`.
 
 If `WATCHER_ENABLED=false`, the process can be healthy for diagnostics but will not run scheduled watches. If scheduling is enabled and failed to start because PostgreSQL is unavailable, `/health` returns an unhealthy response.
+
+### Verify two watches concurrently
+
+Use a disposable database or a controlled notification destination. Through the
+GUI, clone a reviewed small watch twice; alternatively create two distinct
+validated watch files with `watch create --config`. Give them unique names,
+baseline each while paused, and keep only reviewed sources enabled:
+
+```bash
+npm run cli -- watch create --config <watch-a.json> --json
+npm run cli -- watch create --config <watch-b.json> --json
+npm run cli -- watch initialize <watch-a-id> --json
+npm run cli -- watch initialize <watch-b-id> --json
+```
+
+With `WATCHER_MAX_CONCURRENT_WATCHES=2`, resume both before the next scheduler
+poll:
+
+```bash
+npm run cli -- watch resume <watch-a-id> --json
+npm run cli -- watch resume <watch-b-id> --json
+curl -s http://localhost:3002/health
+curl -s http://localhost:3002/metrics
+```
+
+While both runs are active, health must report
+`scheduler.maxConcurrentWatches: 2`, `scheduler.activeWatchCount: 2`, and two
+distinct `scheduler.activeWatchIds`. Metrics must report:
+
+```text
+ever_jobs_watcher_scheduler_capacity 2
+ever_jobs_watcher_scheduler_active_runs 2
+```
+
+If the source work finishes too quickly to sample, inspect both watches' run
+records and confirm their execution intervals overlap; do not introduce an
+artificial production delay. After both settle, active count returns to zero
+and each watch has its own run result:
+
+```bash
+npm run cli -- watch runs <watch-a-id> --json
+npm run cli -- watch runs <watch-b-id> --json
+```
+
+For optional backfill verification, make a third initialized watch due before
+the first two settle. It must stay due while both slots are occupied and start
+automatically as soon as either slot opens. The oldest null/due timestamp wins;
+`createdAt` and ID break ties. Pause or remove only the disposable test watches
+after the check, preserving any run history needed for diagnosis.
 
 ## 6. Baseline before enabling alerts
 
@@ -481,7 +556,12 @@ Resume later:
 npm run cli -- watch resume <watch-id> --json
 ```
 
-Stop the development worker with `Ctrl+C`. It stops scheduler polling and waits for active runs for up to the configured shutdown window before the process exits. Restarting is safe: due state and leases live in PostgreSQL, and notification idempotency lives in the database.
+Stop the development worker with `Ctrl+C`. It marks admission closed before
+stopping scheduler polling, starts no replacement work, and waits for active
+scheduled promises for up to the configured shutdown window before the process
+exits. Restarting is safe: unadmitted work remains due in PostgreSQL, leases
+retain the same-watch safety boundary, and notification idempotency lives in the
+database.
 
 ## 10. Health and Prometheus metrics
 
@@ -511,6 +591,7 @@ Important series include:
 - `ever_jobs_watcher_detection_latency_seconds`
 - `ever_jobs_watcher_notification_latency_seconds`
 - `ever_jobs_watcher_scheduler_last_poll_timestamp_seconds`
+- `ever_jobs_watcher_scheduler_capacity`
 - `ever_jobs_watcher_scheduler_active_runs`
 - `ever_jobs_watcher_target_runs_total{watch,target,tier,outcome}`
 - `ever_jobs_watcher_target_consecutive_hard_failures{watch,target,tier}`

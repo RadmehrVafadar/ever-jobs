@@ -1,6 +1,16 @@
 import { WatcherMetricsService } from "../services/watcher-metrics.service";
 
 describe("WatcherMetricsService company coverage", () => {
+  it("publishes configured and occupied scheduler capacity", async () => {
+    const metrics = new WatcherMetricsService();
+    metrics.schedulerCapacity.set(2);
+    metrics.schedulerActiveRuns.set(1);
+
+    const text = await metrics.render();
+    expect(text).toMatch(/ever_jobs_watcher_scheduler_capacity 2\b/);
+    expect(text).toMatch(/ever_jobs_watcher_scheduler_active_runs 1\b/);
+  });
+
   it("publishes all five coverage summary counts with bounded labels", async () => {
     const metrics = new WatcherMetricsService();
 
